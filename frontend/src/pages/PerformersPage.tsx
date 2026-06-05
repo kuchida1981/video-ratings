@@ -53,6 +53,7 @@ export default function PerformersPage() {
             <tr>
               <th className="text-left px-4 py-2 font-medium">名前</th>
               <th className="text-left px-4 py-2 font-medium">ふりがな</th>
+              <th className="text-right px-4 py-2 font-medium">出演作数</th>
               <th className="text-right px-4 py-2 font-medium">スコア</th>
             </tr>
           </thead>
@@ -65,11 +66,12 @@ export default function PerformersPage() {
               >
                 <td className="px-4 py-2 font-medium">{p.name}</td>
                 <td className="px-4 py-2 text-muted-foreground">{p.furigana ?? "—"}</td>
+                <td className="px-4 py-2 text-right font-mono">{p.work_count}</td>
                 <td className="px-4 py-2 text-right font-mono">{p.total_score}</td>
               </tr>
             ))}
             {performers.length === 0 && (
-              <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">出演者が登録されていません</td></tr>
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">出演者が登録されていません</td></tr>
             )}
           </tbody>
         </table>

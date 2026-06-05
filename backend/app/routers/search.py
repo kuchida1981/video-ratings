@@ -20,8 +20,6 @@ def search_works(
     series: Optional[str] = Query(None),
     sort_by: str = Query("created_at"),
     sort_desc: bool = Query(True),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     q = db.query(Work).options(
@@ -61,6 +59,7 @@ def search_works(
             "series": w.series,
             "created_at": w.created_at,
             "total_score": score_calculator.calculate_work_total_score(w),
+            "performers": [{"id": wp.performer.id, "name": wp.performer.name} for wp in w.work_performers],
         }
         for w in works
     ]
@@ -70,5 +69,4 @@ def search_works(
     else:
         result.sort(key=lambda x: x["created_at"], reverse=sort_desc)
 
-    start = (page - 1) * page_size
-    return result[start: start + page_size]
+    return result

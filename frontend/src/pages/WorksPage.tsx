@@ -163,6 +163,7 @@ export default function WorksPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
+              <th className="text-left px-4 py-2 font-medium">出演者</th>
               <th className="text-left px-4 py-2 font-medium">作品名</th>
               <th className="text-left px-4 py-2 font-medium">メーカー</th>
               <th className="text-left px-4 py-2 font-medium">シリーズ</th>
@@ -177,6 +178,9 @@ export default function WorksPage() {
                 className="border-t hover:bg-muted/30 cursor-pointer"
                 onClick={() => navigate(`/works/${w.id}`)}
               >
+                <td className="px-4 py-2 text-muted-foreground">
+                  {w.performers.length > 0 ? w.performers.map((p) => p.name).join(", ") : "—"}
+                </td>
                 <td className="px-4 py-2 font-medium">{w.title}</td>
                 <td className="px-4 py-2 text-muted-foreground">{w.maker ?? "—"}</td>
                 <td className="px-4 py-2 text-muted-foreground">{w.series ?? "—"}</td>
@@ -185,7 +189,7 @@ export default function WorksPage() {
               </tr>
             ))}
             {works.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">作品が見つかりません</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">作品が見つかりません</td></tr>
             )}
           </tbody>
         </table>

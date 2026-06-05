@@ -31,5 +31,6 @@ class PerformerResponse(PerformerBase):
     updated_at: datetime
     tags: list[TagSummary] = []
     total_score: int = 0
+    work_count: int = 0
 
     model_config = {"from_attributes": True}

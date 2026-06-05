@@ -33,6 +33,7 @@ def _build_performer_response(p: Performer) -> dict:
         "updated_at": p.updated_at,
         "tags": [{"id": pt.tag.id, "name": pt.tag.name, "score": pt.tag.score} for pt in p.performer_tags],
         "total_score": score_calculator.calculate_performer_score(p),
+        "work_count": len(p.work_performers),
     }
 
 
@@ -40,7 +41,10 @@ def _build_performer_response(p: Performer) -> dict:
 def list_performers(db: Session = Depends(get_db)):
     performers = (
         db.query(Performer)
-        .options(joinedload(Performer.performer_tags).joinedload(PerformerTag.tag))
+        .options(
+            joinedload(Performer.performer_tags).joinedload(PerformerTag.tag),
+            joinedload(Performer.work_performers),
+        )
         .order_by(Performer.furigana, Performer.name)
         .all()
     )

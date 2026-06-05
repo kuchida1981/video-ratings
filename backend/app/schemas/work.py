@@ -68,6 +68,13 @@ class WorkResponse(WorkBase):
     model_config = {"from_attributes": True}
 
 
+class PerformerNameOnly(BaseModel):
+    id: int
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
 class WorkListResponse(BaseModel):
     id: int
     title: str
@@ -75,6 +82,7 @@ class WorkListResponse(BaseModel):
     series: Optional[str]
     created_at: datetime
     total_score: int = 0
+    performers: list[PerformerNameOnly] = []
 
     model_config = {"from_attributes": True}
 

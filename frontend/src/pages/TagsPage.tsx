@@ -22,6 +22,9 @@ export default function TagsPage() {
   const [editingTagId, setEditingTagId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editScore, setEditScore] = useState("");
+  const [editingCatId, setEditingCatId] = useState<number | null>(null);
+  const [editCatName, setEditCatName] = useState("");
+  const [editCatMulti, setEditCatMulti] = useState(true);
 
   const reload = () => api.tagCategories.list().then(setCategories);
   useEffect(() => { reload(); }, []);
@@ -73,6 +76,21 @@ export default function TagsPage() {
     reload();
   };
 
+  const openEditCat = (cat: TagCategory) => {
+    setEditingCatId(cat.id);
+    setEditCatName(cat.name);
+    setEditCatMulti(cat.is_multi_select);
+  };
+
+  const closeEditCat = () => setEditingCatId(null);
+
+  const updateCategory = async (catId: number) => {
+    if (!editCatName.trim()) return;
+    await api.tagCategories.update(catId, { name: editCatName, is_multi_select: editCatMulti });
+    closeEditCat();
+    reload();
+  };
+
   const toggle = (id: number) =>
     setExpanded((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -118,20 +136,48 @@ export default function TagsPage() {
             <div className="space-y-2">
               {cats.map((cat) => (
                 <div key={cat.id} className="border rounded-lg overflow-hidden">
-                  <div
-                    className="flex items-center gap-2 px-4 py-2 bg-muted/30 cursor-pointer"
-                    onClick={() => toggle(cat.id)}
-                  >
-                    {expanded.has(cat.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    <span className="font-medium flex-1">{cat.name}</span>
-                    <Badge variant="outline" className="text-xs">{cat.is_multi_select ? "複数可" : "単一選択"}</Badge>
-                    <button
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={(e) => { e.stopPropagation(); deleteCategory(cat.id); }}
+                  {editingCatId === cat.id ? (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-muted/30">
+                      <input
+                        className="flex-1 border rounded px-2 py-1 text-sm"
+                        value={editCatName}
+                        onChange={(e) => setEditCatName(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-1 text-sm">
+                        <input
+                          type="checkbox"
+                          id={`cat-multi-${cat.id}`}
+                          checked={editCatMulti}
+                          onChange={(e) => setEditCatMulti(e.target.checked)}
+                        />
+                        <label htmlFor={`cat-multi-${cat.id}`}>複数可</label>
+                      </div>
+                      <Button size="sm" onClick={() => updateCategory(cat.id)} disabled={!editCatName.trim()}>保存</Button>
+                      <Button size="sm" variant="outline" onClick={closeEditCat}>×</Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center gap-2 px-4 py-2 bg-muted/30 cursor-pointer"
+                      onClick={() => toggle(cat.id)}
                     >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                      {expanded.has(cat.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      <span className="font-medium flex-1">{cat.name}</span>
+                      <Badge variant="outline" className="text-xs">{cat.is_multi_select ? "複数可" : "単一選択"}</Badge>
+                      <button
+                        className="text-muted-foreground hover:text-primary"
+                        onClick={(e) => { e.stopPropagation(); openEditCat(cat); }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); deleteCategory(cat.id); }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                   {expanded.has(cat.id) && (
                     <div className="p-3 space-y-2">
                       <div className="flex flex-wrap gap-2">

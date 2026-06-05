@@ -41,6 +41,7 @@ export interface WorkListItem {
   series: string | null;
   created_at: string;
   total_score: number;
+  performers: { id: number; name: string }[];
 }
 
 export interface TagSummary {
@@ -57,6 +58,7 @@ export interface Performer {
   updated_at: string;
   tags: TagSummary[];
   total_score: number;
+  work_count: number;
 }
 
 export interface Tag {
