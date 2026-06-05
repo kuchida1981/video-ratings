@@ -123,8 +123,11 @@ class PerformerTag(Base):
 class CustomFieldDefinition(Base):
     __tablename__ = "custom_field_definitions"
 
+    __table_args__ = (UniqueConstraint("entity_type", "name", name="uq_custom_field_definitions_entity_name"),)
+
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False, unique=True)
+    name = Column(String, nullable=False)
     field_type = Column(String, nullable=False)  # 'text', 'number', 'date', 'boolean'
     entity_type = Column(String, nullable=False, server_default="work")  # 'work' or 'performer'
+    sort_order = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())

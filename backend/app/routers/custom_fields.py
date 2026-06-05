@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import text
+from pydantic import BaseModel
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -14,20 +15,38 @@ from app.schemas.custom_field import (
 router = APIRouter(prefix="/custom-field-definitions", tags=["custom-fields"])
 
 
+class ReorderRequest(BaseModel):
+    ids: list[int]
+
+
 @router.get("", response_model=list[CustomFieldDefinitionResponse])
 def list_definitions(entity_type: Optional[str] = Query(None), db: Session = Depends(get_db)):
     q = db.query(CustomFieldDefinition)
     if entity_type is not None:
         q = q.filter(CustomFieldDefinition.entity_type == entity_type)
-    return q.order_by(CustomFieldDefinition.name).all()
+    return q.order_by(CustomFieldDefinition.sort_order.asc(), CustomFieldDefinition.id.asc()).all()
+
+
+@router.put("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def reorder_definitions(data: ReorderRequest, db: Session = Depends(get_db)):
+    for i, definition_id in enumerate(data.ids):
+        db.query(CustomFieldDefinition).filter(CustomFieldDefinition.id == definition_id).update({"sort_order": i})
+    db.commit()
 
 
 @router.post("", response_model=CustomFieldDefinitionResponse, status_code=status.HTTP_201_CREATED)
 def create_definition(data: CustomFieldDefinitionCreate, db: Session = Depends(get_db)):
-    existing = db.query(CustomFieldDefinition).filter(CustomFieldDefinition.name == data.name).first()
+    existing = db.query(CustomFieldDefinition).filter(
+        CustomFieldDefinition.entity_type == data.entity_type,
+        CustomFieldDefinition.name == data.name,
+    ).first()
     if existing:
         raise HTTPException(status_code=409, detail="Custom field with this name already exists")
-    defn = CustomFieldDefinition(**data.model_dump())
+    max_order = db.query(func.max(CustomFieldDefinition.sort_order)).filter(
+        CustomFieldDefinition.entity_type == data.entity_type
+    ).scalar()
+    next_order = (max_order + 1) if max_order is not None else 0
+    defn = CustomFieldDefinition(**data.model_dump(), sort_order=next_order)
     db.add(defn)
     db.commit()
     db.refresh(defn)

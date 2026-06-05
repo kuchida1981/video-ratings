@@ -26,6 +26,7 @@ class CustomFieldDefinitionResponse(BaseModel):
     name: str
     field_type: FieldType
     entity_type: str
+    sort_order: int
     created_at: datetime
 
     model_config = {"from_attributes": True}

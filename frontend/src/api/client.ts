@@ -104,6 +104,8 @@ export const api = {
     update: (id: number, data: { name?: string }) =>
       req<CustomFieldDefinition>(`/custom-field-definitions/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) => req<void>(`/custom-field-definitions/${id}`, { method: "DELETE" }),
+    reorder: (ids: number[]) =>
+      req<void>("/custom-field-definitions/reorder", { method: "PUT", body: JSON.stringify({ ids }) }),
   },
 
   imports: {
