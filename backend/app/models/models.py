@@ -76,6 +76,7 @@ class TagCategory(Base):
     name = Column(String, nullable=False)
     entity_type = Column(String, nullable=False)  # 'work' or 'performer'
     is_multi_select = Column(Boolean, nullable=False, default=True)
+    description = Column(String, nullable=True)
 
     tags = relationship("Tag", back_populates="category", cascade="all, delete-orphan")
 
@@ -87,6 +88,7 @@ class Tag(Base):
     category_id = Column(Integer, ForeignKey("tag_categories.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String, nullable=False)
     score = Column(Integer, nullable=True)
+    description = Column(String, nullable=True)
 
     category = relationship("TagCategory", back_populates="tags")
     work_tags = relationship("WorkTag", back_populates="tag", cascade="all, delete-orphan")

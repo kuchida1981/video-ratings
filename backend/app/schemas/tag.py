@@ -12,6 +12,7 @@ class TagCategoryBase(BaseModel):
     name: str
     entity_type: EntityType
     is_multi_select: bool = True
+    description: Optional[str] = None
 
 
 class TagCategoryCreate(TagCategoryBase):
@@ -21,11 +22,13 @@ class TagCategoryCreate(TagCategoryBase):
 class TagCategoryUpdate(BaseModel):
     name: Optional[str] = None
     is_multi_select: Optional[bool] = None
+    description: Optional[str] = None
 
 
 class TagBase(BaseModel):
     name: str
     score: Optional[int] = None
+    description: Optional[str] = None
 
 
 class TagCreate(TagBase):
@@ -35,6 +38,7 @@ class TagCreate(TagBase):
 class TagUpdate(BaseModel):
     name: Optional[str] = None
     score: Optional[int] = None
+    description: Optional[str] = None
 
 
 class TagResponse(TagBase):

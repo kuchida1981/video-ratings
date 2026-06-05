@@ -86,17 +86,26 @@ export default function PerformerDetailPage() {
         <h2 className="font-semibold">評価タグ</h2>
         {categories.map((cat) => (
           <div key={cat.id}>
-            <div className="text-xs text-muted-foreground mb-1">{cat.name}</div>
+            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+              <span>{cat.name}</span>
+              {cat.description && <span className="opacity-60 font-normal">({cat.description})</span>}
+            </div>
             <div className="flex flex-wrap gap-1">
               {cat.tags.map((tag) => (
-                <Badge
-                  key={tag.id}
-                  variant={performer.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => toggleTag(tag.id)}
-                >
-                  {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
-                </Badge>
+                <div key={tag.id} className="group relative">
+                  <Badge
+                    variant={performer.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleTag(tag.id)}
+                  >
+                    {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
+                  </Badge>
+                  {tag.description && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground border shadow-md text-[10px] rounded px-2 py-1 mb-1 whitespace-nowrap z-50">
+                      {tag.description}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
