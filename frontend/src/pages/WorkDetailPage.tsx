@@ -1,0 +1,240 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Trash2, Plus, Star, UserCheck } from "lucide-react";
+import { api } from "@/api/client";
+import type { Work, TagCategory, Performer, CustomFieldDefinition } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+
+export default function WorkDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const workId = Number(id);
+
+  const [work, setWork] = useState<Work | null>(null);
+  const [categories, setCategories] = useState<TagCategory[]>([]);
+  const [allPerformers, setAllPerformers] = useState<Performer[]>([]);
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ title: "", maker: "", series: "" });
+  const [newFilePath, setNewFilePath] = useState("");
+  const [newFileDisplayName, setNewFileDisplayName] = useState("");
+  const [addPerformerId, setAddPerformerId] = useState("");
+
+  const reload = () => api.works.get(workId).then(setWork);
+
+  useEffect(() => {
+    reload();
+    api.tagCategories.list("work").then(setCategories);
+    api.performers.list().then(setAllPerformers);
+    api.customFields.list().then(setCustomFields);
+  }, [workId]);
+
+  useEffect(() => {
+    if (work && editing) setForm({ title: work.title, maker: work.maker ?? "", series: work.series ?? "" });
+  }, [editing, work]);
+
+  if (!work) return <div className="text-muted-foreground">読み込み中…</div>;
+
+  const saveEdit = async () => {
+    await api.works.update(workId, { title: form.title, maker: form.maker || undefined, series: form.series || undefined });
+    setEditing(false);
+    reload();
+  };
+
+  const deleteWork = async () => {
+    if (!confirm("この作品を削除しますか？")) return;
+    await api.works.delete(workId);
+    navigate("/works");
+  };
+
+  const addFile = async () => {
+    if (!newFilePath.trim()) return;
+    await api.works.addFile(workId, { path: newFilePath, display_name: newFileDisplayName || undefined });
+    setNewFilePath("");
+    setNewFileDisplayName("");
+    reload();
+  };
+
+  const addPerformer = async () => {
+    if (!addPerformerId) return;
+    await api.works.addPerformer(workId, { performer_id: Number(addPerformerId) });
+    setAddPerformerId("");
+    reload();
+  };
+
+  const toggleTag = async (tagId: number) => {
+    const has = work.tags.some((t) => t.id === tagId);
+    if (has) await api.works.removeTag(workId, tagId);
+    else await api.works.addTag(workId, tagId);
+    reload();
+  };
+
+  const updateCustomField = async (name: string, value: string) => {
+    await api.works.updateCustomFields(workId, { [name]: value || null });
+    reload();
+  };
+
+  const availablePerformers = allPerformers.filter(
+    (p) => !work.performers.some((wp) => wp.id === p.id)
+  );
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          {editing ? (
+            <div className="space-y-2">
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-xl font-bold h-auto text-xl" />
+              <div className="flex gap-2">
+                <Input placeholder="メーカー" value={form.maker} onChange={(e) => setForm({ ...form, maker: e.target.value })} />
+                <Input placeholder="シリーズ" value={form.series} onChange={(e) => setForm({ ...form, series: e.target.value })} />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={saveEdit}>保存</Button>
+                <Button variant="outline" onClick={() => setEditing(false)}>キャンセル</Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold">{work.title}</h1>
+              <div className="text-sm text-muted-foreground mt-1 space-x-3">
+                {work.maker && <span>{work.maker}</span>}
+                {work.series && <span>{work.series}</span>}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="flex gap-2 items-center">
+          <div className="text-2xl font-bold text-primary">{work.total_score}点</div>
+          {!editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
+          <Button variant="destructive" size="sm" onClick={deleteWork}><Trash2 size={14} /></Button>
+        </div>
+      </div>
+
+      {/* Performers */}
+      <section className="space-y-2">
+        <h2 className="font-semibold">出演者</h2>
+        <div className="flex flex-wrap gap-2">
+          {work.performers.map((p) => (
+            <div key={p.id} className="flex items-center gap-1 border rounded-full px-3 py-1 text-sm">
+              {p.is_main && <Star size={12} className="text-yellow-500 fill-yellow-500" />}
+              <span
+                className="cursor-pointer hover:text-primary"
+                onClick={() => navigate(`/performers/${p.id}`)}
+              >
+                {p.name}
+              </span>
+              {!p.is_main && (
+                <button
+                  className="text-muted-foreground hover:text-yellow-500 ml-1"
+                  onClick={() => api.works.setMainPerformer(workId, p.id, true).then(reload)}
+                  title="主演に設定"
+                >
+                  <UserCheck size={12} />
+                </button>
+              )}
+              <button
+                className="text-muted-foreground hover:text-destructive ml-1"
+                onClick={() => api.works.removePerformer(workId, p.id).then(reload)}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+        {availablePerformers.length > 0 && (
+          <div className="flex gap-2">
+            <select
+              className="border rounded px-2 py-1 text-sm"
+              value={addPerformerId}
+              onChange={(e) => setAddPerformerId(e.target.value)}
+            >
+              <option value="">出演者を追加…</option>
+              {availablePerformers.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}{p.furigana ? ` (${p.furigana})` : ""}</option>
+              ))}
+            </select>
+            <Button size="sm" onClick={addPerformer} disabled={!addPerformerId}>追加</Button>
+          </div>
+        )}
+      </section>
+
+      {/* Tags */}
+      <section className="space-y-2">
+        <h2 className="font-semibold">タグ評価</h2>
+        {categories.map((cat) => (
+          <div key={cat.id}>
+            <div className="text-xs text-muted-foreground mb-1">{cat.name}</div>
+            <div className="flex flex-wrap gap-1">
+              {cat.tags.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant={work.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => toggleTag(tag.id)}
+                >
+                  {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Files */}
+      <section className="space-y-2">
+        <h2 className="font-semibold">ファイルパス</h2>
+        {work.files.map((f) => (
+          <div key={f.id} className="flex items-center gap-2 text-sm">
+            <code className="flex-1 bg-muted px-2 py-1 rounded text-xs">{f.path}</code>
+            {f.display_name && <span className="text-muted-foreground">{f.display_name}</span>}
+            <button
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => api.works.removeFile(workId, f.id).then(reload)}
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <Input
+            placeholder="smb://server/share/path/file.mkv"
+            value={newFilePath}
+            onChange={(e) => setNewFilePath(e.target.value)}
+            className="flex-1"
+          />
+          <Input
+            placeholder="表示名"
+            value={newFileDisplayName}
+            onChange={(e) => setNewFileDisplayName(e.target.value)}
+            className="w-32"
+          />
+          <Button size="sm" onClick={addFile} disabled={!newFilePath.trim()}><Plus size={14} /></Button>
+        </div>
+      </section>
+
+      {/* Custom Fields */}
+      {customFields.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold">カスタム項目</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {customFields.map((cf) => (
+              <div key={cf.id}>
+                <Label className="text-xs">{cf.name}</Label>
+                <Input
+                  type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
+                  defaultValue={String(work.custom_fields?.[cf.name] ?? "")}
+                  onBlur={(e) => updateCustomField(cf.name, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
