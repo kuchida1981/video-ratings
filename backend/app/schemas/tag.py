@@ -41,15 +41,21 @@ class TagUpdate(BaseModel):
     description: Optional[str] = None
 
 
+class ReorderRequest(BaseModel):
+    ids: list[int]
+
+
 class TagResponse(TagBase):
     id: int
     category_id: int
+    sort_order: int
 
     model_config = {"from_attributes": True}
 
 
 class TagCategoryResponse(TagCategoryBase):
     id: int
+    sort_order: int
     tags: list[TagResponse] = []
 
     model_config = {"from_attributes": True}

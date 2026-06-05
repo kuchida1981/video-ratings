@@ -80,6 +80,8 @@ export const api = {
     update: (id: number, data: { name?: string; is_multi_select?: boolean }) =>
       req<TagCategory>(`/tag-categories/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) => req<void>(`/tag-categories/${id}`, { method: "DELETE" }),
+    reorder: (ids: number[]) =>
+      req<void>("/tag-categories/reorder", { method: "PUT", body: JSON.stringify({ ids }) }),
   },
 
   tags: {
@@ -90,6 +92,8 @@ export const api = {
     update: (id: number, data: { name?: string; score?: number | null }) =>
       req<Tag>(`/tags/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) => req<void>(`/tags/${id}`, { method: "DELETE" }),
+    reorder: (ids: number[]) =>
+      req<void>("/tags/reorder", { method: "PUT", body: JSON.stringify({ ids }) }),
   },
 
   customFields: {

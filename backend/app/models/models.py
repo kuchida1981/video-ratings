@@ -78,8 +78,9 @@ class TagCategory(Base):
     entity_type = Column(String, nullable=False)  # 'work' or 'performer'
     is_multi_select = Column(Boolean, nullable=False, default=True)
     description = Column(String, nullable=True)
+    sort_order = Column(Integer, nullable=False, default=0)
 
-    tags = relationship("Tag", back_populates="category", cascade="all, delete-orphan")
+    tags = relationship("Tag", back_populates="category", cascade="all, delete-orphan", order_by="Tag.sort_order.asc()")
 
 
 class Tag(Base):
@@ -90,6 +91,7 @@ class Tag(Base):
     name = Column(String, nullable=False)
     score = Column(Integer, nullable=True)
     description = Column(String, nullable=True)
+    sort_order = Column(Integer, nullable=False, default=0)
 
     category = relationship("TagCategory", back_populates="tags")
     work_tags = relationship("WorkTag", back_populates="tag", cascade="all, delete-orphan")

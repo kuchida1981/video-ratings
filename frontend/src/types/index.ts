@@ -68,6 +68,7 @@ export interface Tag {
   name: string;
   score: number | null;
   description: string | null;
+  sort_order: number;
 }
 
 export interface TagCategory {
@@ -76,6 +77,7 @@ export interface TagCategory {
   entity_type: "work" | "performer";
   is_multi_select: boolean;
   description: string | null;
+  sort_order: number;
   tags: Tag[];
 }
 

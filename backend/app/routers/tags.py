@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -10,9 +11,24 @@ from app.schemas.tag import (
     TagCreate,
     TagUpdate,
     TagResponse,
+    ReorderRequest,
 )
 
 router = APIRouter(tags=["tags"])
+
+
+@router.put("/tag-categories/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def reorder_categories(data: ReorderRequest, db: Session = Depends(get_db)):
+    for i, category_id in enumerate(data.ids):
+        db.query(TagCategory).filter(TagCategory.id == category_id).update({"sort_order": i})
+    db.commit()
+
+
+@router.put("/tags/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def reorder_tags(data: ReorderRequest, db: Session = Depends(get_db)):
+    for i, tag_id in enumerate(data.ids):
+        db.query(Tag).filter(Tag.id == tag_id).update({"sort_order": i})
+    db.commit()
 
 
 @router.get("/tag-categories", response_model=list[TagCategoryResponse])
@@ -20,12 +36,15 @@ def list_categories(entity_type: str | None = None, db: Session = Depends(get_db
     q = db.query(TagCategory).options(joinedload(TagCategory.tags))
     if entity_type:
         q = q.filter(TagCategory.entity_type == entity_type)
-    return q.all()
+    return q.order_by(TagCategory.sort_order.asc(), TagCategory.id.asc()).all()
 
 
 @router.post("/tag-categories", response_model=TagCategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(data: TagCategoryCreate, db: Session = Depends(get_db)):
-    cat = TagCategory(**data.model_dump())
+    max_order = db.query(func.max(TagCategory.sort_order)).filter(TagCategory.entity_type == data.entity_type).scalar()
+    if max_order is None:
+        max_order = -1
+    cat = TagCategory(**data.model_dump(), sort_order=max_order + 1)
     db.add(cat)
     db.commit()
     db.refresh(cat)
@@ -64,7 +83,10 @@ def list_tags(category_id: int | None = None, db: Session = Depends(get_db)):
 def create_tag(data: TagCreate, db: Session = Depends(get_db)):
     if not db.query(TagCategory).filter(TagCategory.id == data.category_id).first():
         raise HTTPException(status_code=404, detail="Category not found")
-    tag = Tag(**data.model_dump())
+    max_order = db.query(func.max(Tag.sort_order)).filter(Tag.category_id == data.category_id).scalar()
+    if max_order is None:
+        max_order = -1
+    tag = Tag(**data.model_dump(), sort_order=max_order + 1)
     db.add(tag)
     db.commit()
     db.refresh(tag)
