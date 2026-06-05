@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.database import get_db
 from app.models.models import CustomFieldDefinition, Work
@@ -14,8 +15,11 @@ router = APIRouter(prefix="/custom-field-definitions", tags=["custom-fields"])
 
 
 @router.get("", response_model=list[CustomFieldDefinitionResponse])
-def list_definitions(db: Session = Depends(get_db)):
-    return db.query(CustomFieldDefinition).order_by(CustomFieldDefinition.name).all()
+def list_definitions(entity_type: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    q = db.query(CustomFieldDefinition)
+    if entity_type is not None:
+        q = q.filter(CustomFieldDefinition.entity_type == entity_type)
+    return q.order_by(CustomFieldDefinition.name).all()
 
 
 @router.post("", response_model=CustomFieldDefinitionResponse, status_code=status.HTTP_201_CREATED)
@@ -47,10 +51,16 @@ def delete_definition(definition_id: int, db: Session = Depends(get_db)):
     if not defn:
         raise HTTPException(status_code=404, detail="Custom field definition not found")
     key = defn.name
+    entity_type = defn.entity_type
     db.delete(defn)
-    # Remove the key from all works' custom_fields JSONB
-    db.execute(
-        text("UPDATE works SET custom_fields = custom_fields - :key WHERE custom_fields ? :key"),
-        {"key": key},
-    )
+    if entity_type == "performer":
+        db.execute(
+            text("UPDATE performers SET custom_fields = custom_fields - :key WHERE custom_fields ? :key"),
+            {"key": key},
+        )
+    else:
+        db.execute(
+            text("UPDATE works SET custom_fields = custom_fields - :key WHERE custom_fields ? :key"),
+            {"key": key},
+        )
     db.commit()

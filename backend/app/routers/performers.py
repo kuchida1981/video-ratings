@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
+from typing import Any
 
 from app.database import get_db
 from app.models.models import Performer, WorkPerformer, PerformerTag, Tag, TagCategory, Work, WorkTag
@@ -29,6 +30,7 @@ def _build_performer_response(p: Performer) -> dict:
         "id": p.id,
         "name": p.name,
         "furigana": p.furigana,
+        "custom_fields": p.custom_fields,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
         "tags": [{"id": pt.tag.id, "name": pt.tag.name, "score": pt.tag.score} for pt in p.performer_tags],
@@ -144,5 +146,17 @@ def remove_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
     if not pt:
         raise HTTPException(status_code=404, detail="Tag association not found")
     db.delete(pt)
+    db.commit()
+    return _build_performer_response(_load_performer(db, performer_id))
+
+
+@router.patch("/{performer_id}/custom-fields", response_model=PerformerResponse)
+def update_custom_fields(performer_id: int, fields: dict[str, Any], db: Session = Depends(get_db)):
+    p = db.query(Performer).filter(Performer.id == performer_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Performer not found")
+    current = p.custom_fields or {}
+    current.update(fields)
+    p.custom_fields = {k: v for k, v in current.items() if v is not None}
     db.commit()
     return _build_performer_response(_load_performer(db, performer_id))

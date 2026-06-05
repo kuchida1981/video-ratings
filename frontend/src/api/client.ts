@@ -68,6 +68,8 @@ export const api = {
     works: (id: number) => req<WorkListItem[]>(`/performers/${id}/works`),
     addTag: (id: number, tagId: number) => req<Performer>(`/performers/${id}/tags/${tagId}`, { method: "POST" }),
     removeTag: (id: number, tagId: number) => req<Performer>(`/performers/${id}/tags/${tagId}`, { method: "DELETE" }),
+    updateCustomFields: (id: number, fields: Record<string, unknown>) =>
+      req<Performer>(`/performers/${id}/custom-fields`, { method: "PATCH", body: JSON.stringify(fields) }),
   },
 
   tagCategories: {
@@ -91,8 +93,9 @@ export const api = {
   },
 
   customFields: {
-    list: () => req<CustomFieldDefinition[]>("/custom-field-definitions"),
-    create: (data: { name: string; field_type: string }) =>
+    list: (entityType?: string) =>
+      req<CustomFieldDefinition[]>(`/custom-field-definitions${entityType ? `?entity_type=${entityType}` : ""}`),
+    create: (data: { name: string; field_type: string; entity_type?: string }) =>
       req<CustomFieldDefinition>("/custom-field-definitions", { method: "POST", body: JSON.stringify(data) }),
     update: (id: number, data: { name?: string }) =>
       req<CustomFieldDefinition>(`/custom-field-definitions/${id}`, { method: "PUT", body: JSON.stringify(data) }),

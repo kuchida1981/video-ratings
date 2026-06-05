@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import { api } from "@/api/client";
-import type { Performer, WorkListItem, TagCategory } from "@/types";
+import type { CustomFieldDefinition, Performer, WorkListItem, TagCategory } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ export default function PerformerDetailPage() {
   const [performer, setPerformer] = useState<Performer | null>(null);
   const [works, setWorks] = useState<WorkListItem[]>([]);
   const [categories, setCategories] = useState<TagCategory[]>([]);
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", furigana: "" });
 
@@ -27,6 +28,7 @@ export default function PerformerDetailPage() {
   useEffect(() => {
     reload();
     api.tagCategories.list("performer").then(setCategories);
+    api.customFields.list("performer").then(setCustomFieldDefs);
   }, [performerId]);
 
   useEffect(() => {
@@ -51,6 +53,11 @@ export default function PerformerDetailPage() {
     const has = performer.tags.some((t) => t.id === tagId);
     if (has) await api.performers.removeTag(performerId, tagId);
     else await api.performers.addTag(performerId, tagId);
+    reload();
+  };
+
+  const updateCustomField = async (name: string, value: string | boolean) => {
+    await api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value });
     reload();
   };
 
@@ -111,6 +118,36 @@ export default function PerformerDetailPage() {
           </div>
         ))}
       </section>
+
+      {/* Custom Fields */}
+      {customFieldDefs.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold">カスタム項目</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {customFieldDefs.map((cf) => (
+              <div key={cf.id}>
+                <Label className="text-xs">{cf.name}</Label>
+                {cf.field_type === "boolean" ? (
+                  <div className="flex items-center h-9">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      defaultChecked={Boolean(performer.custom_fields?.[cf.name])}
+                      onChange={(e) => updateCustomField(cf.name, e.target.checked)}
+                    />
+                  </div>
+                ) : (
+                  <Input
+                    type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
+                    defaultValue={String(performer.custom_fields?.[cf.name] ?? "")}
+                    onBlur={(e) => updateCustomField(cf.name, e.target.value)}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Works */}
       <section className="space-y-2">

@@ -54,6 +54,7 @@ export interface Performer {
   id: number;
   name: string;
   furigana: string | null;
+  custom_fields: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   tags: TagSummary[];
@@ -81,7 +82,8 @@ export interface TagCategory {
 export interface CustomFieldDefinition {
   id: number;
   name: string;
-  field_type: "text" | "number" | "date";
+  field_type: "text" | "number" | "date" | "boolean";
+  entity_type: "work" | "performer";
   created_at: string;
 }
 

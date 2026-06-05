@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Any, Dict, Optional
 from datetime import datetime
 
 
@@ -27,6 +27,7 @@ class TagSummary(BaseModel):
 
 class PerformerResponse(PerformerBase):
     id: int
+    custom_fields: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
     tags: list[TagSummary] = []

@@ -29,7 +29,7 @@ export default function WorkDetailPage() {
     reload();
     api.tagCategories.list("work").then(setCategories);
     api.performers.list().then(setAllPerformers);
-    api.customFields.list().then(setCustomFields);
+    api.customFields.list("work").then(setCustomFields);
   }, [workId]);
 
   useEffect(() => {
@@ -72,8 +72,8 @@ export default function WorkDetailPage() {
     reload();
   };
 
-  const updateCustomField = async (name: string, value: string) => {
-    await api.works.updateCustomFields(workId, { [name]: value || null });
+  const updateCustomField = async (name: string, value: string | boolean) => {
+    await api.works.updateCustomFields(workId, { [name]: value === "" ? null : value });
     reload();
   };
 
@@ -234,11 +234,22 @@ export default function WorkDetailPage() {
             {customFields.map((cf) => (
               <div key={cf.id}>
                 <Label className="text-xs">{cf.name}</Label>
-                <Input
-                  type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
-                  defaultValue={String(work.custom_fields?.[cf.name] ?? "")}
-                  onBlur={(e) => updateCustomField(cf.name, e.target.value)}
-                />
+                {cf.field_type === "boolean" ? (
+                  <div className="flex items-center h-9">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      defaultChecked={Boolean(work.custom_fields?.[cf.name])}
+                      onChange={(e) => updateCustomField(cf.name, e.target.checked)}
+                    />
+                  </div>
+                ) : (
+                  <Input
+                    type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
+                    defaultValue={String(work.custom_fields?.[cf.name] ?? "")}
+                    onBlur={(e) => updateCustomField(cf.name, e.target.value)}
+                  />
+                )}
               </div>
             ))}
           </div>

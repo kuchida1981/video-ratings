@@ -39,6 +39,7 @@ class Performer(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
     furigana = Column(String, nullable=True, index=True)
+    custom_fields = Column(JSONB, nullable=True, default=dict)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -122,5 +123,6 @@ class CustomFieldDefinition(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, unique=True)
-    field_type = Column(String, nullable=False)  # 'text', 'number', 'date'
+    field_type = Column(String, nullable=False)  # 'text', 'number', 'date', 'boolean'
+    entity_type = Column(String, nullable=False, server_default="work")  # 'work' or 'performer'
     created_at = Column(DateTime, nullable=False, server_default=func.now())
