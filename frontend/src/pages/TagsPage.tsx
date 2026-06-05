@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 import { api } from "@/api/client";
 import type { TagCategory } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ export default function TagsPage() {
   const [tagOpen, setTagOpen] = useState<number | null>(null);
   const [tagName, setTagName] = useState("");
   const [tagScore, setTagScore] = useState("");
+  const [editingTagId, setEditingTagId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editScore, setEditScore] = useState("");
 
   const reload = () => api.tagCategories.list().then(setCategories);
   useEffect(() => { reload(); }, []);
@@ -50,6 +53,23 @@ export default function TagsPage() {
   const deleteTag = async (tagId: number) => {
     if (!confirm("このタグを削除しますか？")) return;
     await api.tags.delete(tagId);
+    reload();
+  };
+
+  const openEdit = (tag: { id: number; name: string; score: number | null }) => {
+    setTagOpen(null);
+    setEditingTagId(tag.id);
+    setEditName(tag.name);
+    setEditScore(tag.score != null ? String(tag.score) : "");
+  };
+
+  const closeEdit = () => setEditingTagId(null);
+
+  const updateTag = async (tagId: number) => {
+    if (!editName.trim()) return;
+    const score = editScore !== "" ? Number(editScore) : null;
+    await api.tags.update(tagId, { name: editName, score });
+    closeEdit();
     reload();
   };
 
@@ -115,16 +135,29 @@ export default function TagsPage() {
                   {expanded.has(cat.id) && (
                     <div className="p-3 space-y-2">
                       <div className="flex flex-wrap gap-2">
-                        {cat.tags.map((tag) => (
-                          <div key={tag.id} className="flex items-center gap-1 border rounded-full px-3 py-0.5 text-sm">
-                            <span>{tag.name}</span>
-                            {tag.score != null && <span className="text-muted-foreground text-xs">+{tag.score}</span>}
-                            <button
-                              className="text-muted-foreground hover:text-destructive ml-1"
-                              onClick={() => deleteTag(tag.id)}
-                            >×</button>
-                          </div>
-                        ))}
+                        {cat.tags.map((tag) =>
+                          editingTagId === tag.id ? (
+                            <div key={tag.id} className="flex gap-2 items-end w-full">
+                              <div className="flex-1"><Label className="text-xs">タグ名</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+                              <div className="w-24"><Label className="text-xs">点数</Label><Input type="number" value={editScore} onChange={(e) => setEditScore(e.target.value)} placeholder="なし" /></div>
+                              <Button size="sm" onClick={() => updateTag(tag.id)} disabled={!editName.trim()}>保存</Button>
+                              <Button size="sm" variant="outline" onClick={closeEdit}>×</Button>
+                            </div>
+                          ) : (
+                            <div key={tag.id} className="flex items-center gap-1 border rounded-full px-3 py-0.5 text-sm">
+                              <span>{tag.name}</span>
+                              {tag.score != null && <span className="text-muted-foreground text-xs">+{tag.score}</span>}
+                              <button
+                                className="text-muted-foreground hover:text-primary ml-1"
+                                onClick={() => openEdit(tag)}
+                              ><Pencil size={11} /></button>
+                              <button
+                                className="text-muted-foreground hover:text-destructive ml-0.5"
+                                onClick={() => deleteTag(tag.id)}
+                              >×</button>
+                            </div>
+                          )
+                        )}
                       </div>
                       {tagOpen === cat.id ? (
                         <div className="flex gap-2 items-end">
@@ -134,7 +167,7 @@ export default function TagsPage() {
                           <Button size="sm" variant="outline" onClick={() => setTagOpen(null)}>×</Button>
                         </div>
                       ) : (
-                        <Button size="sm" variant="outline" onClick={() => { setTagOpen(cat.id); setTagName(""); setTagScore(""); }}>
+                        <Button size="sm" variant="outline" onClick={() => { setTagOpen(cat.id); setTagName(""); setTagScore(""); setEditingTagId(null); }}>
                           <Plus size={14} />タグを追加
                         </Button>
                       )}
