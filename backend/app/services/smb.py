@@ -1,5 +1,6 @@
+import asyncio
 import mimetypes
-from typing import Generator
+from typing import AsyncGenerator, Generator
 from urllib.parse import urlparse
 
 import smbclient
@@ -35,6 +36,27 @@ def stream_smb_file(unc_path: str, start: int, end: int) -> Generator[bytes, Non
                 break
             remaining -= len(chunk)
             yield chunk
+
+
+async def stream_smb_file_async(unc_path: str, start: int, end: int) -> AsyncGenerator[bytes, None]:
+    loop = asyncio.get_running_loop()
+
+    def _open_and_seek():
+        f = smbclient.open_file(unc_path, mode="rb", share_access="r")
+        f.seek(start)
+        return f
+
+    f = await loop.run_in_executor(None, _open_and_seek)
+    try:
+        remaining = end - start + 1
+        while remaining > 0:
+            chunk = await loop.run_in_executor(None, f.read, min(CHUNK_SIZE, remaining))
+            if not chunk:
+                break
+            remaining -= len(chunk)
+            yield chunk
+    finally:
+        await loop.run_in_executor(None, f.close)
 
 
 def guess_content_type(path: str) -> str:

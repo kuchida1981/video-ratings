@@ -23,7 +23,7 @@ from app.services.smb import (
     guess_content_type,
     register_smb_session,
     smb_url_to_unc,
-    stream_smb_file,
+    stream_smb_file_async,
 )
 
 router = APIRouter(prefix="/works", tags=["works"])
@@ -161,7 +161,7 @@ def add_file(work_id: int, data: WorkFileCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{work_id}/files/{file_id}/stream")
-def stream_file(work_id: int, file_id: int, request: Request, db: Session = Depends(get_db)):
+async def stream_file(work_id: int, file_id: int, request: Request, db: Session = Depends(get_db)):
     f = db.query(WorkFile).filter(WorkFile.id == file_id, WorkFile.work_id == work_id).first()
     if not f:
         raise HTTPException(status_code=404, detail="File not found")
@@ -190,7 +190,7 @@ def stream_file(work_id: int, file_id: int, request: Request, db: Session = Depe
             raise HTTPException(status_code=400, detail="Invalid Range header")
         end = min(end, file_size - 1)
         return StreamingResponse(
-            stream_smb_file(unc_path, start, end),
+            stream_smb_file_async(unc_path, start, end),
             status_code=206,
             media_type=content_type,
             headers={
@@ -201,7 +201,7 @@ def stream_file(work_id: int, file_id: int, request: Request, db: Session = Depe
         )
 
     return StreamingResponse(
-        stream_smb_file(unc_path, 0, file_size - 1),
+        stream_smb_file_async(unc_path, 0, file_size - 1),
         media_type=content_type,
         headers={
             "Content-Length": str(file_size),
