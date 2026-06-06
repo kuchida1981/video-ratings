@@ -20,20 +20,22 @@ class WorkFileResponse(WorkFileBase):
     model_config = {"from_attributes": True}
 
 
-class PerformerInWork(BaseModel):
-    id: int
-    name: str
-    furigana: Optional[str]
-    is_main: bool
-
-    model_config = {"from_attributes": True}
-
-
 class TagInWork(BaseModel):
     id: int
     name: str
     score: Optional[int]
     category_id: int
+
+    model_config = {"from_attributes": True}
+
+
+class PerformerInWork(BaseModel):
+    id: int
+    name: str
+    furigana: Optional[str]
+    is_main: bool
+    tags: list[TagInWork] = []
+    total_score: int = 0
 
     model_config = {"from_attributes": True}
 

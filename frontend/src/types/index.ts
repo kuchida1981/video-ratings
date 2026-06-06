@@ -13,6 +13,8 @@ export interface PerformerInWork {
   name: string;
   furigana: string | null;
   is_main: boolean;
+  tags: TagInWork[];
+  total_score: number;
 }
 
 export interface TagInWork {
