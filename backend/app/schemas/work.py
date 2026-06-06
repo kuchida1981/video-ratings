@@ -75,6 +75,12 @@ class PerformerNameOnly(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TagInWorkList(BaseModel):
+    id: int
+    name: str
+    category_id: int
+
+
 class WorkListResponse(BaseModel):
     id: int
     title: str
@@ -83,6 +89,8 @@ class WorkListResponse(BaseModel):
     created_at: datetime
     total_score: int = 0
     performers: list[PerformerNameOnly] = []
+    custom_fields: Optional[dict[str, Any]] = None
+    tags: list[TagInWorkList] = []
 
     model_config = {"from_attributes": True}
 

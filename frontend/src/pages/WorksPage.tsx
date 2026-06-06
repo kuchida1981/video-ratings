@@ -1,13 +1,106 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown } from "lucide-react";
 import { api } from "@/api/client";
-import type { WorkListItem, TagCategory, CustomFieldDefinition } from "@/types";
+import type { WorkListItem, TagCategory, CustomFieldDefinition, ColumnDef } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { ColumnConfigPopover } from "@/components/ColumnConfigPopover";
+import { useColumnConfig } from "@/hooks/useColumnConfig";
+
+function buildWorkColumns(
+  customFields: CustomFieldDefinition[],
+  tagCategories: TagCategory[],
+): ColumnDef<WorkListItem>[] {
+  const fixed: ColumnDef<WorkListItem>[] = [
+    {
+      id: "performers",
+      label: "出演者",
+      required: true,
+      defaultVisible: true,
+      width: "w-[20%]",
+      render: (w) => w.performers.length > 0 ? w.performers.map((p) => p.name).join(", ") : "—",
+    },
+    {
+      id: "title",
+      label: "作品名",
+      required: true,
+      defaultVisible: true,
+      width: "",
+      render: (w) => w.title,
+    },
+    {
+      id: "maker",
+      label: "メーカー",
+      required: false,
+      defaultVisible: true,
+      width: "w-[10rem]",
+      render: (w) => w.maker ?? "—",
+    },
+    {
+      id: "series",
+      label: "シリーズ",
+      required: false,
+      defaultVisible: true,
+      width: "w-[10rem]",
+      render: (w) => w.series ?? "—",
+    },
+    {
+      id: "total_score",
+      label: "スコア",
+      required: false,
+      defaultVisible: true,
+      width: "w-[5rem]",
+      align: "right",
+      render: (w) => w.total_score,
+    },
+    {
+      id: "created_at",
+      label: "登録日",
+      required: false,
+      defaultVisible: true,
+      width: "w-[9rem]",
+      render: (w) => new Date(w.created_at).toLocaleDateString("ja-JP"),
+    },
+  ];
+
+  const cfCols: ColumnDef<WorkListItem>[] = customFields
+    .filter((cf) => cf.entity_type === "work")
+    .map((cf) => ({
+      id: `cf_${cf.id}`,
+      label: cf.name,
+      required: false,
+      defaultVisible: false,
+      width: cf.field_type === "number" || cf.field_type === "boolean" ? "w-[5rem]" : cf.field_type === "date" ? "w-[9rem]" : "w-[10rem]",
+      align: (cf.field_type === "number" ? "right" : undefined) as "right" | undefined,
+      render: (w) => {
+        const val = w.custom_fields?.[cf.name];
+        if (val === null || val === undefined || val === "") return "—";
+        if (cf.field_type === "boolean") return val ? "✓" : "✗";
+        if (cf.field_type === "date") return typeof val === "string" ? new Date(val).toLocaleDateString("ja-JP") : String(val);
+        return String(val);
+      },
+    }));
+
+  const tagCols: ColumnDef<WorkListItem>[] = tagCategories
+    .filter((tc) => tc.entity_type === "work")
+    .map((tc) => ({
+      id: `tc_${tc.id}`,
+      label: tc.name,
+      required: false,
+      defaultVisible: false,
+      width: "w-[12rem]",
+      render: (w) => {
+        const names = w.tags.filter((t) => t.category_id === tc.id).map((t) => t.name);
+        return names.length > 0 ? names.join(", ") : "—";
+      },
+    }));
+
+  return [...fixed, ...cfCols, ...tagCols];
+}
 
 export default function WorksPage() {
   const navigate = useNavigate();
@@ -48,6 +141,28 @@ export default function WorksPage() {
     api.tagCategories.list("work").then(setCategories);
     api.customFields.list().then(setCustomFields);
   }, []);
+
+  const allColumns = useMemo(
+    () => buildWorkColumns(customFields, categories),
+    [customFields, categories],
+  );
+
+  const { visibleIds, toggle } = useColumnConfig("works", allColumns);
+
+  const visibleColumns = useMemo(
+    () => allColumns.filter((c) => visibleIds.includes(c.id)),
+    [allColumns, visibleIds],
+  );
+
+  const columnGroups = useMemo(() => {
+    const workCustomFields = customFields.filter((cf) => cf.entity_type === "work");
+    const workTagCategories = categories.filter((tc) => tc.entity_type === "work");
+    return [
+      { label: "基本列", columns: allColumns.filter((c) => !c.id.startsWith("cf_") && !c.id.startsWith("tc_")) },
+      ...(workCustomFields.length > 0 ? [{ label: "カスタム項目", columns: allColumns.filter((c) => c.id.startsWith("cf_")) }] : []),
+      ...(workTagCategories.length > 0 ? [{ label: "タグカテゴリ", columns: allColumns.filter((c) => c.id.startsWith("tc_")) }] : []),
+    ];
+  }, [allColumns, customFields, categories]);
 
   const toggleTag = (tagId: number) => {
     setSelectedTagIds((prev) =>
@@ -160,15 +275,21 @@ export default function WorksPage() {
 
       {/* Works table */}
       <div className="rounded-lg border overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="flex justify-end px-3 py-2 border-b bg-muted/30">
+          <ColumnConfigPopover groups={columnGroups} visibleIds={visibleIds} onToggle={toggle} />
+        </div>
+        <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead className="bg-muted/50">
             <tr>
-              <th className="text-left px-4 py-2 font-medium">出演者</th>
-              <th className="text-left px-4 py-2 font-medium">作品名</th>
-              <th className="text-left px-4 py-2 font-medium">メーカー</th>
-              <th className="text-left px-4 py-2 font-medium">シリーズ</th>
-              <th className="text-right px-4 py-2 font-medium">スコア</th>
-              <th className="text-left px-4 py-2 font-medium">登録日</th>
+              {visibleColumns.map((col) => (
+                <th
+                  key={col.id}
+                  className={`text-left px-4 py-2 font-medium overflow-hidden text-ellipsis whitespace-nowrap ${col.width} ${col.align === "right" ? "text-right" : ""}`}
+                  title={col.label}
+                >
+                  {col.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -178,18 +299,27 @@ export default function WorksPage() {
                 className="border-t hover:bg-muted/30 cursor-pointer"
                 onClick={() => navigate(`/works/${w.id}`)}
               >
-                <td className="px-4 py-2 text-muted-foreground">
-                  {w.performers.length > 0 ? w.performers.map((p) => p.name).join(", ") : "—"}
-                </td>
-                <td className="px-4 py-2 font-medium">{w.title}</td>
-                <td className="px-4 py-2 text-muted-foreground">{w.maker ?? "—"}</td>
-                <td className="px-4 py-2 text-muted-foreground">{w.series ?? "—"}</td>
-                <td className="px-4 py-2 text-right font-mono">{w.total_score}</td>
-                <td className="px-4 py-2 text-muted-foreground">{new Date(w.created_at).toLocaleDateString("ja-JP")}</td>
+                {visibleColumns.map((col) => {
+                  const content = col.render(w);
+                  const textContent = typeof content === "string" || typeof content === "number" ? String(content) : undefined;
+                  return (
+                    <td
+                      key={col.id}
+                      className={`px-4 py-2 overflow-hidden text-ellipsis whitespace-nowrap ${col.id === "title" ? "font-medium" : "text-muted-foreground"} ${col.align === "right" ? "text-right font-mono" : ""}`}
+                      title={textContent}
+                    >
+                      {content}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
             {works.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">作品が見つかりません</td></tr>
+              <tr>
+                <td colSpan={visibleColumns.length} className="px-4 py-8 text-center text-muted-foreground">
+                  作品が見つかりません
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
