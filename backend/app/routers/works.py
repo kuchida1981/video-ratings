@@ -53,6 +53,16 @@ def _build_work_response(work: Work) -> dict[str, Any]:
             "name": wp.performer.name,
             "furigana": wp.performer.furigana,
             "is_main": wp.is_main,
+            "tags": [
+                {
+                    "id": pt.tag.id,
+                    "name": pt.tag.name,
+                    "score": pt.tag.score,
+                    "category_id": pt.tag.category_id,
+                }
+                for pt in wp.performer.performer_tags
+            ],
+            "total_score": score_calculator.calculate_performer_score(wp.performer),
         }
         for wp in work.work_performers
     ]

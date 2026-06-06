@@ -15,6 +15,7 @@ export default function WorkDetailPage() {
 
   const [work, setWork] = useState<Work | null>(null);
   const [categories, setCategories] = useState<TagCategory[]>([]);
+  const [performerCategories, setPerformerCategories] = useState<TagCategory[]>([]);
   const [allPerformers, setAllPerformers] = useState<Performer[]>([]);
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
@@ -32,6 +33,7 @@ export default function WorkDetailPage() {
   useEffect(() => {
     reload();
     api.tagCategories.list("work").then(setCategories);
+    api.tagCategories.list("performer").then(setPerformerCategories);
     api.performers.list().then(setAllPerformers);
     api.customFields.list("work").then(setCustomFields);
   }, [workId]);
@@ -84,6 +86,20 @@ export default function WorkDetailPage() {
     const has = work.tags.some((t) => t.id === tagId);
     if (has) await api.works.removeTag(workId, tagId);
     else await api.works.addTag(workId, tagId);
+    reload();
+  };
+
+  const togglePerformerTag = async (performer: Work["performers"][number], tagId: number, cat: TagCategory) => {
+    const has = performer.tags.some((t) => t.id === tagId);
+    if (has) {
+      await api.performers.removeTag(performer.id, tagId);
+    } else {
+      if (!cat.is_multi_select) {
+        const existing = performer.tags.find((t) => t.category_id === cat.id);
+        if (existing) await api.performers.removeTag(performer.id, existing.id);
+      }
+      await api.performers.addTag(performer.id, tagId);
+    }
     reload();
   };
 
@@ -144,36 +160,67 @@ export default function WorkDetailPage() {
       </div>
 
       {/* Performers */}
-      <section className="space-y-2">
+      <section className="space-y-3">
         <h2 className="font-semibold">出演者</h2>
-        <div className="flex flex-wrap gap-2">
-          {work.performers.map((p) => (
-            <div key={p.id} className="flex items-center gap-1 border rounded-full px-3 py-1 text-sm">
-              {p.is_main && <Star size={12} className="text-yellow-500 fill-yellow-500" />}
-              <span
-                className="cursor-pointer hover:text-primary"
-                onClick={() => navigate(`/performers/${p.id}`)}
-              >
-                {p.name}
-              </span>
-              {!p.is_main && (
-                <button
-                  className="text-muted-foreground hover:text-yellow-500 ml-1"
-                  onClick={() => api.works.setMainPerformer(workId, p.id, true).then(reload)}
-                  title="主演に設定"
+        {work.performers.map((p) => (
+          <div key={p.id} className="border rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {p.is_main && <Star size={13} className="text-yellow-500 fill-yellow-500 shrink-0" />}
+                <span
+                  className="font-medium cursor-pointer hover:text-primary"
+                  onClick={() => navigate(`/performers/${p.id}`)}
                 >
-                  <UserCheck size={12} />
+                  {p.name}
+                </span>
+                <span className="text-sm text-primary font-mono">{p.total_score}点</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {!p.is_main && (
+                  <button
+                    className="text-muted-foreground hover:text-yellow-500"
+                    onClick={() => api.works.setMainPerformer(workId, p.id, true).then(reload)}
+                    title="主演に設定"
+                  >
+                    <UserCheck size={14} />
+                  </button>
+                )}
+                <button
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => api.works.removePerformer(workId, p.id).then(reload)}
+                >
+                  <X size={14} />
                 </button>
-              )}
-              <button
-                className="text-muted-foreground hover:text-destructive ml-1"
-                onClick={() => api.works.removePerformer(workId, p.id).then(reload)}
-              >
-                ×
-              </button>
+              </div>
             </div>
-          ))}
-        </div>
+            {performerCategories.map((cat) => (
+              <div key={cat.id}>
+                <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+                  <span>{cat.name}</span>
+                  {cat.description && <span className="opacity-60">({cat.description})</span>}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {cat.tags.map((tag) => (
+                    <div key={tag.id} className="group relative">
+                      <Badge
+                        variant={p.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => togglePerformerTag(p, tag.id, cat)}
+                      >
+                        {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
+                      </Badge>
+                      {tag.description && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground border shadow-md text-[10px] rounded px-2 py-1 mb-1 whitespace-nowrap z-50">
+                          {tag.description}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
         {availablePerformers.length > 0 && (
           <div className="flex gap-2">
             <select
