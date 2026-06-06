@@ -19,6 +19,8 @@ export default function WorkDetailPage() {
   const [allPerformers, setAllPerformers] = useState<Performer[]>([]);
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
+  const [performerCFDefs, setPerformerCFDefs] = useState<CustomFieldDefinition[]>([]);
+  const [performerCFValues, setPerformerCFValues] = useState<Record<number, Record<string, string | boolean>>>({});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: "", maker: "", series: "" });
   const [newFilePath, setNewFilePath] = useState("");
@@ -36,6 +38,7 @@ export default function WorkDetailPage() {
     api.tagCategories.list("performer").then(setPerformerCategories);
     api.performers.list().then(setAllPerformers);
     api.customFields.list("work").then(setCustomFields);
+    api.customFields.list("performer").then(setPerformerCFDefs);
   }, [workId]);
 
   useEffect(() => {
@@ -52,6 +55,20 @@ export default function WorkDetailPage() {
       setCustomFieldValues(values);
     }
   }, [work, customFields]);
+
+  useEffect(() => {
+    if (work && performerCFDefs.length > 0) {
+      const values: Record<number, Record<string, string | boolean>> = {};
+      work.performers.forEach((p) => {
+        values[p.id] = {};
+        performerCFDefs.forEach((cf) => {
+          const raw = p.custom_fields?.[cf.name];
+          values[p.id][cf.name] = cf.field_type === "boolean" ? Boolean(raw) : String(raw ?? "");
+        });
+      });
+      setPerformerCFValues(values);
+    }
+  }, [work, performerCFDefs]);
 
   if (!work) return <div className="text-muted-foreground">読み込み中…</div>;
 
@@ -100,6 +117,15 @@ export default function WorkDetailPage() {
       }
       await api.performers.addTag(performer.id, tagId);
     }
+    reload();
+  };
+
+  const updatePerformerCustomField = async (performerId: number, name: string, value: string | boolean) => {
+    setPerformerCFValues((prev) => ({
+      ...prev,
+      [performerId]: { ...prev[performerId], [name]: value },
+    }));
+    await api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value });
     reload();
   };
 
@@ -219,6 +245,37 @@ export default function WorkDetailPage() {
                 </div>
               </div>
             ))}
+            {performerCFDefs.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {performerCFDefs.map((cf) => (
+                  <div key={cf.id}>
+                    <Label className="text-xs">{cf.name}</Label>
+                    {cf.field_type === "boolean" ? (
+                      <div className="flex items-center h-9">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={Boolean(performerCFValues[p.id]?.[cf.name])}
+                          onChange={(e) => updatePerformerCustomField(p.id, cf.name, e.target.checked)}
+                        />
+                      </div>
+                    ) : (
+                      <Input
+                        type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
+                        value={String(performerCFValues[p.id]?.[cf.name] ?? "")}
+                        onChange={(e) =>
+                          setPerformerCFValues((prev) => ({
+                            ...prev,
+                            [p.id]: { ...prev[p.id], [cf.name]: e.target.value },
+                          }))
+                        }
+                        onBlur={(e) => updatePerformerCustomField(p.id, cf.name, e.target.value)}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         {availablePerformers.length > 0 && (

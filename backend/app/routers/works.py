@@ -63,6 +63,7 @@ def _build_work_response(work: Work) -> dict[str, Any]:
                 for pt in wp.performer.performer_tags
             ],
             "total_score": score_calculator.calculate_performer_score(wp.performer),
+            "custom_fields": wp.performer.custom_fields,
         }
         for wp in work.work_performers
     ]

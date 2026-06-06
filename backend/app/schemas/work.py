@@ -36,6 +36,7 @@ class PerformerInWork(BaseModel):
     is_main: bool
     tags: list[TagInWork] = []
     total_score: int = 0
+    custom_fields: Optional[dict[str, Any]] = None
 
     model_config = {"from_attributes": True}
 

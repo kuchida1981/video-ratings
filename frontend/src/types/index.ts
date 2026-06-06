@@ -15,6 +15,7 @@ export interface PerformerInWork {
   is_main: boolean;
   tags: TagInWork[];
   total_score: number;
+  custom_fields: Record<string, unknown> | null;
 }
 
 export interface TagInWork {
