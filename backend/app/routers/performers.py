@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm.attributes import flag_modified
 from typing import Any
 
 from app.database import get_db
@@ -155,8 +156,9 @@ def update_custom_fields(performer_id: int, fields: dict[str, Any], db: Session 
     p = db.query(Performer).filter(Performer.id == performer_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Performer not found")
-    current = p.custom_fields or {}
+    current = dict(p.custom_fields or {})
     current.update(fields)
     p.custom_fields = {k: v for k, v in current.items() if v is not None}
+    flag_modified(p, "custom_fields")
     db.commit()
     return _build_performer_response(_load_performer(db, performer_id))

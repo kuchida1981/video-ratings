@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm.attributes import flag_modified
 from typing import Any
 
 from app.database import get_db
@@ -232,8 +233,9 @@ def update_custom_fields(work_id: int, fields: dict[str, Any], db: Session = Dep
     work = db.query(Work).filter(Work.id == work_id).first()
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
-    current = work.custom_fields or {}
+    current = dict(work.custom_fields or {})
     current.update(fields)
     work.custom_fields = {k: v for k, v in current.items() if v is not None}
+    flag_modified(work, "custom_fields")
     db.commit()
     return _build_work_response(_load_work(db, work_id))

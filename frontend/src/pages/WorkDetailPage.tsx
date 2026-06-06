@@ -17,6 +17,7 @@ export default function WorkDetailPage() {
   const [categories, setCategories] = useState<TagCategory[]>([]);
   const [allPerformers, setAllPerformers] = useState<Performer[]>([]);
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: "", maker: "", series: "" });
   const [newFilePath, setNewFilePath] = useState("");
@@ -35,6 +36,17 @@ export default function WorkDetailPage() {
   useEffect(() => {
     if (work && editing) setForm({ title: work.title, maker: work.maker ?? "", series: work.series ?? "" });
   }, [editing, work]);
+
+  useEffect(() => {
+    if (work && customFields.length > 0) {
+      const values: Record<string, string | boolean> = {};
+      customFields.forEach((cf) => {
+        const raw = work.custom_fields?.[cf.name];
+        values[cf.name] = cf.field_type === "boolean" ? Boolean(raw) : String(raw ?? "");
+      });
+      setCustomFieldValues(values);
+    }
+  }, [work, customFields]);
 
   if (!work) return <div className="text-muted-foreground">読み込み中…</div>;
 
@@ -73,6 +85,7 @@ export default function WorkDetailPage() {
   };
 
   const updateCustomField = async (name: string, value: string | boolean) => {
+    setCustomFieldValues((prev) => ({ ...prev, [name]: value }));
     await api.works.updateCustomFields(workId, { [name]: value === "" ? null : value });
     reload();
   };
@@ -251,14 +264,15 @@ export default function WorkDetailPage() {
                     <input
                       type="checkbox"
                       className="h-4 w-4"
-                      defaultChecked={Boolean(work.custom_fields?.[cf.name])}
+                      checked={Boolean(customFieldValues[cf.name])}
                       onChange={(e) => updateCustomField(cf.name, e.target.checked)}
                     />
                   </div>
                 ) : (
                   <Input
                     type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
-                    defaultValue={String(work.custom_fields?.[cf.name] ?? "")}
+                    value={String(customFieldValues[cf.name] ?? "")}
+                    onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
                     onBlur={(e) => updateCustomField(cf.name, e.target.value)}
                   />
                 )}
