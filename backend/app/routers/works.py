@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
 from typing import Any
 
+from app.config import settings
 from app.database import get_db
 from app.models.models import Work, WorkFile, WorkPerformer, WorkTag, Performer, PerformerTag, Tag, TagCategory
 from app.schemas.work import (
@@ -16,6 +18,13 @@ from app.schemas.work import (
     SetMainPerformer,
 )
 from app.services.score_calculator import score_calculator
+from app.services.smb import (
+    get_smb_file_size,
+    guess_content_type,
+    register_smb_session,
+    smb_url_to_unc,
+    stream_smb_file,
+)
 
 router = APIRouter(prefix="/works", tags=["works"])
 
@@ -139,6 +148,56 @@ def add_file(work_id: int, data: WorkFileCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(f)
     return f
+
+
+@router.get("/{work_id}/files/{file_id}/stream")
+def stream_file(work_id: int, file_id: int, request: Request, db: Session = Depends(get_db)):
+    f = db.query(WorkFile).filter(WorkFile.id == file_id, WorkFile.work_id == work_id).first()
+    if not f:
+        raise HTTPException(status_code=404, detail="File not found")
+    if not f.path.startswith("smb://"):
+        raise HTTPException(status_code=400, detail="Not an SMB path")
+    if not settings.smb_username or not settings.smb_password:
+        raise HTTPException(status_code=503, detail="SMB credentials not configured")
+
+    try:
+        host, unc_path = smb_url_to_unc(f.path)
+        register_smb_session(host, settings.smb_username, settings.smb_password)
+        file_size = get_smb_file_size(unc_path)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"SMB error: {e}")
+
+    content_type = guess_content_type(f.path)
+    range_header = request.headers.get("Range")
+
+    if range_header:
+        try:
+            range_spec = range_header.removeprefix("bytes=")
+            start_str, end_str = range_spec.split("-", 1)
+            start = int(start_str)
+            end = int(end_str) if end_str else file_size - 1
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail="Invalid Range header")
+        end = min(end, file_size - 1)
+        return StreamingResponse(
+            stream_smb_file(unc_path, start, end),
+            status_code=206,
+            media_type=content_type,
+            headers={
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Content-Length": str(end - start + 1),
+                "Accept-Ranges": "bytes",
+            },
+        )
+
+    return StreamingResponse(
+        stream_smb_file(unc_path, 0, file_size - 1),
+        media_type=content_type,
+        headers={
+            "Content-Length": str(file_size),
+            "Accept-Ranges": "bytes",
+        },
+    )
 
 
 @router.delete("/{work_id}/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)

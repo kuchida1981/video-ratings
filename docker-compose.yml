@@ -21,6 +21,8 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://video_ratings:video_ratings@db:5432/video_ratings
+      SMB_USERNAME: "kosuke"  # Samba ユーザー名を設定してください
+      SMB_PASSWORD: "jG.K4-y_xXxv2QDe7EfVRjGjtZ4ghQPC"  # Samba パスワードを設定してください
     volumes:
       - ./backend:/app
     depends_on:
