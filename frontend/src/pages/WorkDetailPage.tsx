@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2, Plus, Star, UserCheck } from "lucide-react";
+import { Trash2, Plus, Star, UserCheck, Search } from "lucide-react";
 import { api } from "@/api/client";
 import type { Work, TagCategory, Performer, CustomFieldDefinition } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -100,7 +100,19 @@ export default function WorkDetailPage() {
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold">{work.title}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">{work.title}</h1>
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(
+                    [...work.performers.map((p) => `"${p.name}"`), `"${work.title}"`].join(" ")
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  <Search size={16} />
+                </a>
+              </div>
               <div className="text-sm text-muted-foreground mt-1 space-x-3">
                 {work.maker && <span>{work.maker}</span>}
                 {work.series && <span>{work.series}</span>}

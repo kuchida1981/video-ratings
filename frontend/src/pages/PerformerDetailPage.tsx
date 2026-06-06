@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { Trash2, Search } from "lucide-react";
 import { api } from "@/api/client";
 import type { CustomFieldDefinition, Performer, WorkListItem, TagCategory } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -76,7 +76,17 @@ export default function PerformerDetailPage() {
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold">{performer.name}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">{performer.name}</h1>
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(`"${performer.name}"`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  <Search size={16} />
+                </a>
+              </div>
               {performer.furigana && <div className="text-sm text-muted-foreground">{performer.furigana}</div>}
             </>
           )}
