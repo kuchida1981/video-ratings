@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2, Plus, Star, UserCheck, Search } from "lucide-react";
+import { Trash2, Plus, Star, UserCheck, Search, Play, X } from "lucide-react";
 import { api } from "@/api/client";
 import type { Work, TagCategory, Performer, CustomFieldDefinition } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,9 @@ export default function WorkDetailPage() {
   const [newFilePath, setNewFilePath] = useState("");
   const [newFileDisplayName, setNewFileDisplayName] = useState("");
   const [addPerformerId, setAddPerformerId] = useState("");
+  const [playingFileId, setPlayingFileId] = useState<number | null>(null);
+
+  const isSmbUrl = (path: string) => path.startsWith("smb://");
 
   const reload = () => api.works.get(workId).then(setWork);
 
@@ -223,15 +226,37 @@ export default function WorkDetailPage() {
       <section className="space-y-2">
         <h2 className="font-semibold">ファイルパス</h2>
         {work.files.map((f) => (
-          <div key={f.id} className="flex items-center gap-2 text-sm">
-            <code className="flex-1 bg-muted px-2 py-1 rounded text-xs">{f.path}</code>
-            {f.display_name && <span className="text-muted-foreground">{f.display_name}</span>}
-            <button
-              className="text-muted-foreground hover:text-destructive"
-              onClick={() => api.works.removeFile(workId, f.id).then(reload)}
-            >
-              <Trash2 size={14} />
-            </button>
+          <div key={f.id}>
+            <div className="flex items-center gap-2 text-sm">
+              <code className="flex-1 bg-muted px-2 py-1 rounded text-xs">{f.path}</code>
+              {f.display_name && <span className="text-muted-foreground">{f.display_name}</span>}
+              {isSmbUrl(f.path) && (
+                <button
+                  className={`${playingFileId === f.id ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+                  onClick={() => setPlayingFileId(playingFileId === f.id ? null : f.id)}
+                  title={playingFileId === f.id ? "閉じる" : "再生"}
+                >
+                  {playingFileId === f.id ? <X size={14} /> : <Play size={14} />}
+                </button>
+              )}
+              <button
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => {
+                  if (playingFileId === f.id) setPlayingFileId(null);
+                  api.works.removeFile(workId, f.id).then(reload);
+                }}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            {playingFileId === f.id && (
+              <video
+                key={f.id}
+                controls
+                className="w-full mt-2 rounded"
+                src={`/api/works/${workId}/files/${f.id}/stream`}
+              />
+            )}
           </div>
         ))}
         <div className="flex gap-2">
