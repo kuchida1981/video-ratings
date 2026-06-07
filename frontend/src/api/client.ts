@@ -118,4 +118,24 @@ export const api = {
     execute: (rows: ImportRow[]) =>
       req<ImportResult>("/import/execute", { method: "POST", body: JSON.stringify({ rows }) }),
   },
+
+  data: {
+    exportAndDownload: async () => {
+      const res = await fetch(`${BASE}/export`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail ?? res.statusText);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `video-ratings-export-${now}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    import: (payload: unknown) =>
+      req<{ message: string }>("/import", { method: "POST", body: JSON.stringify(payload) }),
+  },
 };

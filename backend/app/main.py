@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import works, performers, tags, custom_fields, search, imports
+from app.routers import works, performers, tags, custom_fields, search, imports, data
 
 app = FastAPI(title="Video Ratings API", version="0.1.0")
 
@@ -18,6 +18,7 @@ app.include_router(performers.router)
 app.include_router(tags.router)
 app.include_router(custom_fields.router)
 app.include_router(imports.router)
+app.include_router(data.router)
 
 
 @app.get("/health")

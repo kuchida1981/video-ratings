@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, X, ArrowUpDown } from "lucide-react";
+import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle } from "lucide-react";
 import { api } from "@/api/client";
-import type { WorkListItem, TagCategory, CustomFieldDefinition, ColumnDef } from "@/types";
+import type { WorkListItem, TagCategory, CustomFieldDefinition, ColumnDef, ImportPreviewResponse, ImportRow, ImportResult } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -120,6 +120,12 @@ export default function WorksPage() {
   const [newMaker, setNewMaker] = useState("");
   const [newSeries, setNewSeries] = useState("");
 
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportPreviewResponse | null>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importDragOver, setImportDragOver] = useState(false);
+
   const fetchWorks = useCallback(async () => {
     const params: Record<string, string | number | boolean | string[]> = {
       sort_by: sortBy,
@@ -189,25 +195,167 @@ export default function WorksPage() {
 
   const hasFilters = keyword || maker || series || selectedTagIds.length > 0;
 
+  const handleImportFile = async (file: File) => {
+    setImportLoading(true);
+    setImportResult(null);
+    try {
+      const data = await api.imports.preview(file);
+      setImportPreview(data);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const executeImport = async () => {
+    if (!importPreview) return;
+    setImportLoading(true);
+    try {
+      const validRows: ImportRow[] = importPreview.rows.filter((r) => r.is_valid);
+      const res = await api.imports.execute(validRows);
+      setImportResult(res);
+      setImportPreview(null);
+      fetchWorks();
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const resetImport = () => { setImportPreview(null); setImportResult(null); };
+
+  const closeBulkImport = () => {
+    setBulkImportOpen(false);
+    resetImport();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">作品一覧</h1>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus size={16} />新規登録</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>作品を登録</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div><Label>作品名 *</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="作品名" /></div>
-              <div><Label>メーカー</Label><Input value={newMaker} onChange={(e) => setNewMaker(e.target.value)} placeholder="メーカー" /></div>
-              <div><Label>シリーズ</Label><Input value={newSeries} onChange={(e) => setNewSeries(e.target.value)} placeholder="シリーズ" /></div>
-              <Button onClick={createWork} disabled={!newTitle.trim()} className="w-full">登録する</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setBulkImportOpen(true)}>
+            <Upload size={16} />一括登録
+          </Button>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus size={16} />新規登録</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>作品を登録</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div><Label>作品名 *</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="作品名" /></div>
+                <div><Label>メーカー</Label><Input value={newMaker} onChange={(e) => setNewMaker(e.target.value)} placeholder="メーカー" /></div>
+                <div><Label>シリーズ</Label><Input value={newSeries} onChange={(e) => setNewSeries(e.target.value)} placeholder="シリーズ" /></div>
+                <Button onClick={createWork} disabled={!newTitle.trim()} className="w-full">登録する</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* 一括登録モーダル */}
+      <Dialog open={bulkImportOpen} onOpenChange={closeBulkImport}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>CSVで一括登録</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            CSVファイルから作品を一括登録します。列: <code>title</code>, <code>performer_names</code>（カンマ区切り）, <code>performer_furiganas</code>（任意）, <code>directory_path</code>（任意）
+          </p>
+
+          {!importPreview && !importResult && (
+            <div
+              className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors ${
+                importDragOver ? "border-primary bg-primary/5" : "border-border"
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setImportDragOver(true); }}
+              onDragLeave={() => setImportDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setImportDragOver(false);
+                const file = e.dataTransfer.files[0];
+                if (file) handleImportFile(file);
+              }}
+            >
+              <Upload size={36} className="mx-auto text-muted-foreground mb-3" />
+              <p className="text-muted-foreground mb-4">CSVファイルをドロップ、または</p>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportFile(f); }}
+                />
+                <Button variant="outline" asChild><span>ファイルを選択</span></Button>
+              </label>
+            </div>
+          )}
+
+          {importLoading && <div className="text-center text-muted-foreground py-4">読み込み中…</div>}
+
+          {importPreview && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <span className="text-sm">全 {importPreview.rows.length} 行 / 正常 {importPreview.valid_count} 件 / エラー {importPreview.error_count} 件</span>
+                <div className="flex gap-2 ml-auto">
+                  <Button variant="outline" onClick={resetImport}>キャンセル</Button>
+                  <Button onClick={executeImport} disabled={importPreview.valid_count === 0}>
+                    {importPreview.valid_count}件をインポート
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-lg border overflow-hidden max-h-80 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="w-8 px-3 py-2"></th>
+                      <th className="text-left px-3 py-2">作品名</th>
+                      <th className="text-left px-3 py-2">出演者</th>
+                      <th className="text-left px-3 py-2">パス</th>
+                      <th className="text-left px-3 py-2">エラー</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importPreview.rows.map((row) => (
+                      <tr key={row.row_number} className={`border-t ${!row.is_valid ? "bg-destructive/5" : ""}`}>
+                        <td className="px-3 py-2 text-center">
+                          {row.is_valid
+                            ? <CheckCircle2 size={16} className="text-green-500 mx-auto" />
+                            : <XCircle size={16} className="text-destructive mx-auto" />}
+                        </td>
+                        <td className="px-3 py-2">{row.title ?? <span className="text-muted-foreground">—</span>}</td>
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {row.performer_names.map((n, i) => (
+                            <span key={i}>{n}{row.performer_furiganas[i] ? ` (${row.performer_furiganas[i]})` : ""}</span>
+                          )).reduce((acc, el, i) => i === 0 ? [el] : [...acc, ", ", el], [] as React.ReactNode[])}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{row.directory_path ?? "—"}</td>
+                        <td className="px-3 py-2 text-destructive text-xs">{row.errors.join(", ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {importResult && (
+            <div className="space-y-4">
+              <div className="rounded-lg border p-6 text-center space-y-2">
+                <CheckCircle2 size={36} className="mx-auto text-green-500" />
+                <p className="font-semibold text-lg">{importResult.created_count}件をインポートしました</p>
+                {importResult.skipped_count > 0 && <p className="text-muted-foreground text-sm">{importResult.skipped_count}件をスキップ</p>}
+                {importResult.errors.length > 0 && (
+                  <ul className="text-destructive text-sm text-left space-y-1 mt-2">
+                    {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={resetImport} variant="outline" className="flex-1">続けてインポートする</Button>
+                <Button onClick={closeBulkImport} className="flex-1">閉じる</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Search & Filters */}
       <div className="space-y-3 rounded-lg border p-4">

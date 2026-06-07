@@ -1,12 +1,11 @@
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
-import { Film, Users, Tag, Settings, Upload } from "lucide-react";
+import { Film, Users, Tag, Settings } from "lucide-react";
 import WorksPage from "@/pages/WorksPage";
 import WorkDetailPage from "@/pages/WorkDetailPage";
 import PerformersPage from "@/pages/PerformersPage";
 import PerformerDetailPage from "@/pages/PerformerDetailPage";
 import TagsPage from "@/pages/TagsPage";
-import CustomFieldsPage from "@/pages/CustomFieldsPage";
-import ImportPage from "@/pages/ImportPage";
+import SettingsPage from "@/pages/SettingsPage";
 
 function NavItem({ to, icon: Icon, label }: { to: string; icon: React.ElementType; label: string }) {
   return (
@@ -33,7 +32,6 @@ export default function App() {
           <NavItem to="/works" icon={Film} label="作品" />
           <NavItem to="/performers" icon={Users} label="出演者" />
           <NavItem to="/tags" icon={Tag} label="タグ管理" />
-          <NavItem to="/import" icon={Upload} label="インポート" />
           <NavItem to="/settings" icon={Settings} label="設定" />
         </aside>
         <main className="flex-1 overflow-auto p-6">
@@ -44,8 +42,7 @@ export default function App() {
             <Route path="/performers" element={<PerformersPage />} />
             <Route path="/performers/:id" element={<PerformerDetailPage />} />
             <Route path="/tags" element={<TagsPage />} />
-            <Route path="/settings" element={<CustomFieldsPage />} />
-            <Route path="/import" element={<ImportPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
       </div>
