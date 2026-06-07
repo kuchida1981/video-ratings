@@ -19,5 +19,5 @@
 
 ## 5. コンテナリビルドとマイグレーション実行
 
-- [ ] 5.1 `docker compose build backend` でビルドし、`docker compose up -d backend` でコンテナを再起動する
-- [ ] 5.2 `docker compose exec backend python scripts/resize_covers.py` でマイグレーションを実行し、ログで件数を確認する
+- [x] 5.1 `docker compose build backend` でビルドし、`docker compose up -d backend` でコンテナを再起動する
+- [x] 5.2 `docker compose exec backend python scripts/resize_covers.py` でマイグレーションを実行し、ログで件数を確認する
