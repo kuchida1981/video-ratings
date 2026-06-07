@@ -1,6 +1,7 @@
 import os
 from PIL import Image
 
+
 def resize_covers(directory="uploads/covers/", max_width=1200, quality=85):
     if not os.path.exists(directory):
         print(f"Directory not found: {directory}")
