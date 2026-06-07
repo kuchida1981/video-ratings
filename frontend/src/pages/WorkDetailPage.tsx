@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Trash2, Plus, Star, UserCheck, Search, Play, X } from "lucide-react";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { api } from "@/api/client";
-import type { Work, TagCategory, Performer, CustomFieldDefinition } from "@/types";
+import type { Work, TagCategory, Performer, CustomFieldDefinition, WorkFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,8 @@ export default function WorkDetailPage() {
   const [newFileDisplayName, setNewFileDisplayName] = useState("");
   const [addPerformerId, setAddPerformerId] = useState("");
   const [playingFileId, setPlayingFileId] = useState<number | null>(null);
+  const [playingFile, setPlayingFile] = useState<WorkFile | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const isSmbUrl = (path: string) => path.startsWith("smb://");
 
@@ -58,6 +60,32 @@ export default function WorkDetailPage() {
   }, [work, customFields]);
 
   useEffect(() => {
+    if (!playingFile && videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = "";
+      videoRef.current.load();
+    }
+  }, [playingFile]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onEnd = () => setPlayingFile(null);
+    const onDocChange = () => {
+      const isFullscreen = document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+      if (!isFullscreen) setPlayingFile(null);
+    };
+    video.addEventListener("webkitendfullscreen", onEnd);
+    document.addEventListener("fullscreenchange", onDocChange);
+    document.addEventListener("webkitfullscreenchange", onDocChange);
+    return () => {
+      video.removeEventListener("webkitendfullscreen", onEnd);
+      document.removeEventListener("fullscreenchange", onDocChange);
+      document.removeEventListener("webkitfullscreenchange", onDocChange);
+    };
+  }, []);
+
+  useEffect(() => {
     if (work && performerCFDefs.length > 0) {
       const values: Record<number, Record<string, string | boolean>> = {};
       work.performers.forEach((p) => {
@@ -72,6 +100,24 @@ export default function WorkDetailPage() {
   }, [work, performerCFDefs]);
 
   if (!work) return <div className="text-muted-foreground">読み込み中…</div>;
+
+  const smbFiles = work.files.filter((f) => isSmbUrl(f.path));
+
+  const handlePlay = (file: WorkFile) => {
+    setPlayingFile(file);
+    const video = videoRef.current;
+    if (!video) return;
+    video.src = `/api/works/${workId}/files/${file.id}/stream`;
+    video.load();
+    video.play().then(() => {
+      const v = video as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+      if (v.webkitEnterFullscreen) {
+        v.webkitEnterFullscreen();
+      } else {
+        video.requestFullscreen?.();
+      }
+    }).catch(() => {});
+  };
 
   const saveEdit = async () => {
     await api.works.update(workId, { title: form.title, maker: form.maker || undefined, series: form.series || undefined });
@@ -154,19 +200,44 @@ export default function WorkDetailPage() {
     <div className="space-y-6 max-w-3xl">
       {/* カバー画像 */}
       <section className="space-y-2">
-        {work.cover_image_url ? (
-          <div className="relative aspect-video rounded-lg overflow-hidden border">
-            <img src={work.cover_image_url} alt={work.title} className="w-full h-full object-cover" />
-            <button
-              onClick={deleteCover}
-              className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
-            >
-              <X size={14} />
-            </button>
+        {(work.cover_image_url || smbFiles.length > 0) ? (
+          <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+            {work.cover_image_url && (
+              <img src={work.cover_image_url} alt={work.title} className="w-full h-full object-cover" />
+            )}
+            {work.cover_image_url && (
+              <button
+                onClick={deleteCover}
+                className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+              >
+                <X size={14} />
+              </button>
+            )}
+            {smbFiles.length > 0 && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50">
+                {smbFiles.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => handlePlay(f)}
+                    className="flex items-center gap-3 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white rounded-xl px-6 py-3 text-sm font-medium transition-colors"
+                  >
+                    <Play size={20} className="fill-white shrink-0" />
+                    <span className="truncate max-w-xs">
+                      {f.display_name ?? f.path.split("/").pop()}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <CoverUploadZone onUpload={uploadCover} />
         )}
+        <video
+          ref={videoRef}
+          className="sr-only"
+          src={playingFile ? `/api/works/${workId}/files/${playingFile.id}/stream` : undefined}
+        />
       </section>
 
       {/* Header */}

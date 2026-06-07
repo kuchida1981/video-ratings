@@ -47,7 +47,7 @@ TBD - created by archiving change tile-view-and-cover-images. Update Purpose aft
 ---
 
 ### Requirement: タイルグリッドはレスポンシブで最大列数を設定できる
-タイルグリッドは画面幅に応じて自動的に列数を調整しなければならない。グローバルに設定された最大列数を超えない範囲で auto-fill する。
+タイルグリッドは画面幅に応じて自動的に列数を調整しなければならない。グローバルに設定された最大列数を超えない範囲で auto-fill する。最大列数が未設定（初回起動時）の場合は、画面幅に応じたデフォルト値を使用する。
 
 #### Scenario: 最大列数設定が反映される
 - **WHEN** ユーザーが設定画面でグリッド最大列数を 4 に設定する
@@ -60,4 +60,16 @@ TBD - created by archiving change tile-view-and-cover-images. Update Purpose aft
 #### Scenario: 最大列数設定がブラウザ再読み込み後も保持される
 - **WHEN** ユーザーが最大列数を変更した後にページを再読み込みする
 - **THEN** 変更した最大列数が復元される
+
+#### Scenario: 初回起動時（設定未保存）の画面幅 900px 未満
+- **WHEN** localStorage に列数設定がなく、画面幅が 900px 未満である
+- **THEN** デフォルト最大列数は 3 として表示される
+
+#### Scenario: 初回起動時（設定未保存）の画面幅 900px 以上 1200px 未満
+- **WHEN** localStorage に列数設定がなく、画面幅が 900px 以上 1200px 未満である
+- **THEN** デフォルト最大列数は 4 として表示される
+
+#### Scenario: 初回起動時（設定未保存）の画面幅 1200px 以上
+- **WHEN** localStorage に列数設定がなく、画面幅が 1200px 以上である
+- **THEN** デフォルト最大列数は 6 として表示される
 
