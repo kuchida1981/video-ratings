@@ -20,6 +20,7 @@ export function WorkTile({ work, onClick }: WorkTileProps) {
             src={work.cover_image_url}
             alt={work.title}
             className="w-full h-full object-cover"
+            loading="lazy"
           />
         ) : (
           <Film size={32} className="text-muted-foreground/40" />
