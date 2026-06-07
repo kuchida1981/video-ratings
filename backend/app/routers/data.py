@@ -1,7 +1,13 @@
+import io
+import json
+import shutil
+import zipfile
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -19,6 +25,8 @@ from app.models.models import (
 )
 
 router = APIRouter(prefix="", tags=["data"])
+
+COVERS_DIR = Path("uploads/covers")
 
 
 def _get_schema_version(db: Session) -> str:
@@ -39,25 +47,63 @@ def _row_to_dict(row: Any) -> dict:
 @router.get("/export")
 def export_data(db: Session = Depends(get_db)):
     schema_version = _get_schema_version(db)
-    return {
-        "schema_version": schema_version,
-        "exported_at": datetime.now(UTC).isoformat(),
-        "data": {
-            "tag_categories": [_row_to_dict(r) for r in db.query(TagCategory).all()],
-            "tags": [_row_to_dict(r) for r in db.query(Tag).all()],
-            "works": [_row_to_dict(r) for r in db.query(Work).all()],
-            "performers": [_row_to_dict(r) for r in db.query(Performer).all()],
-            "work_performers": [_row_to_dict(r) for r in db.query(WorkPerformer).all()],
-            "work_files": [_row_to_dict(r) for r in db.query(WorkFile).all()],
-            "work_tags": [_row_to_dict(r) for r in db.query(WorkTag).all()],
-            "performer_tags": [_row_to_dict(r) for r in db.query(PerformerTag).all()],
-            "custom_field_definitions": [_row_to_dict(r) for r in db.query(CustomFieldDefinition).all()],
+    data_json = json.dumps(
+        {
+            "schema_version": schema_version,
+            "exported_at": datetime.now(UTC).isoformat(),
+            "data": {
+                "tag_categories": [_row_to_dict(r) for r in db.query(TagCategory).all()],
+                "tags": [_row_to_dict(r) for r in db.query(Tag).all()],
+                "works": [_row_to_dict(r) for r in db.query(Work).all()],
+                "performers": [_row_to_dict(r) for r in db.query(Performer).all()],
+                "work_performers": [_row_to_dict(r) for r in db.query(WorkPerformer).all()],
+                "work_files": [_row_to_dict(r) for r in db.query(WorkFile).all()],
+                "work_tags": [_row_to_dict(r) for r in db.query(WorkTag).all()],
+                "performer_tags": [_row_to_dict(r) for r in db.query(PerformerTag).all()],
+                "custom_field_definitions": [_row_to_dict(r) for r in db.query(CustomFieldDefinition).all()],
+            },
         },
-    }
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("data.json", data_json)
+        for subdir in ("works", "performers"):
+            covers_subdir = COVERS_DIR / subdir
+            if covers_subdir.exists():
+                for img_path in covers_subdir.iterdir():
+                    if img_path.is_file():
+                        zf.write(img_path, arcname=f"covers/{subdir}/{img_path.name}")
+
+    buf.seek(0)
+    date_str = datetime.now(UTC).strftime("%Y-%m-%d")
+    filename = f"video-ratings-export-{date_str}.zip"
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/import")
-def import_data(payload: dict, db: Session = Depends(get_db)):
+async def import_data(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    content = await file.read()
+
+    try:
+        buf = io.BytesIO(content)
+        zf = zipfile.ZipFile(buf)
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="ZIPファイルが不正です")
+
+    if "data.json" not in zf.namelist():
+        raise HTTPException(status_code=400, detail="ZIPに data.json が含まれていません")
+
+    try:
+        payload = json.loads(zf.read("data.json").decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise HTTPException(status_code=400, detail="data.json のパースに失敗しました")
+
     schema_version = payload.get("schema_version")
     if not schema_version:
         raise HTTPException(status_code=400, detail="schema_version が指定されていません")
@@ -125,5 +171,15 @@ def import_data(payload: dict, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"インポートに失敗しました: {str(e)}")
+
+    # 画像の洗い替え（DBコミット後に実行）
+    shutil.rmtree(COVERS_DIR, ignore_errors=True)
+    COVERS_DIR.mkdir(parents=True, exist_ok=True)
+
+    cover_entries = [name for name in zf.namelist() if name.startswith("covers/") and not name.endswith("/")]
+    for entry in cover_entries:
+        dest = COVERS_DIR / Path(entry).relative_to("covers")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(zf.read(entry))
 
     return {"message": "インポートが完了しました"}

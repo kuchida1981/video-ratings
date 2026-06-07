@@ -146,11 +146,10 @@ export const api = {
       const a = document.createElement("a");
       const now = new Date().toISOString().slice(0, 10);
       a.href = url;
-      a.download = `video-ratings-export-${now}.json`;
+      a.download = `video-ratings-export-${now}.zip`;
       a.click();
       URL.revokeObjectURL(url);
     },
-    import: (payload: unknown) =>
-      req<{ message: string }>("/import", { method: "POST", body: JSON.stringify(payload) }),
+    import: (file: File) => upload<{ message: string }>("/import", file),
   },
 };
