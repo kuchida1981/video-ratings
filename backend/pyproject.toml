@@ -24,7 +24,6 @@ include = ["app*"]
 
 [tool.ruff]
 line-length = 120
-cache-dir = "~/.cache/ruff"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
