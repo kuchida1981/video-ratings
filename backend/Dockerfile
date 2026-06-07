@@ -8,8 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir Pillow>=11.0.0
 
 COPY . .
+RUN pip install --no-cache-dir -e .
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

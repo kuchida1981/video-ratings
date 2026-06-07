@@ -11,9 +11,41 @@ export function CoverUploadZone({ onUpload }: CoverUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((file: File) => {
-    if (file.type.startsWith("image/")) {
-      onUpload(file);
-    }
+    if (!file.type.startsWith("image/")) return;
+
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      const MAX_WIDTH = 1200;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_WIDTH) {
+        height = Math.round((height * MAX_WIDTH) / width);
+        width = MAX_WIDTH;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const resizedFile = new File([blob], "image.jpg", {
+                type: "image/jpeg",
+              });
+              onUpload(resizedFile);
+            }
+          },
+          "image/jpeg",
+          0.85
+        );
+      }
+    };
   }, [onUpload]);
 
   const handlePaste = useCallback((e: ClipboardEvent) => {

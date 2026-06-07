@@ -18,6 +18,7 @@ export function PerformerTile({ performer, onClick }: PerformerTileProps) {
             src={performer.cover_image_url}
             alt={performer.name}
             className="w-full h-full object-cover"
+            loading="lazy"
           />
         ) : (
           <User size={32} className="text-muted-foreground/40" />
