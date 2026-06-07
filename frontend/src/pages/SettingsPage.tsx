@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { Plus, Trash2, GripVertical, Download, Upload } from "lucide-react";
 import {
   DndContext,
@@ -65,6 +66,7 @@ function SortableRow({ def, onRemove }: { def: CustomFieldDefinition; onRemove: 
 }
 
 export default function SettingsPage() {
+  const { maxCols, setMaxCols } = useTileMaxColumns();
   const [workDefs, setWorkDefs] = useState<CustomFieldDefinition[]>([]);
   const [performerDefs, setPerformerDefs] = useState<CustomFieldDefinition[]>([]);
   const [name, setName] = useState("");
@@ -196,6 +198,23 @@ export default function SettingsPage() {
   return (
     <div className="space-y-12 max-w-lg">
       <h1 className="text-2xl font-bold">設定</h1>
+
+      {/* 表示設定セクション */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold border-b pb-2">表示設定</h2>
+        <div className="flex items-center gap-4">
+          <Label className="whitespace-nowrap">グリッド最大列数</Label>
+          <Input
+            type="number"
+            min={2}
+            max={12}
+            value={maxCols}
+            onChange={(e) => setMaxCols(parseInt(e.target.value, 10))}
+            className="w-24"
+          />
+          <span className="text-sm text-muted-foreground">列（2〜12）</span>
+        </div>
+      </section>
 
       {/* カスタム項目セクション */}
       <section className="space-y-8">

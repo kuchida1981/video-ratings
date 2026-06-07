@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2, Search } from "lucide-react";
+import { Trash2, Search, X } from "lucide-react";
 import { api } from "@/api/client";
 import type { CustomFieldDefinition, Performer, WorkListItem, TagCategory } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { WorkTile } from "@/components/WorkTile";
+import { CoverUploadZone } from "@/components/CoverUploadZone";
+import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
+import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 
 export default function PerformerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +24,8 @@ export default function PerformerDetailPage() {
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", furigana: "" });
+  const { maxCols } = useTileMaxColumns();
+  const gridStyle = useTileGridStyle(maxCols);
 
   const reload = () => {
     api.performers.get(performerId).then(setPerformer);
@@ -74,8 +80,35 @@ export default function PerformerDetailPage() {
     reload();
   };
 
+  const uploadCover = async (file: File) => {
+    await api.performers.uploadCover(performerId, file);
+    reload();
+  };
+
+  const deleteCover = async () => {
+    await api.performers.deleteCover(performerId);
+    reload();
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
+      {/* カバー画像 */}
+      <section className="space-y-2">
+        {performer.cover_image_url ? (
+          <div className="relative aspect-video rounded-lg overflow-hidden border">
+            <img src={performer.cover_image_url} alt={performer.name} className="w-full h-full object-cover" />
+            <button
+              onClick={deleteCover}
+              className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <CoverUploadZone onUpload={uploadCover} />
+        )}
+      </section>
+
       <div className="flex items-start justify-between">
         <div>
           {editing ? (
@@ -176,26 +209,15 @@ export default function PerformerDetailPage() {
       {/* Works */}
       <section className="space-y-2">
         <h2 className="font-semibold">出演作品 ({works.length})</h2>
-        <div className="rounded-lg border overflow-hidden">
-          <table className="w-full text-sm">
-            <tbody>
-              {works.map((w) => (
-                <tr
-                  key={w.id}
-                  className="border-t first:border-0 hover:bg-muted/30 cursor-pointer"
-                  onClick={() => navigate(`/works/${w.id}`)}
-                >
-                  <td className="px-4 py-2 font-medium">{w.title}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{w.maker ?? "—"}</td>
-                  <td className="px-4 py-2 text-right font-mono">{w.total_score}</td>
-                </tr>
-              ))}
-              {works.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">出演作品なし</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {works.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">出演作品なし</p>
+        ) : (
+          <div className="grid gap-3" style={gridStyle}>
+            {works.map((w) => (
+              <WorkTile key={w.id} work={w} onClick={() => navigate(`/works/${w.id}`)} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

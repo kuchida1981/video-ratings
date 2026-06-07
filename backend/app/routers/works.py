@@ -1,6 +1,7 @@
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
@@ -92,6 +93,7 @@ def _build_work_response(work: Work) -> dict[str, Any]:
         "performers": performers,
         "tags": tags,
         "total_score": total_score,
+        "cover_image_url": f"/static/covers/{work.cover_image_path}" if work.cover_image_path else None,
     }
 
 
@@ -119,6 +121,12 @@ def list_works(db: Session = Depends(get_db)):
                 "series": w.series,
                 "created_at": w.created_at,
                 "total_score": score_calculator.calculate_work_total_score(w),
+                "performers": [{"id": wp.performer.id, "name": wp.performer.name} for wp in w.work_performers],
+                "custom_fields": w.custom_fields,
+                "tags": [
+                    {"id": wt.tag.id, "name": wt.tag.name, "category_id": wt.tag.category_id} for wt in w.work_tags
+                ],
+                "cover_image_url": f"/static/covers/{w.cover_image_path}" if w.cover_image_path else None,
             }
         )
     return result
@@ -310,6 +318,48 @@ def remove_tag(work_id: int, tag_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tag association not found")
     db.delete(wt)
     db.commit()
+    return _build_work_response(_load_work(db, work_id))
+
+
+_ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
+@router.post("/{work_id}/cover", response_model=WorkResponse)
+async def upload_cover(work_id: int, file: UploadFile, db: Session = Depends(get_db)):
+    work = db.query(Work).filter(Work.id == work_id).first()
+    if not work:
+        raise HTTPException(status_code=404, detail="Work not found")
+    ext = Path(file.filename or "image.jpg").suffix.lower() or ".jpg"
+    if ext not in _ALLOWED_IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail="Unsupported image format")
+    covers_dir = Path("uploads/covers/works")
+    covers_dir.mkdir(parents=True, exist_ok=True)
+    rel_path = f"works/{work_id}{ext}"
+    file_path = Path("uploads/covers") / rel_path
+    if work.cover_image_path and work.cover_image_path != rel_path:
+        try:
+            (Path("uploads/covers") / work.cover_image_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+    contents = await file.read()
+    file_path.write_bytes(contents)
+    work.cover_image_path = rel_path
+    db.commit()
+    return _build_work_response(_load_work(db, work_id))
+
+
+@router.delete("/{work_id}/cover", response_model=WorkResponse)
+def delete_cover(work_id: int, db: Session = Depends(get_db)):
+    work = db.query(Work).filter(Work.id == work_id).first()
+    if not work:
+        raise HTTPException(status_code=404, detail="Work not found")
+    if work.cover_image_path:
+        try:
+            (Path("uploads/covers") / work.cover_image_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+        work.cover_image_path = None
+        db.commit()
     return _build_work_response(_load_work(db, work_id))
 
 

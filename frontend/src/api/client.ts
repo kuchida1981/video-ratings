@@ -26,6 +26,17 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+async function upload<T>(path: string, file: File): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE}${path}`, { method: "POST", body: form });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail ?? res.statusText);
+  }
+  return res.json();
+}
+
 // Works
 export const api = {
   works: {
@@ -47,6 +58,8 @@ export const api = {
     removeTag: (id: number, tagId: number) => req<Work>(`/works/${id}/tags/${tagId}`, { method: "DELETE" }),
     updateCustomFields: (id: number, fields: Record<string, unknown>) =>
       req<Work>(`/works/${id}/custom-fields`, { method: "PATCH", body: JSON.stringify(fields) }),
+    uploadCover: (id: number, file: File) => upload<Work>(`/works/${id}/cover`, file),
+    deleteCover: (id: number) => req<Work>(`/works/${id}/cover`, { method: "DELETE" }),
     search: (params: Record<string, string | number | boolean | string[]>) => {
       const qs = new URLSearchParams();
       for (const [k, v] of Object.entries(params)) {
@@ -70,6 +83,8 @@ export const api = {
     removeTag: (id: number, tagId: number) => req<Performer>(`/performers/${id}/tags/${tagId}`, { method: "DELETE" }),
     updateCustomFields: (id: number, fields: Record<string, unknown>) =>
       req<Performer>(`/performers/${id}/custom-fields`, { method: "PATCH", body: JSON.stringify(fields) }),
+    uploadCover: (id: number, file: File) => upload<Performer>(`/performers/${id}/cover`, file),
+    deleteCover: (id: number) => req<Performer>(`/performers/${id}/cover`, { method: "DELETE" }),
   },
 
   tagCategories: {

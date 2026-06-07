@@ -18,6 +18,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api/, ""),
       },
+      "/static": {
+        target: "http://backend:8000",
+        changeOrigin: true,
+      },
     },
   },
   test: {

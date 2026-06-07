@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 export interface WorkFile {
   id: number;
   work_id: number;
@@ -37,6 +35,7 @@ export interface Work {
   performers: PerformerInWork[];
   tags: TagInWork[];
   total_score: number;
+  cover_image_url: string | null;
 }
 
 export interface WorkListItem {
@@ -49,6 +48,7 @@ export interface WorkListItem {
   performers: { id: number; name: string }[];
   custom_fields: Record<string, unknown> | null;
   tags: { id: number; name: string; category_id: number }[];
+  cover_image_url: string | null;
 }
 
 export interface TagSummary {
@@ -67,6 +67,7 @@ export interface Performer {
   tags: TagSummary[];
   total_score: number;
   work_count: number;
+  cover_image_url: string | null;
 }
 
 export interface Tag {
@@ -118,12 +119,3 @@ export interface ImportResult {
   errors: string[];
 }
 
-export interface ColumnDef<T> {
-  id: string;
-  label: string;
-  required: boolean;
-  defaultVisible: boolean;
-  width: string;
-  align?: "left" | "right";
-  render: (item: T) => ReactNode;
-}

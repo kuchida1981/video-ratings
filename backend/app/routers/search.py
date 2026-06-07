@@ -68,6 +68,7 @@ def search_works(
             "performers": [{"id": wp.performer.id, "name": wp.performer.name} for wp in w.work_performers],
             "custom_fields": w.custom_fields,
             "tags": [{"id": wt.tag.id, "name": wt.tag.name, "category_id": wt.tag.category_id} for wt in w.work_tags],
+            "cover_image_url": f"/static/covers/{w.cover_image_path}" if w.cover_image_path else None,
         }
         for w in works
     ]
