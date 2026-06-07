@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
 
 const STORAGE_KEY = "tileGridMaxColumns";
-const DEFAULT_MAX_COLS = 6;
+
+function getDefaultCols(): number {
+  if (window.innerWidth < 900) return 3;
+  if (window.innerWidth < 1200) return 4;
+  return 6;
+}
 
 export function useTileMaxColumns() {
   const [maxCols, setMaxColsState] = useState<number>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     const parsed = stored ? parseInt(stored, 10) : NaN;
-    return isNaN(parsed) ? DEFAULT_MAX_COLS : Math.min(12, Math.max(2, parsed));
+    return isNaN(parsed) ? getDefaultCols() : Math.min(12, Math.max(2, parsed));
   });
 
   useEffect(() => {

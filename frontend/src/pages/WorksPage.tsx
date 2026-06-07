@@ -252,14 +252,14 @@ export default function WorksPage() {
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-3 text-muted-foreground" />
             <Input
-              className="pl-9"
+              className="pl-9 h-11"
               placeholder="作品名・出演者・メーカー・シリーズで検索"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
           </div>
-          <Input className="w-40" placeholder="メーカー" value={maker} onChange={(e) => setMaker(e.target.value)} />
-          <Input className="w-40" placeholder="シリーズ" value={series} onChange={(e) => setSeries(e.target.value)} />
+          <Input className="w-40 h-11" placeholder="メーカー" value={maker} onChange={(e) => setMaker(e.target.value)} />
+          <Input className="w-40 h-11" placeholder="シリーズ" value={series} onChange={(e) => setSeries(e.target.value)} />
           {hasFilters && (
             <Button variant="outline" onClick={resetFilters}><X size={16} />リセット</Button>
           )}
@@ -273,7 +273,7 @@ export default function WorksPage() {
                 <Badge
                   key={tag.id}
                   variant={selectedTagIds.includes(tag.id) ? "default" : "outline"}
-                  className="cursor-pointer"
+                  className="cursor-pointer py-1.5"
                   onClick={() => toggleTag(tag.id)}
                 >
                   {tag.name}{tag.score != null ? ` (+${tag.score})` : ""}
