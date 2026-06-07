@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.models import Performer, Work, WorkPerformer
+from app.models.models import Performer, Work, WorkFile, WorkPerformer
 from app.schemas.imports import (
     ImportExecuteRequest,
     ImportPreviewResponse,
@@ -72,10 +72,12 @@ def execute_import(data: ImportExecuteRequest, db: Session = Depends(get_db)):
             continue
         try:
             work = Work(title=row.title, custom_fields={})
-            if row.directory_path:
-                work.files = []
             db.add(work)
             db.flush()
+
+            if row.directory_path:
+                work_file = WorkFile(work_id=work.id, path=row.directory_path)
+                db.add(work_file)
 
             for idx, name in enumerate(row.performer_names):
                 furigana = row.performer_furiganas[idx] if idx < len(row.performer_furiganas) else None

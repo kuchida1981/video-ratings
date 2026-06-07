@@ -119,7 +119,7 @@ def get_performer_works(performer_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{performer_id}/tags/{tag_id}", response_model=PerformerResponse)
 def add_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
-    _load_performer(db, performer_id)
+    p = _load_performer(db, performer_id)
     tag = db.query(Tag).options(joinedload(Tag.category)).filter(Tag.id == tag_id).first()
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
@@ -138,7 +138,7 @@ def add_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
     if not existing:
         db.add(PerformerTag(performer_id=performer_id, tag_id=tag_id))
         db.commit()
-    return _build_performer_response(_load_performer(db, performer_id))
+    return _build_performer_response(p)
 
 
 @router.delete("/{performer_id}/tags/{tag_id}", response_model=PerformerResponse)
