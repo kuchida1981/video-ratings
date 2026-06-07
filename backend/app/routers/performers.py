@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Any
 
@@ -158,16 +157,26 @@ def remove_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
     return _build_performer_response(_load_performer(db, performer_id))
 
 
+_ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
 @router.post("/{performer_id}/cover", response_model=PerformerResponse)
 async def upload_cover(performer_id: int, file: UploadFile, db: Session = Depends(get_db)):
     p = db.query(Performer).filter(Performer.id == performer_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Performer not found")
     ext = Path(file.filename or "image.jpg").suffix.lower() or ".jpg"
+    if ext not in _ALLOWED_IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail="Unsupported image format")
     covers_dir = Path("uploads/covers/performers")
     covers_dir.mkdir(parents=True, exist_ok=True)
     rel_path = f"performers/{performer_id}{ext}"
     file_path = Path("uploads/covers") / rel_path
+    if p.cover_image_path and p.cover_image_path != rel_path:
+        try:
+            (Path("uploads/covers") / p.cover_image_path).unlink(missing_ok=True)
+        except Exception:
+            pass
     contents = await file.read()
     file_path.write_bytes(contents)
     p.cover_image_path = rel_path
@@ -181,9 +190,10 @@ def delete_cover(performer_id: int, db: Session = Depends(get_db)):
     if not p:
         raise HTTPException(status_code=404, detail="Performer not found")
     if p.cover_image_path:
-        file_path = Path("uploads/covers") / p.cover_image_path
-        if file_path.exists():
-            os.remove(file_path)
+        try:
+            (Path("uploads/covers") / p.cover_image_path).unlink(missing_ok=True)
+        except Exception:
+            pass
         p.cover_image_path = None
         db.commit()
     return _build_performer_response(_load_performer(db, performer_id))

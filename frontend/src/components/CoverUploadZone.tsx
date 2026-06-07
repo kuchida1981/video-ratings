@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Upload, Clipboard } from "lucide-react";
 
 interface CoverUploadZoneProps {
@@ -25,21 +25,20 @@ export function CoverUploadZone({ onUpload }: CoverUploadZoneProps) {
     }
   }, [handleFile]);
 
-  const onFocus = () => {
-    setFocused(true);
-    window.addEventListener("paste", handlePaste);
-  };
-
-  const onBlur = () => {
-    setFocused(false);
-    window.removeEventListener("paste", handlePaste);
-  };
+  useEffect(() => {
+    if (focused) {
+      window.addEventListener("paste", handlePaste);
+      return () => {
+        window.removeEventListener("paste", handlePaste);
+      };
+    }
+  }, [focused, handlePaste]);
 
   return (
     <div
       tabIndex={0}
-      onFocus={onFocus}
-      onBlur={onBlur}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {

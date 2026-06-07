@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Any
 
@@ -322,16 +321,26 @@ def remove_tag(work_id: int, tag_id: int, db: Session = Depends(get_db)):
     return _build_work_response(_load_work(db, work_id))
 
 
+_ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
 @router.post("/{work_id}/cover", response_model=WorkResponse)
 async def upload_cover(work_id: int, file: UploadFile, db: Session = Depends(get_db)):
     work = db.query(Work).filter(Work.id == work_id).first()
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
     ext = Path(file.filename or "image.jpg").suffix.lower() or ".jpg"
+    if ext not in _ALLOWED_IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail="Unsupported image format")
     covers_dir = Path("uploads/covers/works")
     covers_dir.mkdir(parents=True, exist_ok=True)
     rel_path = f"works/{work_id}{ext}"
     file_path = Path("uploads/covers") / rel_path
+    if work.cover_image_path and work.cover_image_path != rel_path:
+        try:
+            (Path("uploads/covers") / work.cover_image_path).unlink(missing_ok=True)
+        except Exception:
+            pass
     contents = await file.read()
     file_path.write_bytes(contents)
     work.cover_image_path = rel_path
@@ -345,9 +354,10 @@ def delete_cover(work_id: int, db: Session = Depends(get_db)):
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
     if work.cover_image_path:
-        file_path = Path("uploads/covers") / work.cover_image_path
-        if file_path.exists():
-            os.remove(file_path)
+        try:
+            (Path("uploads/covers") / work.cover_image_path).unlink(missing_ok=True)
+        except Exception:
+            pass
         work.cover_image_path = None
         db.commit()
     return _build_work_response(_load_work(db, work_id))
