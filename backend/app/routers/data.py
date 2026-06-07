@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -41,7 +41,7 @@ def export_data(db: Session = Depends(get_db)):
     schema_version = _get_schema_version(db)
     return {
         "schema_version": schema_version,
-        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "exported_at": datetime.now(UTC).isoformat(),
         "data": {
             "tag_categories": [_row_to_dict(r) for r in db.query(TagCategory).all()],
             "tags": [_row_to_dict(r) for r in db.query(Tag).all()],
@@ -114,10 +114,12 @@ def import_data(payload: dict, db: Session = Depends(get_db)):
             ("work_files", "id"),
             ("custom_field_definitions", "id"),
         ]:
-            db.execute(text(
-                f"SELECT setval(pg_get_serial_sequence('{table}', '{col}'),"
-                f" COALESCE((SELECT MAX({col}) FROM {table}), 1))"
-            ))
+            db.execute(
+                text(
+                    f"SELECT setval(pg_get_serial_sequence('{table}', '{col}'),"
+                    f" COALESCE((SELECT MAX({col}) FROM {table}), 1))"
+                )
+            )
 
         db.commit()
     except Exception as e:

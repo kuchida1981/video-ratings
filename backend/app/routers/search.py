@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, and_, cast, Float
-from sqlalchemy.dialects.postgresql import JSONB
-from typing import Optional
 
 from app.database import get_db
-from app.models.models import Work, WorkPerformer, Performer, PerformerTag, WorkTag, Tag
+from app.models.models import Performer, PerformerTag, Work, WorkPerformer, WorkTag
 from app.schemas.work import WorkListResponse
 from app.services.score_calculator import score_calculator
 
@@ -14,30 +12,38 @@ router = APIRouter(prefix="/works/search", tags=["search"])
 
 @router.get("", response_model=list[WorkListResponse])
 def search_works(
-    keyword: Optional[str] = Query(None),
-    tag_ids: Optional[list[int]] = Query(None),
-    maker: Optional[str] = Query(None),
-    series: Optional[str] = Query(None),
+    keyword: str | None = Query(None),
+    tag_ids: list[int] | None = Query(None),
+    maker: str | None = Query(None),
+    series: str | None = Query(None),
     sort_by: str = Query("created_at"),
     sort_desc: bool = Query(True),
     db: Session = Depends(get_db),
 ):
     q = db.query(Work).options(
-        joinedload(Work.work_performers).joinedload(WorkPerformer.performer).joinedload(Performer.performer_tags).joinedload(PerformerTag.tag),
+        joinedload(Work.work_performers)
+        .joinedload(WorkPerformer.performer)
+        .joinedload(Performer.performer_tags)
+        .joinedload(PerformerTag.tag),
         joinedload(Work.work_tags).joinedload(WorkTag.tag),
     )
 
     if keyword:
         like = f"%{keyword}%"
-        q = q.outerjoin(Work.work_performers).outerjoin(WorkPerformer.performer).filter(
-            or_(
-                Work.title.ilike(like),
-                Work.maker.ilike(like),
-                Work.series.ilike(like),
-                Performer.name.ilike(like),
-                Performer.furigana.ilike(like),
+        q = (
+            q.outerjoin(Work.work_performers)
+            .outerjoin(WorkPerformer.performer)
+            .filter(
+                or_(
+                    Work.title.ilike(like),
+                    Work.maker.ilike(like),
+                    Work.series.ilike(like),
+                    Performer.name.ilike(like),
+                    Performer.furigana.ilike(like),
+                )
             )
-        ).distinct()
+            .distinct()
+        )
 
     if maker:
         q = q.filter(Work.maker.ilike(f"%{maker}%"))

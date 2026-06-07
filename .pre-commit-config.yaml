@@ -1,0 +1,37 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff lint (backend)
+        entry: bash -c 'if [ "$(docker compose ps backend --format {{.State}})" = "running" ]; then docker compose exec -T backend ruff check app/; else echo "Backend container not running, skipping ruff lint"; fi'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format check (backend)
+        entry: bash -c 'if [ "$(docker compose ps backend --format {{.State}})" = "running" ]; then docker compose exec -T backend ruff format --check app/; else echo "Backend container not running, skipping ruff format check"; fi'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: pytest-unit
+        name: pytest unit tests (backend)
+        entry: bash -c 'if [ "$(docker compose ps backend --format {{.State}})" = "running" ]; then docker compose exec -T backend pytest -m unit --no-cov -q; else echo "Backend container not running, skipping pytest"; fi'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: eslint
+        name: eslint (frontend)
+        entry: bash -c 'if [ "$(docker compose ps frontend --format {{.State}})" = "running" ]; then docker compose exec -T frontend npm run lint; else echo "Frontend container not running, skipping eslint"; fi'
+        language: system
+        types_or: [ts, tsx, javascript]
+        pass_filenames: false
+
+      - id: tsc
+        name: typescript type check (frontend)
+        entry: bash -c 'if [ "$(docker compose ps frontend --format {{.State}})" = "running" ]; then docker compose exec -T frontend npx tsc --noEmit; else echo "Frontend container not running, skipping tsc"; fi'
+        language: system
+        types_or: [ts, tsx]
+        pass_filenames: false

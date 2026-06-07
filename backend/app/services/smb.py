@@ -1,6 +1,6 @@
 import asyncio
 import mimetypes
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 from urllib.parse import urlparse
 
 import smbclient

@@ -1,13 +1,12 @@
 from pydantic import BaseModel
-from typing import Optional
 
 
 class ImportRow(BaseModel):
     row_number: int
-    title: Optional[str]
+    title: str | None
     performer_names: list[str]
     performer_furiganas: list[str]
-    directory_path: Optional[str]
+    directory_path: str | None
     errors: list[str] = []
     is_valid: bool = True
 

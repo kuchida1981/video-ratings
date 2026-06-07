@@ -3,15 +3,15 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models.models import TagCategory, Tag
+from app.models.models import Tag, TagCategory
 from app.schemas.tag import (
-    TagCategoryCreate,
-    TagCategoryUpdate,
-    TagCategoryResponse,
-    TagCreate,
-    TagUpdate,
-    TagResponse,
     ReorderRequest,
+    TagCategoryCreate,
+    TagCategoryResponse,
+    TagCategoryUpdate,
+    TagCreate,
+    TagResponse,
+    TagUpdate,
 )
 
 router = APIRouter(tags=["tags"])

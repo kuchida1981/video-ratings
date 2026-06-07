@@ -1,11 +1,12 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
-from typing import Any
 
 from app.database import get_db
-from app.models.models import Performer, WorkPerformer, PerformerTag, Tag, TagCategory, Work, WorkTag
-from app.schemas.performer import PerformerCreate, PerformerUpdate, PerformerResponse
+from app.models.models import Performer, PerformerTag, Tag, Work, WorkPerformer, WorkTag
+from app.schemas.performer import PerformerCreate, PerformerResponse, PerformerUpdate
 from app.schemas.work import WorkListResponse
 from app.services.score_calculator import score_calculator
 
@@ -15,9 +16,7 @@ router = APIRouter(prefix="/performers", tags=["performers"])
 def _load_performer(db: Session, performer_id: int) -> Performer:
     p = (
         db.query(Performer)
-        .options(
-            joinedload(Performer.performer_tags).joinedload(PerformerTag.tag)
-        )
+        .options(joinedload(Performer.performer_tags).joinedload(PerformerTag.tag))
         .filter(Performer.id == performer_id)
         .first()
     )
@@ -96,7 +95,10 @@ def get_performer_works(performer_id: int, db: Session = Depends(get_db)):
         db.query(Work)
         .join(WorkPerformer)
         .options(
-            joinedload(Work.work_performers).joinedload(WorkPerformer.performer).joinedload(Performer.performer_tags).joinedload(PerformerTag.tag),
+            joinedload(Work.work_performers)
+            .joinedload(WorkPerformer.performer)
+            .joinedload(Performer.performer_tags)
+            .joinedload(PerformerTag.tag),
             joinedload(Work.work_tags).joinedload(WorkTag.tag),
         )
         .filter(WorkPerformer.performer_id == performer_id)
@@ -130,20 +132,18 @@ def add_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
             PerformerTag.performer_id == performer_id, PerformerTag.tag_id.in_(same_cat_tag_ids)
         ).delete(synchronize_session=False)
 
-    existing = db.query(PerformerTag).filter(
-        PerformerTag.performer_id == performer_id, PerformerTag.tag_id == tag_id
-    ).first()
+    existing = (
+        db.query(PerformerTag).filter(PerformerTag.performer_id == performer_id, PerformerTag.tag_id == tag_id).first()
+    )
     if not existing:
         db.add(PerformerTag(performer_id=performer_id, tag_id=tag_id))
         db.commit()
-    return _build_performer_response(_load_performer(db, performer_id))
+    return _build_performer_response(p)
 
 
 @router.delete("/{performer_id}/tags/{tag_id}", response_model=PerformerResponse)
 def remove_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
-    pt = db.query(PerformerTag).filter(
-        PerformerTag.performer_id == performer_id, PerformerTag.tag_id == tag_id
-    ).first()
+    pt = db.query(PerformerTag).filter(PerformerTag.performer_id == performer_id, PerformerTag.tag_id == tag_id).first()
     if not pt:
         raise HTTPException(status_code=404, detail="Tag association not found")
     db.delete(pt)

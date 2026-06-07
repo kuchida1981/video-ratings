@@ -1,11 +1,12 @@
-from pydantic import BaseModel
-from typing import Any, Dict, Optional
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
 
 
 class PerformerBase(BaseModel):
     name: str
-    furigana: Optional[str] = None
+    furigana: str | None = None
 
 
 class PerformerCreate(PerformerBase):
@@ -13,21 +14,21 @@ class PerformerCreate(PerformerBase):
 
 
 class PerformerUpdate(BaseModel):
-    name: Optional[str] = None
-    furigana: Optional[str] = None
+    name: str | None = None
+    furigana: str | None = None
 
 
 class TagSummary(BaseModel):
     id: int
     name: str
-    score: Optional[int]
+    score: int | None
 
     model_config = {"from_attributes": True}
 
 
 class PerformerResponse(PerformerBase):
     id: int
-    custom_fields: Optional[Dict[str, Any]] = None
+    custom_fields: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
     tags: list[TagSummary] = []
