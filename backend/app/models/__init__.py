@@ -1,14 +1,14 @@
 from app.models.models import (
     Base,
-    Work,
-    Performer,
-    WorkPerformer,
-    WorkFile,
-    TagCategory,
-    Tag,
-    WorkTag,
-    PerformerTag,
     CustomFieldDefinition,
+    Performer,
+    PerformerTag,
+    Tag,
+    TagCategory,
+    Work,
+    WorkFile,
+    WorkPerformer,
+    WorkTag,
 )
 
 __all__ = [

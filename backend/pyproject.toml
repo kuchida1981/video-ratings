@@ -20,3 +20,38 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+markers = ["unit", "integration"]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = [
+    "app/routers/*",
+    "app/main.py",
+    "app/database.py",
+    "app/config.py",
+    "app/services/smb.py",
+    "alembic/*",
+]
+
+[tool.coverage.report]
+fail_under = 80

@@ -1,0 +1,37 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff lint (backend)
+        entry: docker compose exec -T backend ruff check app/
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format check (backend)
+        entry: docker compose exec -T backend ruff format --check app/
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: pytest-unit
+        name: pytest unit tests (backend)
+        entry: docker compose exec -T backend pytest -m unit --no-cov -q
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: eslint
+        name: eslint (frontend)
+        entry: docker compose exec -T frontend npm run lint
+        language: system
+        types_or: [ts, tsx, javascript]
+        pass_filenames: false
+
+      - id: tsc
+        name: typescript type check (frontend)
+        entry: docker compose exec -T frontend npx tsc --noEmit
+        language: system
+        types_or: [ts, tsx]
+        pass_filenames: false

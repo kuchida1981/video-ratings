@@ -1,4 +1,4 @@
-from app.models.models import Work, Performer
+from app.models.models import Performer, Work
 
 
 class ScoreCalculator:

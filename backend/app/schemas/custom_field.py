@@ -1,10 +1,10 @@
-from pydantic import BaseModel
-from typing import Optional
-from enum import Enum
 from datetime import datetime
+from enum import StrEnum
+
+from pydantic import BaseModel
 
 
-class FieldType(str, Enum):
+class FieldType(StrEnum):
     text = "text"
     number = "number"
     date = "date"
@@ -18,7 +18,7 @@ class CustomFieldDefinitionCreate(BaseModel):
 
 
 class CustomFieldDefinitionUpdate(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class CustomFieldDefinitionResponse(BaseModel):

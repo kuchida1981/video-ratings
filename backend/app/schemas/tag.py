@@ -1,9 +1,9 @@
+from enum import StrEnum
+
 from pydantic import BaseModel
-from typing import Optional
-from enum import Enum
 
 
-class EntityType(str, Enum):
+class EntityType(StrEnum):
     work = "work"
     performer = "performer"
 
@@ -12,7 +12,7 @@ class TagCategoryBase(BaseModel):
     name: str
     entity_type: EntityType
     is_multi_select: bool = True
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class TagCategoryCreate(TagCategoryBase):
@@ -20,15 +20,15 @@ class TagCategoryCreate(TagCategoryBase):
 
 
 class TagCategoryUpdate(BaseModel):
-    name: Optional[str] = None
-    is_multi_select: Optional[bool] = None
-    description: Optional[str] = None
+    name: str | None = None
+    is_multi_select: bool | None = None
+    description: str | None = None
 
 
 class TagBase(BaseModel):
     name: str
-    score: Optional[int] = None
-    description: Optional[str] = None
+    score: int | None = None
+    description: str | None = None
 
 
 class TagCreate(TagBase):
@@ -36,9 +36,9 @@ class TagCreate(TagBase):
 
 
 class TagUpdate(BaseModel):
-    name: Optional[str] = None
-    score: Optional[int] = None
-    description: Optional[str] = None
+    name: str | None = None
+    score: int | None = None
+    description: str | None = None
 
 
 class ReorderRequest(BaseModel):

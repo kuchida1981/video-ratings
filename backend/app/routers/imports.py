@@ -1,15 +1,16 @@
 import csv
 import io
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.models import Work, Performer, WorkPerformer
+from app.models.models import Performer, Work, WorkPerformer
 from app.schemas.imports import (
-    ImportPreviewResponse,
-    ImportRow,
     ImportExecuteRequest,
+    ImportPreviewResponse,
     ImportResult,
+    ImportRow,
 )
 
 router = APIRouter(prefix="/import", tags=["import"])
@@ -72,7 +73,6 @@ def execute_import(data: ImportExecuteRequest, db: Session = Depends(get_db)):
         try:
             work = Work(title=row.title, custom_fields={})
             if row.directory_path:
-                from app.models.models import WorkFile
                 work.files = []
             db.add(work)
             db.flush()

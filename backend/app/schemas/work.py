@@ -1,11 +1,12 @@
-from pydantic import BaseModel
-from typing import Optional, Any
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
 
 
 class WorkFileBase(BaseModel):
     path: str
-    display_name: Optional[str] = None
+    display_name: str | None = None
     order: int = 0
 
 
@@ -23,7 +24,7 @@ class WorkFileResponse(WorkFileBase):
 class TagInWork(BaseModel):
     id: int
     name: str
-    score: Optional[int]
+    score: int | None
     category_id: int
 
     model_config = {"from_attributes": True}
@@ -32,20 +33,20 @@ class TagInWork(BaseModel):
 class PerformerInWork(BaseModel):
     id: int
     name: str
-    furigana: Optional[str]
+    furigana: str | None
     is_main: bool
     tags: list[TagInWork] = []
     total_score: int = 0
-    custom_fields: Optional[dict[str, Any]] = None
+    custom_fields: dict[str, Any] | None = None
 
     model_config = {"from_attributes": True}
 
 
 class WorkBase(BaseModel):
     title: str
-    maker: Optional[str] = None
-    series: Optional[str] = None
-    custom_fields: Optional[dict[str, Any]] = None
+    maker: str | None = None
+    series: str | None = None
+    custom_fields: dict[str, Any] | None = None
 
 
 class WorkCreate(WorkBase):
@@ -53,10 +54,10 @@ class WorkCreate(WorkBase):
 
 
 class WorkUpdate(BaseModel):
-    title: Optional[str] = None
-    maker: Optional[str] = None
-    series: Optional[str] = None
-    custom_fields: Optional[dict[str, Any]] = None
+    title: str | None = None
+    maker: str | None = None
+    series: str | None = None
+    custom_fields: dict[str, Any] | None = None
 
 
 class WorkResponse(WorkBase):
@@ -87,12 +88,12 @@ class TagInWorkList(BaseModel):
 class WorkListResponse(BaseModel):
     id: int
     title: str
-    maker: Optional[str]
-    series: Optional[str]
+    maker: str | None
+    series: str | None
     created_at: datetime
     total_score: int = 0
     performers: list[PerformerNameOnly] = []
-    custom_fields: Optional[dict[str, Any]] = None
+    custom_fields: dict[str, Any] | None = None
     tags: list[TagInWorkList] = []
 
     model_config = {"from_attributes": True}

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import works, performers, tags, custom_fields, search, imports, data
+from app.routers import custom_fields, data, imports, performers, search, tags, works
 
 app = FastAPI(title="Video Ratings API", version="0.1.0")
 

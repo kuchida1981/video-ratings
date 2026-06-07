@@ -1,21 +1,22 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
-from typing import Any
 
 from app.config import settings
 from app.database import get_db
-from app.models.models import Work, WorkFile, WorkPerformer, WorkTag, Performer, PerformerTag, Tag, TagCategory
+from app.models.models import Performer, PerformerTag, Tag, Work, WorkFile, WorkPerformer, WorkTag
 from app.schemas.work import (
-    WorkCreate,
-    WorkUpdate,
-    WorkResponse,
-    WorkListResponse,
-    WorkFileCreate,
-    WorkFileResponse,
     AddPerformerToWork,
     SetMainPerformer,
+    WorkCreate,
+    WorkFileCreate,
+    WorkFileResponse,
+    WorkListResponse,
+    WorkResponse,
+    WorkUpdate,
 )
 from app.services.score_calculator import score_calculator
 from app.services.smb import (
@@ -33,7 +34,10 @@ def _load_work(db: Session, work_id: int) -> Work:
     work = (
         db.query(Work)
         .options(
-            joinedload(Work.work_performers).joinedload(WorkPerformer.performer).joinedload(Performer.performer_tags).joinedload(PerformerTag.tag),
+            joinedload(Work.work_performers)
+            .joinedload(WorkPerformer.performer)
+            .joinedload(Performer.performer_tags)
+            .joinedload(PerformerTag.tag),
             joinedload(Work.files),
             joinedload(Work.work_tags).joinedload(WorkTag.tag),
         )
@@ -96,7 +100,10 @@ def list_works(db: Session = Depends(get_db)):
     works = (
         db.query(Work)
         .options(
-            joinedload(Work.work_performers).joinedload(WorkPerformer.performer).joinedload(Performer.performer_tags).joinedload(PerformerTag.tag),
+            joinedload(Work.work_performers)
+            .joinedload(WorkPerformer.performer)
+            .joinedload(Performer.performer_tags)
+            .joinedload(PerformerTag.tag),
             joinedload(Work.work_tags).joinedload(WorkTag.tag),
         )
         .order_by(Work.created_at.desc())
@@ -104,14 +111,16 @@ def list_works(db: Session = Depends(get_db)):
     )
     result = []
     for w in works:
-        result.append({
-            "id": w.id,
-            "title": w.title,
-            "maker": w.maker,
-            "series": w.series,
-            "created_at": w.created_at,
-            "total_score": score_calculator.calculate_work_total_score(w),
-        })
+        result.append(
+            {
+                "id": w.id,
+                "title": w.title,
+                "maker": w.maker,
+                "series": w.series,
+                "created_at": w.created_at,
+                "total_score": score_calculator.calculate_work_total_score(w),
+            }
+        )
     return result
 
 
@@ -227,9 +236,11 @@ def add_performer(work_id: int, data: AddPerformerToWork, db: Session = Depends(
         raise HTTPException(status_code=404, detail="Work not found")
     if not db.query(Performer).filter(Performer.id == data.performer_id).first():
         raise HTTPException(status_code=404, detail="Performer not found")
-    existing = db.query(WorkPerformer).filter(
-        WorkPerformer.work_id == work_id, WorkPerformer.performer_id == data.performer_id
-    ).first()
+    existing = (
+        db.query(WorkPerformer)
+        .filter(WorkPerformer.work_id == work_id, WorkPerformer.performer_id == data.performer_id)
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=409, detail="Performer already associated")
     if data.is_main:
@@ -242,9 +253,11 @@ def add_performer(work_id: int, data: AddPerformerToWork, db: Session = Depends(
 
 @router.delete("/{work_id}/performers/{performer_id}", response_model=WorkResponse)
 def remove_performer(work_id: int, performer_id: int, db: Session = Depends(get_db)):
-    wp = db.query(WorkPerformer).filter(
-        WorkPerformer.work_id == work_id, WorkPerformer.performer_id == performer_id
-    ).first()
+    wp = (
+        db.query(WorkPerformer)
+        .filter(WorkPerformer.work_id == work_id, WorkPerformer.performer_id == performer_id)
+        .first()
+    )
     if not wp:
         raise HTTPException(status_code=404, detail="Association not found")
     db.delete(wp)
@@ -254,9 +267,11 @@ def remove_performer(work_id: int, performer_id: int, db: Session = Depends(get_
 
 @router.patch("/{work_id}/performers/{performer_id}", response_model=WorkResponse)
 def set_main_performer(work_id: int, performer_id: int, data: SetMainPerformer, db: Session = Depends(get_db)):
-    wp = db.query(WorkPerformer).filter(
-        WorkPerformer.work_id == work_id, WorkPerformer.performer_id == performer_id
-    ).first()
+    wp = (
+        db.query(WorkPerformer)
+        .filter(WorkPerformer.work_id == work_id, WorkPerformer.performer_id == performer_id)
+        .first()
+    )
     if not wp:
         raise HTTPException(status_code=404, detail="Association not found")
     if data.is_main:
@@ -268,7 +283,7 @@ def set_main_performer(work_id: int, performer_id: int, data: SetMainPerformer, 
 
 @router.post("/{work_id}/tags/{tag_id}", response_model=WorkResponse)
 def add_tag(work_id: int, tag_id: int, db: Session = Depends(get_db)):
-    work = _load_work(db, work_id)
+    _load_work(db, work_id)
     tag = db.query(Tag).options(joinedload(Tag.category)).filter(Tag.id == tag_id).first()
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
@@ -277,9 +292,9 @@ def add_tag(work_id: int, tag_id: int, db: Session = Depends(get_db)):
 
     if not tag.category.is_multi_select:
         same_cat_tag_ids = [t.id for t in tag.category.tags]
-        db.query(WorkTag).filter(
-            WorkTag.work_id == work_id, WorkTag.tag_id.in_(same_cat_tag_ids)
-        ).delete(synchronize_session=False)
+        db.query(WorkTag).filter(WorkTag.work_id == work_id, WorkTag.tag_id.in_(same_cat_tag_ids)).delete(
+            synchronize_session=False
+        )
 
     existing = db.query(WorkTag).filter(WorkTag.work_id == work_id, WorkTag.tag_id == tag_id).first()
     if not existing:
