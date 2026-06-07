@@ -75,7 +75,7 @@ export default function SettingsPage() {
 
   // データ管理セクションの状態
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
-  const [pendingPayload, setPendingPayload] = useState<unknown>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -164,29 +164,21 @@ export default function SettingsPage() {
   };
 
   const handleImportFileSelect = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const payload = JSON.parse(e.target?.result as string);
-        setPendingPayload(payload);
-        setImportStatus(null);
-        setImportConfirmOpen(true);
-      } catch {
-        setImportStatus("JSONファイルの解析に失敗しました");
-      }
-    };
-    reader.readAsText(file);
+    setPendingFile(file);
+    setImportStatus(null);
+    setImportConfirmOpen(true);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const executeImport = async () => {
-    if (!pendingPayload) return;
+    if (!pendingFile) return;
     setImportLoading(true);
     try {
-      const result = await api.data.import(pendingPayload);
+      const result = await api.data.import(pendingFile);
       setImportStatus(result.message);
       setImportConfirmOpen(false);
-      setPendingPayload(null);
+      setPendingFile(null);
+      window.location.reload();
     } catch (e) {
       setImportStatus(`エラー: ${e instanceof Error ? e.message : String(e)}`);
       setImportConfirmOpen(false);
@@ -279,7 +271,7 @@ export default function SettingsPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json"
+              accept=".zip"
               className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportFileSelect(f); }}
             />
@@ -306,6 +298,9 @@ export default function SettingsPage() {
             <p className="text-sm text-destructive font-medium">
               現在の全データが置き換えられます。この操作は元に戻せません。
             </p>
+            {pendingFile && (
+              <p className="text-sm text-muted-foreground font-mono break-all">{pendingFile.name}</p>
+            )}
             <p className="text-sm text-muted-foreground">
               続行してよろしいですか？
             </p>
