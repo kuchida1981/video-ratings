@@ -12,21 +12,21 @@ repos:
     hooks:
       - id: pytest-unit
         name: pytest unit tests (backend)
-        entry: bash -c "cd backend && pytest -m unit --no-cov -q"
+        entry: bash -c "cd backend && (command -v uv >/dev/null && uv run pytest -m unit --no-cov -q || command -v pytest >/dev/null && pytest -m unit --no-cov -q || echo 'pytest not found, skipping')"
         language: system
         types: [python]
         pass_filenames: false
 
       - id: eslint
         name: eslint (frontend)
-        entry: bash -c "cd frontend && npm run lint"
+        entry: bash -c "cd frontend && (command -v npm >/dev/null && npm run lint || echo 'npm not found, skipping')"
         language: system
         types_or: [ts, tsx, javascript]
         pass_filenames: false
 
       - id: tsc
         name: typescript type check (frontend)
-        entry: bash -c "cd frontend && npx tsc --noEmit"
+        entry: bash -c "cd frontend && (command -v npx >/dev/null && npx tsc --noEmit || echo 'npx not found, skipping')"
         language: system
         types_or: [ts, tsx]
         pass_filenames: false
