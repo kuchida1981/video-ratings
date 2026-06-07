@@ -68,6 +68,7 @@ class WorkResponse(WorkBase):
     performers: list[PerformerInWork] = []
     tags: list[TagInWork] = []
     total_score: int = 0
+    cover_image_url: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -95,6 +96,7 @@ class WorkListResponse(BaseModel):
     performers: list[PerformerNameOnly] = []
     custom_fields: dict[str, Any] | None = None
     tags: list[TagInWorkList] = []
+    cover_image_url: str | None = None
 
     model_config = {"from_attributes": True}
 

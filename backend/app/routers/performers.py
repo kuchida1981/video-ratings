@@ -1,6 +1,8 @@
+import os
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -36,6 +38,7 @@ def _build_performer_response(p: Performer) -> dict:
         "tags": [{"id": pt.tag.id, "name": pt.tag.name, "score": pt.tag.score} for pt in p.performer_tags],
         "total_score": score_calculator.calculate_performer_score(p),
         "work_count": len(p.work_performers),
+        "cover_image_url": f"/static/covers/{p.cover_image_path}" if p.cover_image_path else None,
     }
 
 
@@ -112,6 +115,10 @@ def get_performer_works(performer_id: int, db: Session = Depends(get_db)):
             "series": w.series,
             "created_at": w.created_at,
             "total_score": score_calculator.calculate_work_total_score(w),
+            "performers": [{"id": wp.performer.id, "name": wp.performer.name} for wp in w.work_performers],
+            "custom_fields": w.custom_fields,
+            "tags": [{"id": wt.tag.id, "name": wt.tag.name, "category_id": wt.tag.category_id} for wt in w.work_tags],
+            "cover_image_url": f"/static/covers/{w.cover_image_path}" if w.cover_image_path else None,
         }
         for w in works
     ]
@@ -148,6 +155,37 @@ def remove_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tag association not found")
     db.delete(pt)
     db.commit()
+    return _build_performer_response(_load_performer(db, performer_id))
+
+
+@router.post("/{performer_id}/cover", response_model=PerformerResponse)
+async def upload_cover(performer_id: int, file: UploadFile, db: Session = Depends(get_db)):
+    p = db.query(Performer).filter(Performer.id == performer_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Performer not found")
+    ext = Path(file.filename or "image.jpg").suffix.lower() or ".jpg"
+    covers_dir = Path("uploads/covers/performers")
+    covers_dir.mkdir(parents=True, exist_ok=True)
+    rel_path = f"performers/{performer_id}{ext}"
+    file_path = Path("uploads/covers") / rel_path
+    contents = await file.read()
+    file_path.write_bytes(contents)
+    p.cover_image_path = rel_path
+    db.commit()
+    return _build_performer_response(_load_performer(db, performer_id))
+
+
+@router.delete("/{performer_id}/cover", response_model=PerformerResponse)
+def delete_cover(performer_id: int, db: Session = Depends(get_db)):
+    p = db.query(Performer).filter(Performer.id == performer_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Performer not found")
+    if p.cover_image_path:
+        file_path = Path("uploads/covers") / p.cover_image_path
+        if file_path.exists():
+            os.remove(file_path)
+        p.cover_image_path = None
+        db.commit()
     return _build_performer_response(_load_performer(db, performer_id))
 
 

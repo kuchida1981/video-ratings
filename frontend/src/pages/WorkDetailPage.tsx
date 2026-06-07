@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Trash2, Plus, Star, UserCheck, Search, Play, X } from "lucide-react";
+import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { api } from "@/api/client";
 import type { Work, TagCategory, Performer, CustomFieldDefinition } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -135,12 +136,39 @@ export default function WorkDetailPage() {
     reload();
   };
 
+  const uploadCover = async (file: File) => {
+    await api.works.uploadCover(workId, file);
+    reload();
+  };
+
+  const deleteCover = async () => {
+    await api.works.deleteCover(workId);
+    reload();
+  };
+
   const availablePerformers = allPerformers.filter(
     (p) => !work.performers.some((wp) => wp.id === p.id)
   );
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* カバー画像 */}
+      <section className="space-y-2">
+        {work.cover_image_url ? (
+          <div className="relative aspect-video rounded-lg overflow-hidden border">
+            <img src={work.cover_image_url} alt={work.title} className="w-full h-full object-cover" />
+            <button
+              onClick={deleteCover}
+              className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <CoverUploadZone onUpload={uploadCover} />
+        )}
+      </section>
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
