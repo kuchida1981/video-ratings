@@ -1,6 +1,6 @@
 import os
+import tempfile
 from PIL import Image
-
 
 def resize_covers(directory="uploads/covers/", max_width=1200, quality=85):
     if not os.path.exists(directory):
@@ -20,12 +20,27 @@ def resize_covers(directory="uploads/covers/", max_width=1200, quality=85):
                         width, height = img.size
                         if width > max_width:
                             new_height = int(height * (max_width / width))
-                            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                            img.save(filepath, "JPEG", quality=quality)
-                            print(f"Resized: {os.path.relpath(filepath, directory)} ({width}x{height} -> {max_width}x{new_height})")
-                            resized_count += 1
+
+                            # Convert RGBA/P to RGB to avoid issues when saving as JPEG
+                            if img.mode in ("RGBA", "P"):
+                                img = img.convert("RGB")
+
+                            resized_img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+                            # Save to a temporary file first for safety
+                            fd, temp_path = tempfile.mkstemp(dir=root, suffix=".tmp")
+                            try:
+                                with os.fdopen(fd, 'wb') as tmp:
+                                    resized_img.save(tmp, "JPEG", quality=quality)
+                                os.replace(temp_path, filepath)
+                                print(f"Resized: {os.path.relpath(filepath, directory)} ({width}x{height} -> {max_width}x{new_height})")
+                                resized_count += 1
+                            except Exception as e:
+                                os.remove(temp_path)
+                                raise e
                 except Exception as e:
                     print(f"Error processing {filename}: {e}")
+
 
     print(f"\nSummary:")
     print(f"Total images found: {count}")

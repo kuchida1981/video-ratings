@@ -14,9 +14,16 @@ export function CoverUploadZone({ onUpload }: CoverUploadZoneProps) {
     if (!file.type.startsWith("image/")) return;
 
     const img = new Image();
-    img.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      console.warn("Failed to load image for resizing, falling back to original file.");
+      onUpload(file);
+    };
+
     img.onload = () => {
-      URL.revokeObjectURL(img.src);
+      URL.revokeObjectURL(objectUrl);
       const MAX_WIDTH = 1200;
       let width = img.width;
       let height = img.height;
@@ -39,13 +46,18 @@ export function CoverUploadZone({ onUpload }: CoverUploadZoneProps) {
                 type: "image/jpeg",
               });
               onUpload(resizedFile);
+            } else {
+              onUpload(file);
             }
           },
           "image/jpeg",
           0.85
         );
+      } else {
+        onUpload(file);
       }
     };
+    img.src = objectUrl;
   }, [onUpload]);
 
   const handlePaste = useCallback((e: ClipboardEvent) => {
