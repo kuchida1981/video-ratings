@@ -23,6 +23,6 @@
 
 ## 4. 動作確認
 
-- [ ] 4.1 ワークフローファイルを push し、GitHub Actions タブで両ジョブが正常に起動・成功することを確認する
-- [ ] 4.2 backend のみ変更した PR で frontend job がスキップされることを確認する
-- [ ] 4.3 frontend のみ変更した PR で backend job がスキップされることを確認する
+- [x] 4.1 ワークフローファイルを push し、GitHub Actions タブで両ジョブが正常に起動・成功することを確認する
+- [x] 4.2 backend のみ変更した PR で frontend job がスキップされることを確認する
+- [x] 4.3 frontend のみ変更した PR で backend job がスキップされることを確認する
