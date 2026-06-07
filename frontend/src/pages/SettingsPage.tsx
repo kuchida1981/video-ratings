@@ -178,6 +178,7 @@ export default function SettingsPage() {
       setImportStatus(result.message);
       setImportConfirmOpen(false);
       setPendingFile(null);
+      window.location.reload();
     } catch (e) {
       setImportStatus(`エラー: ${e instanceof Error ? e.message : String(e)}`);
       setImportConfirmOpen(false);

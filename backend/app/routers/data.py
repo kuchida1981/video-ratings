@@ -87,12 +87,10 @@ def export_data(db: Session = Depends(get_db)):
 
 
 @router.post("/import")
-async def import_data(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    content = await file.read()
-
+def import_data(file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
-        buf = io.BytesIO(content)
-        zf = zipfile.ZipFile(buf)
+        file.file.seek(0)
+        zf = zipfile.ZipFile(file.file)
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="ZIPファイルが不正です")
 
@@ -173,13 +171,28 @@ async def import_data(file: UploadFile = File(...), db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail=f"インポートに失敗しました: {str(e)}")
 
     # 画像の洗い替え（DBコミット後に実行）
-    shutil.rmtree(COVERS_DIR, ignore_errors=True)
-    COVERS_DIR.mkdir(parents=True, exist_ok=True)
+    # 一時ディレクトリに展開・検証後、アトミックにディレクトリを差し替え
+    temp_dir = COVERS_DIR.parent / "covers_tmp"
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    temp_dir.mkdir(parents=True)
 
-    cover_entries = [name for name in zf.namelist() if name.startswith("covers/") and not name.endswith("/")]
-    for entry in cover_entries:
-        dest = COVERS_DIR / Path(entry).relative_to("covers")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(zf.read(entry))
+    try:
+        resolved_temp = temp_dir.resolve()
+        cover_entries = [name for name in zf.namelist() if name.startswith("covers/") and not name.endswith("/")]
+        for entry in cover_entries:
+            dest = (temp_dir / Path(entry).relative_to("covers")).resolve()
+            if not dest.is_relative_to(resolved_temp):
+                raise HTTPException(status_code=400, detail="不正なファイルパスが含まれています")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(zf.read(entry))
+    except HTTPException:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    except Exception as e:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=f"画像の展開に失敗しました: {str(e)}")
+
+    shutil.rmtree(COVERS_DIR, ignore_errors=True)
+    temp_dir.rename(COVERS_DIR)
 
     return {"message": "インポートが完了しました"}
