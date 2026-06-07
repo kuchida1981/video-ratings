@@ -60,29 +60,28 @@ export default function WorkDetailPage() {
   }, [work, customFields]);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !playingFile) return;
-    video.load();
-    video.play().then(() => {
-      const v = video as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
-      if (v.webkitEnterFullscreen) {
-        v.webkitEnterFullscreen();
-      } else {
-        video.requestFullscreen?.();
-      }
-    }).catch(() => {});
+    if (!playingFile && videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = "";
+      videoRef.current.load();
+    }
   }, [playingFile]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     const onEnd = () => setPlayingFile(null);
-    const onDocChange = () => { if (!document.fullscreenElement) setPlayingFile(null); };
+    const onDocChange = () => {
+      const isFullscreen = document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+      if (!isFullscreen) setPlayingFile(null);
+    };
     video.addEventListener("webkitendfullscreen", onEnd);
     document.addEventListener("fullscreenchange", onDocChange);
+    document.addEventListener("webkitfullscreenchange", onDocChange);
     return () => {
       video.removeEventListener("webkitendfullscreen", onEnd);
       document.removeEventListener("fullscreenchange", onDocChange);
+      document.removeEventListener("webkitfullscreenchange", onDocChange);
     };
   }, []);
 
@@ -103,6 +102,22 @@ export default function WorkDetailPage() {
   if (!work) return <div className="text-muted-foreground">読み込み中…</div>;
 
   const smbFiles = work.files.filter((f) => isSmbUrl(f.path));
+
+  const handlePlay = (file: WorkFile) => {
+    setPlayingFile(file);
+    const video = videoRef.current;
+    if (!video) return;
+    video.src = `/api/works/${workId}/files/${file.id}/stream`;
+    video.load();
+    video.play().then(() => {
+      const v = video as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+      if (v.webkitEnterFullscreen) {
+        v.webkitEnterFullscreen();
+      } else {
+        video.requestFullscreen?.();
+      }
+    }).catch(() => {});
+  };
 
   const saveEdit = async () => {
     await api.works.update(workId, { title: form.title, maker: form.maker || undefined, series: form.series || undefined });
@@ -203,7 +218,7 @@ export default function WorkDetailPage() {
                 {smbFiles.map((f) => (
                   <button
                     key={f.id}
-                    onClick={() => setPlayingFile(f)}
+                    onClick={() => handlePlay(f)}
                     className="flex items-center gap-3 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white rounded-xl px-6 py-3 text-sm font-medium transition-colors"
                   >
                     <Play size={20} className="fill-white shrink-0" />

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 const STORAGE_KEY = "tileGridMaxColumns";
 
 function getDefaultCols(): number {
+  if (typeof window === "undefined") return 6;
   if (window.innerWidth < 900) return 3;
   if (window.innerWidth < 1200) return 4;
   return 6;
