@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 
 
+
 class Settings(BaseSettings):
     database_url: str = "ppostgresql://video_ratings:video_ratings@localhost:5432/video_ratings"
     smb_username: str = ""
