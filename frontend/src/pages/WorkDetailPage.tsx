@@ -323,7 +323,6 @@ export default function WorkDetailPage() {
         <video
           ref={videoRef}
           className="sr-only"
-          src={playingFile ? `/api/works/${workId}/files/${playingFile.id}/stream` : undefined}
         />
       </section>
 
@@ -594,6 +593,7 @@ export default function WorkDetailPage() {
               <video
                 key={f.id}
                 controls
+                autoPlay
                 className="w-full mt-2 rounded"
                 src={`/api/works/${workId}/files/${f.id}/stream`}
               />
