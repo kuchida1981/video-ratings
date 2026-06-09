@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { WorkTile } from "@/components/WorkTile";
+import { StringArrayInput } from "@/components/StringArrayInput";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
@@ -21,7 +22,7 @@ export default function PerformerDetailPage() {
   const [works, setWorks] = useState<WorkListItem[]>([]);
   const [categories, setCategories] = useState<TagCategory[]>([]);
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean | string[]>>({});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", furigana: "" });
   const { maxCols } = useTileMaxColumns();
@@ -44,10 +45,12 @@ export default function PerformerDetailPage() {
 
   useEffect(() => {
     if (performer && customFieldDefs.length > 0) {
-      const values: Record<string, string | boolean> = {};
+      const values: Record<string, string | boolean | string[]> = {};
       customFieldDefs.forEach((cf) => {
         const raw = performer.custom_fields?.[cf.name];
-        values[cf.name] = cf.field_type === "boolean" ? Boolean(raw) : String(raw ?? "");
+        if (cf.field_type === "boolean") values[cf.name] = Boolean(raw);
+        else if (cf.field_type === "string_array") values[cf.name] = Array.isArray(raw) ? (raw as string[]) : [];
+        else values[cf.name] = String(raw ?? "");
       });
       setCustomFieldValues(values);
     }
@@ -74,9 +77,10 @@ export default function PerformerDetailPage() {
     reload();
   };
 
-  const updateCustomField = async (name: string, value: string | boolean) => {
+  const updateCustomField = async (name: string, value: string | boolean | string[]) => {
     setCustomFieldValues((prev) => ({ ...prev, [name]: value }));
-    await api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value });
+    const apiValue = Array.isArray(value) ? (value.length === 0 ? null : value) : (value === "" ? null : value);
+    await api.performers.updateCustomFields(performerId, { [name]: apiValue });
     reload();
   };
 
@@ -181,7 +185,7 @@ export default function PerformerDetailPage() {
           <h2 className="font-semibold">カスタム項目</h2>
           <div className="grid grid-cols-2 gap-3">
             {customFieldDefs.map((cf) => (
-              <div key={cf.id}>
+              <div key={cf.id} className={cf.field_type === "string_array" ? "col-span-2" : ""}>
                 <Label className="text-xs">{cf.name}</Label>
                 {cf.field_type === "boolean" ? (
                   <div className="flex items-center h-9">
@@ -192,6 +196,11 @@ export default function PerformerDetailPage() {
                       onChange={(e) => updateCustomField(cf.name, e.target.checked)}
                     />
                   </div>
+                ) : cf.field_type === "string_array" ? (
+                  <StringArrayInput
+                    value={(customFieldValues[cf.name] as string[]) ?? []}
+                    onChange={(v) => updateCustomField(cf.name, v)}
+                  />
                 ) : (
                   <Input
                     type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}

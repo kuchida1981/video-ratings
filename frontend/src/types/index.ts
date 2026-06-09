@@ -92,7 +92,7 @@ export interface TagCategory {
 export interface CustomFieldDefinition {
   id: number;
   name: string;
-  field_type: "text" | "number" | "date" | "boolean";
+  field_type: "text" | "number" | "date" | "boolean" | "string_array";
   entity_type: "work" | "performer";
   created_at: string;
 }

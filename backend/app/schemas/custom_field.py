@@ -9,6 +9,7 @@ class FieldType(StrEnum):
     number = "number"
     date = "date"
     boolean = "boolean"
+    string_array = "string_array"
 
 
 class CustomFieldDefinitionCreate(BaseModel):

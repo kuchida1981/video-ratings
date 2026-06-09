@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type FieldType = "text" | "number" | "date" | "boolean";
+type FieldType = "text" | "number" | "date" | "boolean" | "string_array";
 
 function SortableRow({ def, onRemove }: { def: CustomFieldDefinition; onRemove: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: def.id });
@@ -41,7 +41,7 @@ function SortableRow({ def, onRemove }: { def: CustomFieldDefinition; onRemove: 
     zIndex: isDragging ? 10 : undefined,
   };
   const typeLabel = (t: string) =>
-    ({ text: "テキスト", number: "数値", date: "日付", boolean: "チェックボックス" }[t] ?? t);
+    ({ text: "テキスト", number: "数値", date: "日付", boolean: "チェックボックス", string_array: "配列 <文字列>" }[t] ?? t);
 
   return (
     <tr ref={setNodeRef} style={style} className="border-t bg-background">
@@ -248,6 +248,7 @@ export default function SettingsPage() {
                   <SelectItem value="number">数値</SelectItem>
                   <SelectItem value="date">日付</SelectItem>
                   <SelectItem value="boolean">チェックボックス</SelectItem>
+                  <SelectItem value="string_array">{"配列 <文字列>"}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Trash2, Plus, Star, UserCheck, Search, Play, X } from "lucide-react";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
+import { StringArrayInput } from "@/components/StringArrayInput";
 import { api } from "@/api/client";
 import type { Work, TagCategory, Performer, CustomFieldDefinition, WorkFile } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,9 @@ export default function WorkDetailPage() {
   const [performerCategories, setPerformerCategories] = useState<TagCategory[]>([]);
   const [allPerformers, setAllPerformers] = useState<Performer[]>([]);
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean | string[]>>({});
   const [performerCFDefs, setPerformerCFDefs] = useState<CustomFieldDefinition[]>([]);
-  const [performerCFValues, setPerformerCFValues] = useState<Record<number, Record<string, string | boolean>>>({});
+  const [performerCFValues, setPerformerCFValues] = useState<Record<number, Record<string, string | boolean | string[]>>>({});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: "", maker: "", series: "" });
   const [newFilePath, setNewFilePath] = useState("");
@@ -50,10 +51,12 @@ export default function WorkDetailPage() {
 
   useEffect(() => {
     if (work && customFields.length > 0) {
-      const values: Record<string, string | boolean> = {};
+      const values: Record<string, string | boolean | string[]> = {};
       customFields.forEach((cf) => {
         const raw = work.custom_fields?.[cf.name];
-        values[cf.name] = cf.field_type === "boolean" ? Boolean(raw) : String(raw ?? "");
+        if (cf.field_type === "boolean") values[cf.name] = Boolean(raw);
+        else if (cf.field_type === "string_array") values[cf.name] = Array.isArray(raw) ? (raw as string[]) : [];
+        else values[cf.name] = String(raw ?? "");
       });
       setCustomFieldValues(values);
     }
@@ -87,12 +90,14 @@ export default function WorkDetailPage() {
 
   useEffect(() => {
     if (work && performerCFDefs.length > 0) {
-      const values: Record<number, Record<string, string | boolean>> = {};
+      const values: Record<number, Record<string, string | boolean | string[]>> = {};
       work.performers.forEach((p) => {
         values[p.id] = {};
         performerCFDefs.forEach((cf) => {
           const raw = p.custom_fields?.[cf.name];
-          values[p.id][cf.name] = cf.field_type === "boolean" ? Boolean(raw) : String(raw ?? "");
+          if (cf.field_type === "boolean") values[p.id][cf.name] = Boolean(raw);
+          else if (cf.field_type === "string_array") values[p.id][cf.name] = Array.isArray(raw) ? (raw as string[]) : [];
+          else values[p.id][cf.name] = String(raw ?? "");
         });
       });
       setPerformerCFValues(values);
@@ -167,18 +172,20 @@ export default function WorkDetailPage() {
     reload();
   };
 
-  const updatePerformerCustomField = async (performerId: number, name: string, value: string | boolean) => {
+  const updatePerformerCustomField = async (performerId: number, name: string, value: string | boolean | string[]) => {
     setPerformerCFValues((prev) => ({
       ...prev,
       [performerId]: { ...prev[performerId], [name]: value },
     }));
-    await api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value });
+    const apiValue = Array.isArray(value) ? (value.length === 0 ? null : value) : (value === "" ? null : value);
+    await api.performers.updateCustomFields(performerId, { [name]: apiValue });
     reload();
   };
 
-  const updateCustomField = async (name: string, value: string | boolean) => {
+  const updateCustomField = async (name: string, value: string | boolean | string[]) => {
     setCustomFieldValues((prev) => ({ ...prev, [name]: value }));
-    await api.works.updateCustomFields(workId, { [name]: value === "" ? null : value });
+    const apiValue = Array.isArray(value) ? (value.length === 0 ? null : value) : (value === "" ? null : value);
+    await api.works.updateCustomFields(workId, { [name]: apiValue });
     reload();
   };
 
@@ -347,7 +354,7 @@ export default function WorkDetailPage() {
             {performerCFDefs.length > 0 && (
               <div className="grid grid-cols-2 gap-2 pt-1">
                 {performerCFDefs.map((cf) => (
-                  <div key={cf.id}>
+                  <div key={cf.id} className={cf.field_type === "string_array" ? "col-span-2" : ""}>
                     <Label className="text-xs">{cf.name}</Label>
                     {cf.field_type === "boolean" ? (
                       <div className="flex items-center h-9">
@@ -358,6 +365,11 @@ export default function WorkDetailPage() {
                           onChange={(e) => updatePerformerCustomField(p.id, cf.name, e.target.checked)}
                         />
                       </div>
+                    ) : cf.field_type === "string_array" ? (
+                      <StringArrayInput
+                        value={(performerCFValues[p.id]?.[cf.name] as string[]) ?? []}
+                        onChange={(v) => updatePerformerCustomField(p.id, cf.name, v)}
+                      />
                     ) : (
                       <Input
                         type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
@@ -485,7 +497,7 @@ export default function WorkDetailPage() {
           <h2 className="font-semibold">カスタム項目</h2>
           <div className="grid grid-cols-2 gap-3">
             {customFields.map((cf) => (
-              <div key={cf.id}>
+              <div key={cf.id} className={cf.field_type === "string_array" ? "col-span-2" : ""}>
                 <Label className="text-xs">{cf.name}</Label>
                 {cf.field_type === "boolean" ? (
                   <div className="flex items-center h-9">
@@ -496,6 +508,11 @@ export default function WorkDetailPage() {
                       onChange={(e) => updateCustomField(cf.name, e.target.checked)}
                     />
                   </div>
+                ) : cf.field_type === "string_array" ? (
+                  <StringArrayInput
+                    value={(customFieldValues[cf.name] as string[]) ?? []}
+                    onChange={(v) => updateCustomField(cf.name, v)}
+                  />
                 ) : (
                   <Input
                     type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
