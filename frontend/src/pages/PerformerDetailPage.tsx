@@ -83,8 +83,9 @@ export default function PerformerDetailPage() {
       setNewAliasName("");
       setNewAliasFurigana("");
       reload();
-    } catch (e: any) {
-      alert(e.message || "別名の追加に失敗しました");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "別名の追加に失敗しました";
+      alert(msg);
     }
   };
 
@@ -97,8 +98,9 @@ export default function PerformerDetailPage() {
       });
       setEditingAliasId(null);
       reload();
-    } catch (e: any) {
-      alert(e.message || "別名の更新に失敗しました");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "別名の更新に失敗しました";
+      alert(msg);
     }
   };
 
@@ -107,8 +109,9 @@ export default function PerformerDetailPage() {
     try {
       await api.performers.removeAlias(performerId, aliasId);
       reload();
-    } catch (e: any) {
-      alert(e.message || "別名の削除に失敗しました");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "別名の削除に失敗しました";
+      alert(msg);
     }
   };
 
