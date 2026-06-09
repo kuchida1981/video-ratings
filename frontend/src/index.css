@@ -31,3 +31,15 @@
   * { @apply border-border; }
   body { @apply bg-background text-foreground; }
 }
+
+video:fullscreen,
+video:-webkit-full-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  clip: auto;
+  clip-path: none;
+  overflow: visible;
+  margin: 0;
+}
