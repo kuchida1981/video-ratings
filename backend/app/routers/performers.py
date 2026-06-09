@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -234,7 +235,7 @@ async def upload_cover(performer_id: int, file: UploadFile, db: Session = Depend
         raise HTTPException(status_code=400, detail="Unsupported image format")
     covers_dir = Path("uploads/covers/performers")
     covers_dir.mkdir(parents=True, exist_ok=True)
-    rel_path = f"performers/{performer_id}{ext}"
+    rel_path = f"performers/{performer_id}_{uuid.uuid4().hex[:8]}{ext}"
     file_path = Path("uploads/covers") / rel_path
     if p.cover_image_path and p.cover_image_path != rel_path:
         try:

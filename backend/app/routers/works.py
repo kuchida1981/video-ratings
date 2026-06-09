@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from app.schemas.work import (
     WorkCreate,
     WorkFileCreate,
     WorkFileResponse,
+    WorkFileUpdate,
     WorkListResponse,
     WorkResponse,
     WorkUpdate,
@@ -178,6 +180,18 @@ def add_file(work_id: int, data: WorkFileCreate, db: Session = Depends(get_db)):
     return f
 
 
+@router.patch("/{work_id}/files/{file_id}", response_model=WorkFileResponse)
+def update_file(work_id: int, file_id: int, data: WorkFileUpdate, db: Session = Depends(get_db)):
+    f = db.query(WorkFile).filter(WorkFile.id == file_id, WorkFile.work_id == work_id).first()
+    if not f:
+        raise HTTPException(status_code=404, detail="File not found")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(f, key, value)
+    db.commit()
+    db.refresh(f)
+    return f
+
+
 @router.get("/{work_id}/files/{file_id}/stream")
 async def stream_file(work_id: int, file_id: int, request: Request, db: Session = Depends(get_db)):
     f = db.query(WorkFile).filter(WorkFile.id == file_id, WorkFile.work_id == work_id).first()
@@ -334,7 +348,7 @@ async def upload_cover(work_id: int, file: UploadFile, db: Session = Depends(get
         raise HTTPException(status_code=400, detail="Unsupported image format")
     covers_dir = Path("uploads/covers/works")
     covers_dir.mkdir(parents=True, exist_ok=True)
-    rel_path = f"works/{work_id}{ext}"
+    rel_path = f"works/{work_id}_{uuid.uuid4().hex[:8]}{ext}"
     file_path = Path("uploads/covers") / rel_path
     if work.cover_image_path and work.cover_image_path != rel_path:
         try:

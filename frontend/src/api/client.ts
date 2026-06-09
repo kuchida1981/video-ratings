@@ -47,6 +47,8 @@ export const api = {
     delete: (id: number) => req<void>(`/works/${id}`, { method: "DELETE" }),
     addFile: (id: number, data: { path: string; display_name?: string; order?: number }) =>
       req<WorkFile>(`/works/${id}/files`, { method: "POST", body: JSON.stringify(data) }),
+    updateFile: (id: number, fileId: number, data: { path?: string; display_name?: string | null }) =>
+      req<WorkFile>(`/works/${id}/files/${fileId}`, { method: "PATCH", body: JSON.stringify(data) }),
     removeFile: (id: number, fileId: number) => req<void>(`/works/${id}/files/${fileId}`, { method: "DELETE" }),
     addPerformer: (id: number, data: { performer_id: number; is_main?: boolean }) =>
       req<Work>(`/works/${id}/performers`, { method: "POST", body: JSON.stringify(data) }),

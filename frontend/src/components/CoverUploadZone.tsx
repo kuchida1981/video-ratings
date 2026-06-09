@@ -91,14 +91,20 @@ export function CoverUploadZone({ onUpload }: CoverUploadZoneProps) {
         const file = e.dataTransfer.files[0];
         if (file) handleFile(file);
       }}
-      onClick={() => inputRef.current?.click()}
-      className={`aspect-video w-full rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer select-none transition-colors text-sm
+      className={`aspect-video w-full rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 select-none transition-colors text-sm
         ${dragOver ? "border-primary bg-primary/5" : focused ? "border-primary/60 bg-muted/30" : "border-border bg-muted/20 hover:bg-muted/30"}`}
     >
-      <Upload size={20} className="text-muted-foreground" />
-      <span className="text-muted-foreground">クリックまたはドロップ</span>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+        className="flex flex-col items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Upload size={20} />
+        <span>ファイルを選択</span>
+      </button>
+      <span className="text-muted-foreground text-xs">またはドロップ</span>
       <span className="text-xs text-muted-foreground flex items-center gap-1">
-        <Clipboard size={12} />フォーカス後に Ctrl+V で貼り付け
+        <Clipboard size={12} />クリックしてフォーカス → Ctrl+V で貼り付け
       </span>
       <input
         ref={inputRef}
