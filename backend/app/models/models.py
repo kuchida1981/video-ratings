@@ -46,6 +46,7 @@ class Performer(Base):
 
     work_performers = relationship("WorkPerformer", back_populates="performer")
     performer_tags = relationship("PerformerTag", back_populates="performer", cascade="all, delete-orphan")
+    aliases = relationship("PerformerAlias", back_populates="performer", cascade="all, delete-orphan")
 
 
 class WorkPerformer(Base):
@@ -132,3 +133,14 @@ class CustomFieldDefinition(Base):
     entity_type = Column(String, nullable=False, server_default="work")  # 'work' or 'performer'
     sort_order = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class PerformerAlias(Base):
+    __tablename__ = "performer_aliases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    performer_id = Column(Integer, ForeignKey("performers.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False, index=True)
+    furigana = Column(String, nullable=True, index=True)
+
+    performer = relationship("Performer", back_populates="aliases")

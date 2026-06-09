@@ -85,6 +85,12 @@ export const api = {
       req<Performer>(`/performers/${id}/custom-fields`, { method: "PATCH", body: JSON.stringify(fields) }),
     uploadCover: (id: number, file: File) => upload<Performer>(`/performers/${id}/cover`, file),
     deleteCover: (id: number) => req<Performer>(`/performers/${id}/cover`, { method: "DELETE" }),
+    addAlias: (id: number, data: { name: string; furigana?: string | null }) =>
+      req<Performer>(`/performers/${id}/aliases`, { method: "POST", body: JSON.stringify(data) }),
+    updateAlias: (id: number, aliasId: number, data: { name?: string; furigana?: string | null }) =>
+      req<Performer>(`/performers/${id}/aliases/${aliasId}`, { method: "PUT", body: JSON.stringify(data) }),
+    removeAlias: (id: number, aliasId: number) =>
+      req<Performer>(`/performers/${id}/aliases/${aliasId}`, { method: "DELETE" }),
   },
 
   tagCategories: {

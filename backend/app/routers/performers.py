@@ -6,8 +6,14 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.database import get_db
-from app.models.models import Performer, PerformerTag, Tag, Work, WorkPerformer, WorkTag
-from app.schemas.performer import PerformerCreate, PerformerResponse, PerformerUpdate
+from app.models.models import Performer, PerformerAlias, PerformerTag, Tag, Work, WorkPerformer, WorkTag
+from app.schemas.performer import (
+    AliasCreate,
+    AliasUpdate,
+    PerformerCreate,
+    PerformerResponse,
+    PerformerUpdate,
+)
 from app.schemas.work import WorkListResponse
 from app.services.score_calculator import score_calculator
 
@@ -17,7 +23,10 @@ router = APIRouter(prefix="/performers", tags=["performers"])
 def _load_performer(db: Session, performer_id: int) -> Performer:
     p = (
         db.query(Performer)
-        .options(joinedload(Performer.performer_tags).joinedload(PerformerTag.tag))
+        .options(
+            joinedload(Performer.performer_tags).joinedload(PerformerTag.tag),
+            joinedload(Performer.aliases),
+        )
         .filter(Performer.id == performer_id)
         .first()
     )
@@ -35,6 +44,7 @@ def _build_performer_response(p: Performer) -> dict:
         "created_at": p.created_at,
         "updated_at": p.updated_at,
         "tags": [{"id": pt.tag.id, "name": pt.tag.name, "score": pt.tag.score} for pt in p.performer_tags],
+        "aliases": [{"id": alias.id, "name": alias.name, "furigana": alias.furigana} for alias in p.aliases],
         "total_score": score_calculator.calculate_performer_score(p),
         "work_count": len(p.work_performers),
         "cover_image_url": f"/static/covers/{p.cover_image_path}" if p.cover_image_path else None,
@@ -48,6 +58,7 @@ def list_performers(db: Session = Depends(get_db)):
         .options(
             joinedload(Performer.performer_tags).joinedload(PerformerTag.tag),
             joinedload(Performer.work_performers),
+            joinedload(Performer.aliases),
         )
         .order_by(Performer.furigana, Performer.name)
         .all()
@@ -155,6 +166,59 @@ def remove_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
     db.delete(pt)
     db.commit()
     return _build_performer_response(_load_performer(db, performer_id))
+
+
+@router.post("/{performer_id}/aliases", response_model=PerformerResponse)
+def add_alias(performer_id: int, data: AliasCreate, db: Session = Depends(get_db)):
+    p = _load_performer(db, performer_id)
+    if not data.name or not data.name.strip():
+        raise HTTPException(status_code=400, detail="Alias name cannot be empty")
+    alias = PerformerAlias(performer_id=performer_id, name=data.name, furigana=data.furigana)
+    db.add(alias)
+    db.commit()
+    db.refresh(p)
+    return _build_performer_response(p)
+
+
+@router.put("/{performer_id}/aliases/{alias_id}", response_model=PerformerResponse)
+def update_alias(performer_id: int, alias_id: int, data: AliasUpdate, db: Session = Depends(get_db)):
+    p = _load_performer(db, performer_id)
+    alias = (
+        db.query(PerformerAlias)
+        .filter(PerformerAlias.id == alias_id, PerformerAlias.performer_id == performer_id)
+        .first()
+    )
+    if not alias:
+        raise HTTPException(status_code=404, detail="Alias not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+    if "name" in update_data:
+        if update_data["name"] is None or not update_data["name"].strip():
+            raise HTTPException(status_code=400, detail="Alias name cannot be empty")
+        alias.name = update_data["name"]
+    if "furigana" in update_data:
+        alias.furigana = update_data["furigana"]
+
+    db.commit()
+    db.refresh(p)
+    return _build_performer_response(p)
+
+
+@router.delete("/{performer_id}/aliases/{alias_id}", response_model=PerformerResponse)
+def remove_alias(performer_id: int, alias_id: int, db: Session = Depends(get_db)):
+    p = _load_performer(db, performer_id)
+    alias = (
+        db.query(PerformerAlias)
+        .filter(PerformerAlias.id == alias_id, PerformerAlias.performer_id == performer_id)
+        .first()
+    )
+    if not alias:
+        raise HTTPException(status_code=404, detail="Alias not found")
+
+    db.delete(alias)
+    db.commit()
+    db.refresh(p)
+    return _build_performer_response(p)
 
 
 _ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
