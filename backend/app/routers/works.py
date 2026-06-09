@@ -16,6 +16,7 @@ from app.schemas.work import (
     WorkCreate,
     WorkFileCreate,
     WorkFileResponse,
+    WorkFileUpdate,
     WorkListResponse,
     WorkResponse,
     WorkUpdate,
@@ -174,6 +175,18 @@ def add_file(work_id: int, data: WorkFileCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Work not found")
     f = WorkFile(work_id=work_id, **data.model_dump())
     db.add(f)
+    db.commit()
+    db.refresh(f)
+    return f
+
+
+@router.patch("/{work_id}/files/{file_id}", response_model=WorkFileResponse)
+def update_file(work_id: int, file_id: int, data: WorkFileUpdate, db: Session = Depends(get_db)):
+    f = db.query(WorkFile).filter(WorkFile.id == file_id, WorkFile.work_id == work_id).first()
+    if not f:
+        raise HTTPException(status_code=404, detail="File not found")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(f, key, value)
     db.commit()
     db.refresh(f)
     return f

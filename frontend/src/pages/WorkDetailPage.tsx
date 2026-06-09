@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2, Plus, Star, UserCheck, Search, Play, X, ImagePlus } from "lucide-react";
+import { Trash2, Plus, Star, UserCheck, Search, Play, X, ImagePlus, Pencil, Check } from "lucide-react";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { api } from "@/api/client";
 import type { Work, TagCategory, Performer, CustomFieldDefinition, WorkFile } from "@/types";
@@ -61,6 +61,8 @@ export default function WorkDetailPage() {
   const [addPerformerId, setAddPerformerId] = useState("");
   const [playingFileId, setPlayingFileId] = useState<number | null>(null);
   const [playingFile, setPlayingFile] = useState<WorkFile | null>(null);
+  const [editingFileId, setEditingFileId] = useState<number | null>(null);
+  const [editFileForm, setEditFileForm] = useState({ path: "", display_name: "" });
   const [coverDragOver, setCoverDragOver] = useState(false);
   const [coverFocused, setCoverFocused] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -515,28 +517,79 @@ export default function WorkDetailPage() {
         <h2 className="font-semibold">ファイルパス</h2>
         {work.files.map((f) => (
           <div key={f.id}>
-            <div className="flex items-center gap-2 text-sm">
-              <code className="flex-1 bg-muted px-2 py-1 rounded text-xs">{f.path}</code>
-              {f.display_name && <span className="text-muted-foreground">{f.display_name}</span>}
-              {isSmbUrl(f.path) && (
+            {editingFileId === f.id ? (
+              <div className="flex items-center gap-2 text-sm">
+                <Input
+                  value={editFileForm.path}
+                  onChange={(e) => setEditFileForm((p) => ({ ...p, path: e.target.value }))}
+                  className="flex-1 h-7 text-xs font-mono"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      api.works.updateFile(workId, f.id, { path: editFileForm.path, display_name: editFileForm.display_name || null }).then(reload);
+                      setEditingFileId(null);
+                    } else if (e.key === "Escape") {
+                      setEditingFileId(null);
+                    }
+                  }}
+                />
+                <Input
+                  value={editFileForm.display_name}
+                  onChange={(e) => setEditFileForm((p) => ({ ...p, display_name: e.target.value }))}
+                  placeholder="表示名"
+                  className="w-32 h-7 text-xs"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      api.works.updateFile(workId, f.id, { path: editFileForm.path, display_name: editFileForm.display_name || null }).then(reload);
+                      setEditingFileId(null);
+                    } else if (e.key === "Escape") {
+                      setEditingFileId(null);
+                    }
+                  }}
+                />
                 <button
-                  className={`${playingFileId === f.id ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
-                  onClick={() => setPlayingFileId(playingFileId === f.id ? null : f.id)}
-                  title={playingFileId === f.id ? "閉じる" : "再生"}
+                  className="text-muted-foreground hover:text-primary"
+                  onClick={() => {
+                    api.works.updateFile(workId, f.id, { path: editFileForm.path, display_name: editFileForm.display_name || null }).then(reload);
+                    setEditingFileId(null);
+                  }}
                 >
-                  {playingFileId === f.id ? <X size={14} /> : <Play size={14} />}
+                  <Check size={14} />
                 </button>
-              )}
-              <button
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => {
-                  if (playingFileId === f.id) setPlayingFileId(null);
-                  api.works.removeFile(workId, f.id).then(reload);
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
+                <button className="text-muted-foreground hover:text-foreground" onClick={() => setEditingFileId(null)}>
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm">
+                <code className="flex-1 bg-muted px-2 py-1 rounded text-xs">{f.path}</code>
+                {f.display_name && <span className="text-muted-foreground">{f.display_name}</span>}
+                <button
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => { setEditingFileId(f.id); setEditFileForm({ path: f.path, display_name: f.display_name ?? "" }); }}
+                  title="編集"
+                >
+                  <Pencil size={14} />
+                </button>
+                {isSmbUrl(f.path) && (
+                  <button
+                    className={`${playingFileId === f.id ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+                    onClick={() => setPlayingFileId(playingFileId === f.id ? null : f.id)}
+                    title={playingFileId === f.id ? "閉じる" : "再生"}
+                  >
+                    {playingFileId === f.id ? <X size={14} /> : <Play size={14} />}
+                  </button>
+                )}
+                <button
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    if (playingFileId === f.id) setPlayingFileId(null);
+                    api.works.removeFile(workId, f.id).then(reload);
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
             {playingFileId === f.id && (
               <video
                 key={f.id}

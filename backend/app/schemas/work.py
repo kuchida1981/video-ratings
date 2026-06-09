@@ -14,6 +14,11 @@ class WorkFileCreate(WorkFileBase):
     pass
 
 
+class WorkFileUpdate(BaseModel):
+    path: str | None = None
+    display_name: str | None = None
+
+
 class WorkFileResponse(WorkFileBase):
     id: int
     work_id: int
