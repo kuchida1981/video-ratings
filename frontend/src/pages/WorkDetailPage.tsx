@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2, Plus, Star, UserCheck, Search, Play, X } from "lucide-react";
+import { Trash2, Plus, Star, UserCheck, Search, Play, X, ImagePlus } from "lucide-react";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { api } from "@/api/client";
 import type { Work, TagCategory, Performer, CustomFieldDefinition, WorkFile } from "@/types";
@@ -8,6 +8,38 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+
+function processImageFile(file: File, onUpload: (file: File) => void) {
+  if (!file.type.startsWith("image/")) return;
+  const img = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  img.onerror = () => { URL.revokeObjectURL(objectUrl); onUpload(file); };
+  img.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+    const MAX_WIDTH = 1200;
+    let width = img.width;
+    let height = img.height;
+    if (width > MAX_WIDTH) {
+      height = Math.round((height * MAX_WIDTH) / width);
+      width = MAX_WIDTH;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => onUpload(blob ? new File([blob], "image.jpg", { type: "image/jpeg" }) : file),
+        "image/jpeg",
+        0.85
+      );
+    } else {
+      onUpload(file);
+    }
+  };
+  img.src = objectUrl;
+}
 
 export default function WorkDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +61,10 @@ export default function WorkDetailPage() {
   const [addPerformerId, setAddPerformerId] = useState("");
   const [playingFileId, setPlayingFileId] = useState<number | null>(null);
   const [playingFile, setPlayingFile] = useState<WorkFile | null>(null);
+  const [coverDragOver, setCoverDragOver] = useState(false);
+  const [coverFocused, setCoverFocused] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const isSmbUrl = (path: string) => path.startsWith("smb://");
 
@@ -98,6 +133,21 @@ export default function WorkDetailPage() {
       setPerformerCFValues(values);
     }
   }, [work, performerCFDefs]);
+
+  useEffect(() => {
+    if (!coverFocused) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = Array.from(e.clipboardData?.items ?? []);
+      const imageItem = items.find((item) => item.type.startsWith("image/"));
+      if (imageItem) {
+        const file = imageItem.getAsFile();
+        if (file) processImageFile(file, uploadCover);
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverFocused]);
 
   if (!work) return <div className="text-muted-foreground">読み込み中…</div>;
 
@@ -200,18 +250,52 @@ export default function WorkDetailPage() {
     <div className="space-y-6 max-w-3xl">
       {/* カバー画像 */}
       <section className="space-y-2">
-        {(work.cover_image_url || smbFiles.length > 0) ? (
-          <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+        {(work.cover_image_url || smbFiles.length > 0) && (
+          <div
+            className={`relative aspect-video rounded-lg overflow-hidden border bg-black${!work.cover_image_url && coverDragOver ? " border-primary" : ""}`}
+            tabIndex={!work.cover_image_url ? 0 : undefined}
+            onFocus={!work.cover_image_url ? () => setCoverFocused(true) : undefined}
+            onBlur={!work.cover_image_url ? () => setCoverFocused(false) : undefined}
+            onDragOver={!work.cover_image_url ? (e) => { e.preventDefault(); setCoverDragOver(true); } : undefined}
+            onDragLeave={!work.cover_image_url ? () => setCoverDragOver(false) : undefined}
+            onDrop={!work.cover_image_url ? (e) => {
+              e.preventDefault();
+              setCoverDragOver(false);
+              const file = e.dataTransfer.files[0];
+              if (file) processImageFile(file, uploadCover);
+            } : undefined}
+          >
             {work.cover_image_url && (
               <img src={work.cover_image_url} alt={work.title} className="w-full h-full object-cover" />
             )}
-            {work.cover_image_url && (
+            {work.cover_image_url ? (
               <button
                 onClick={deleteCover}
                 className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
               >
                 <X size={14} />
               </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => coverInputRef.current?.click()}
+                  className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+                  title="カバー画像を設定（D&D・Ctrl+Vも使用可）"
+                >
+                  <ImagePlus size={14} />
+                </button>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) processImageFile(file, uploadCover);
+                    e.target.value = "";
+                  }}
+                />
+              </>
             )}
             {smbFiles.length > 0 && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50">
@@ -230,7 +314,8 @@ export default function WorkDetailPage() {
               </div>
             )}
           </div>
-        ) : (
+        )}
+        {!work.cover_image_url && smbFiles.length === 0 && (
           <CoverUploadZone onUpload={uploadCover} />
         )}
         <video
