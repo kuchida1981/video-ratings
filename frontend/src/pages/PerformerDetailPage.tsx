@@ -27,6 +27,12 @@ export default function PerformerDetailPage() {
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(maxCols);
 
+  const [newAliasName, setNewAliasName] = useState("");
+  const [newAliasFurigana, setNewAliasFurigana] = useState("");
+  const [editingAliasId, setEditingAliasId] = useState<number | null>(null);
+  const [editingAliasName, setEditingAliasName] = useState("");
+  const [editingAliasFurigana, setEditingAliasFurigana] = useState("");
+
   const reload = () => {
     api.performers.get(performerId).then(setPerformer);
     api.performers.works(performerId).then(setWorks);
@@ -65,6 +71,48 @@ export default function PerformerDetailPage() {
     if (!confirm("この出演者を削除しますか？")) return;
     await api.performers.delete(performerId);
     navigate("/performers");
+  };
+
+  const addAlias = async () => {
+    if (!newAliasName.trim()) return;
+    try {
+      await api.performers.addAlias(performerId, {
+        name: newAliasName.trim(),
+        furigana: newAliasFurigana.trim() || null,
+      });
+      setNewAliasName("");
+      setNewAliasFurigana("");
+      reload();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "別名の追加に失敗しました";
+      alert(msg);
+    }
+  };
+
+  const updateAlias = async (aliasId: number) => {
+    if (!editingAliasName.trim()) return;
+    try {
+      await api.performers.updateAlias(performerId, aliasId, {
+        name: editingAliasName.trim(),
+        furigana: editingAliasFurigana.trim() || null,
+      });
+      setEditingAliasId(null);
+      reload();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "別名の更新に失敗しました";
+      alert(msg);
+    }
+  };
+
+  const removeAlias = async (aliasId: number) => {
+    if (!confirm("この別名を削除しますか？")) return;
+    try {
+      await api.performers.removeAlias(performerId, aliasId);
+      reload();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "別名の削除に失敗しました";
+      alert(msg);
+    }
   };
 
   const toggleTag = async (tagId: number) => {
@@ -112,12 +160,91 @@ export default function PerformerDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           {editing ? (
-            <div className="space-y-2">
-              <div><Label>名前</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-              <div><Label>ふりがな</Label><Input value={form.furigana} onChange={(e) => setForm({ ...form, furigana: e.target.value })} /></div>
-              <div className="flex gap-2">
-                <Button onClick={save}>保存</Button>
-                <Button variant="outline" onClick={() => setEditing(false)}>キャンセル</Button>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div><Label>名前</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                <div><Label>ふりがな</Label><Input value={form.furigana} onChange={(e) => setForm({ ...form, furigana: e.target.value })} /></div>
+                <div className="flex gap-2">
+                  <Button onClick={save}>保存</Button>
+                  <Button variant="outline" onClick={() => setEditing(false)}>キャンセル</Button>
+                </div>
+              </div>
+
+              {/* 別名管理セクション */}
+              <div className="border-t pt-4 space-y-3">
+                <h3 className="text-sm font-semibold">別名管理</h3>
+                
+                {/* 既存の別名リスト */}
+                <div className="space-y-2">
+                  {(performer.aliases ?? []).map((alias) => (
+                    <div key={alias.id} className="flex items-center gap-2 text-sm border p-2 rounded bg-muted/30">
+                      {editingAliasId === alias.id ? (
+                        <>
+                          <div className="flex-1 flex gap-2">
+                            <Input
+                              placeholder="名前"
+                              value={editingAliasName}
+                              onChange={(e) => setEditingAliasName(e.target.value)}
+                            />
+                            <Input
+                              placeholder="ふりがな"
+                              value={editingAliasFurigana}
+                              onChange={(e) => setEditingAliasFurigana(e.target.value)}
+                            />
+                          </div>
+                          <div className="flex gap-1">
+                            <Button size="sm" onClick={() => updateAlias(alias.id)}>保存</Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingAliasId(null)}>キャンセル</Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex-1">
+                            <span className="font-medium">{alias.name}</span>
+                            {alias.furigana && <span className="text-muted-foreground text-xs ml-2">({alias.furigana})</span>}
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingAliasId(alias.id);
+                                setEditingAliasName(alias.name);
+                                setEditingAliasFurigana(alias.furigana ?? "");
+                              }}
+                            >
+                              編集
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => removeAlias(alias.id)}>
+                              削除
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {(performer.aliases ?? []).length === 0 && (
+                    <div className="text-xs text-muted-foreground italic">登録されている別名はありません。</div>
+                  )}
+                </div>
+
+                {/* 新規追加フォーム */}
+                <div className="space-y-2 border-t pt-3">
+                  <h4 className="text-xs font-medium text-muted-foreground">別名の新規追加</h4>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="別名（必須）"
+                      value={newAliasName}
+                      onChange={(e) => setNewAliasName(e.target.value)}
+                    />
+                    <Input
+                      placeholder="ふりがな（任意）"
+                      value={newAliasFurigana}
+                      onChange={(e) => setNewAliasFurigana(e.target.value)}
+                    />
+                    <Button onClick={addAlias}>追加</Button>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -134,6 +261,17 @@ export default function PerformerDetailPage() {
                 </a>
               </div>
               {performer.furigana && <div className="text-sm text-muted-foreground">{performer.furigana}</div>}
+              {performer.aliases && performer.aliases.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1 items-center">
+                  <span className="text-xs text-muted-foreground">別名:</span>
+                  {performer.aliases.map((alias) => (
+                    <Badge key={alias.id} variant="secondary" className="text-xs py-0">
+                      {alias.name}
+                      {alias.furigana && <span className="text-[10px] opacity-70 ml-1">({alias.furigana})</span>}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>

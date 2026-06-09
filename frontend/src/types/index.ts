@@ -57,10 +57,17 @@ export interface TagSummary {
   score: number | null;
 }
 
+export interface PerformerAlias {
+  id: number;
+  name: string;
+  furigana: string | null;
+}
+
 export interface Performer {
   id: number;
   name: string;
   furigana: string | null;
+  aliases: PerformerAlias[];
   custom_fields: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
