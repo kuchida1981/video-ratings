@@ -105,20 +105,42 @@ export interface CustomFieldDefinition {
   created_at: string;
 }
 
+export interface PerformerMatch {
+  name: string;
+  furigana: string | null;
+  existing_id: number | null;
+  existing_name: string | null;
+  existing_aliases: string[];
+}
+
 export interface ImportRow {
   row_number: number;
   title: string | null;
-  performer_names: string[];
-  performer_furiganas: string[];
+  performers: PerformerMatch[];
   directory_path: string | null;
   errors: string[];
   is_valid: boolean;
+  is_duplicate_suspect: boolean;
+  duplicate_hint: string | null;
 }
 
 export interface ImportPreviewResponse {
   rows: ImportRow[];
   valid_count: number;
   error_count: number;
+}
+
+export interface PerformerExecuteInfo {
+  name: string;
+  furigana: string | null;
+  performer_id: number | null;
+}
+
+export interface ExecuteRow {
+  row_number: number;
+  title: string | null;
+  performers: PerformerExecuteInfo[];
+  directory_path: string | null;
 }
 
 export interface ImportResult {
