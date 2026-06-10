@@ -8,12 +8,10 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import Performer, PerformerAlias, Work, WorkFile, WorkPerformer
 from app.schemas.imports import (
-    ExecuteRow,
     ImportExecuteRequest,
     ImportPreviewResponse,
     ImportResult,
     ImportRow,
-    PerformerExecuteInfo,
     PerformerMatch,
 )
 
@@ -30,22 +28,30 @@ def _parse_csv(content: bytes) -> list[dict]:
         raw_furiganas = (row.get("performer_furiganas") or "").strip()
         directory_path = (row.get("directory_path") or "").strip() or None
 
-        performer_names = [unicodedata.normalize("NFC", n.strip()) for n in raw_names.split(",") if n.strip()] if raw_names else []
-        performer_furiganas = [unicodedata.normalize("NFC", f.strip()) for f in raw_furiganas.split(",") if f.strip()] if raw_furiganas else []
+        performer_names = (
+            [unicodedata.normalize("NFC", n.strip()) for n in raw_names.split(",") if n.strip()] if raw_names else []
+        )
+        performer_furiganas = (
+            [unicodedata.normalize("NFC", f.strip()) for f in raw_furiganas.split(",") if f.strip()]
+            if raw_furiganas
+            else []
+        )
 
         errors = []
         if not title:
             errors.append("title is required")
 
-        rows.append({
-            "row_number": i,
-            "title": title or None,
-            "performer_names": performer_names,
-            "performer_furiganas": performer_furiganas,
-            "directory_path": directory_path,
-            "errors": errors,
-            "is_valid": len(errors) == 0,
-        })
+        rows.append(
+            {
+                "row_number": i,
+                "title": title or None,
+                "performer_names": performer_names,
+                "performer_furiganas": performer_furiganas,
+                "directory_path": directory_path,
+                "errors": errors,
+                "is_valid": len(errors) == 0,
+            }
+        )
     return rows
 
 
@@ -55,19 +61,19 @@ async def preview_import(file: UploadFile = File(...), db: Session = Depends(get
         raise HTTPException(status_code=400, detail="CSV file required")
     content = await file.read()
     raw_rows = _parse_csv(content)
-    
+
     rows = []
     for r in raw_rows:
         errors = r["errors"]
         is_valid = r["is_valid"]
-        
+
         performer_matches = []
         performer_names = r["performer_names"]
         performer_furiganas = r["performer_furiganas"]
-        
+
         for idx, name in enumerate(performer_names):
             furigana = performer_furiganas[idx] if idx < len(performer_furiganas) else None
-            
+
             # NFC/NFD 両形式でDBを検索（DB内に正規化前のデータが混在する可能性への対処）
             name_variants = list({name, unicodedata.normalize("NFD", name)})
             performer = db.query(Performer).filter(Performer.name.in_(name_variants)).first()
@@ -75,28 +81,28 @@ async def preview_import(file: UploadFile = File(...), db: Session = Depends(get
                 alias = db.query(PerformerAlias).filter(PerformerAlias.name.in_(name_variants)).first()
                 if alias:
                     performer = alias.performer
-            
+
             if performer:
                 existing_aliases = [a.name for a in performer.aliases]
-                performer_matches.append(PerformerMatch(
-                    name=name,
-                    furigana=furigana,
-                    existing_id=performer.id,
-                    existing_name=performer.name,
-                    existing_aliases=existing_aliases
-                ))
+                performer_matches.append(
+                    PerformerMatch(
+                        name=name,
+                        furigana=furigana,
+                        existing_id=performer.id,
+                        existing_name=performer.name,
+                        existing_aliases=existing_aliases,
+                    )
+                )
             else:
-                performer_matches.append(PerformerMatch(
-                    name=name,
-                    furigana=furigana,
-                    existing_id=None,
-                    existing_name=None,
-                    existing_aliases=[]
-                ))
-        
+                performer_matches.append(
+                    PerformerMatch(
+                        name=name, furigana=furigana, existing_id=None, existing_name=None, existing_aliases=[]
+                    )
+                )
+
         is_duplicate_suspect = False
         duplicate_hint = None
-        
+
         if is_valid and r["title"]:
             title = r["title"]
             # 新規出演者が1人でもいれば、既存作品と同一にはなり得ない
@@ -113,7 +119,7 @@ async def preview_import(file: UploadFile = File(...), db: Session = Depends(get
                         is_duplicate_suspect = True
                         duplicate_hint = f"既存作品 ID:{work.id} と同一の可能性があります"
                         break
-        
+
         import_row = ImportRow(
             row_number=r["row_number"],
             title=r["title"],
@@ -122,10 +128,10 @@ async def preview_import(file: UploadFile = File(...), db: Session = Depends(get
             errors=errors,
             is_valid=is_valid,
             is_duplicate_suspect=is_duplicate_suspect,
-            duplicate_hint=duplicate_hint
+            duplicate_hint=duplicate_hint,
         )
         rows.append(import_row)
-        
+
     valid_count = sum(1 for r in rows if r.is_valid)
     return ImportPreviewResponse(
         rows=rows,
@@ -159,7 +165,7 @@ def execute_import(data: ImportExecuteRequest, db: Session = Depends(get_db)):
                     performer = Performer(name=perf_info.name, furigana=perf_info.furigana)
                     db.add(performer)
                     db.flush()
-                
+
                 wp = WorkPerformer(work_id=work.id, performer_id=performer.id, is_main=(idx == 0))
                 db.add(wp)
 
