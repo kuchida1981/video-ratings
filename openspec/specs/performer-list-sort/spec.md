@@ -1,6 +1,10 @@
-## ADDED Requirements
+# performer-list-sort Specification
 
+## Purpose
+TBD - created by archiving change performer-list-sort. Update Purpose after archive.
+## Requirements
 ### Requirement: 出演者一覧のソート
+The system MUST support sorting the performer list by name, work count, or average work score.
 システムは出演者一覧ページで、表示順を「名前順 / 作品数順 / 作品平均点数順」× 昇順/降順に切り替えられなければならない。
 
 #### Scenario: ソートキーと方向を変更できる
@@ -34,3 +38,4 @@
 #### Scenario: デフォルトソートは名前昇順
 - **WHEN** ユーザーが出演者一覧ページを初めて開く
 - **THEN** ソートキーは「名前順」、方向は「昇順」が初期選択されている
+

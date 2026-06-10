@@ -53,6 +53,7 @@ class PerformerResponse(PerformerBase):
     aliases: list[AliasResponse] = []
     total_score: int = 0
     work_count: int = 0
+    avg_work_score: float = 0.0
     cover_image_url: str | None = None
 
     model_config = {"from_attributes": True}

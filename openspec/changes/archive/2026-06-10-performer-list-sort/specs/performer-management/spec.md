@@ -1,6 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: 出演者一覧ページでタイル表示する
+The system MUST display performers as tiles with average work score.
 システムは出演者一覧ページで出演者をタイルグリッド形式で表示しなければならない。出演者タイルには名前・出演作品数・スコアを表示する。`GET /performers` レスポンスの各出演者オブジェクトには `avg_work_score`（出演作品の total_score 平均値）を含まなければならない。作品が0件の場合は `avg_work_score = 0.0` とする。
 
 #### Scenario: 出演者タイルの内容
