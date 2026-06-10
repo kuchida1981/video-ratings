@@ -1,14 +1,23 @@
 from pydantic import BaseModel
 
 
+class PerformerMatch(BaseModel):
+    name: str
+    furigana: str | None
+    existing_id: int | None
+    existing_name: str | None
+    existing_aliases: list[str]
+
+
 class ImportRow(BaseModel):
     row_number: int
     title: str | None
-    performer_names: list[str]
-    performer_furiganas: list[str]
+    performers: list[PerformerMatch]
     directory_path: str | None
     errors: list[str] = []
     is_valid: bool = True
+    is_duplicate_suspect: bool = False
+    duplicate_hint: str | None = None
 
 
 class ImportPreviewResponse(BaseModel):
@@ -17,8 +26,21 @@ class ImportPreviewResponse(BaseModel):
     error_count: int
 
 
+class PerformerExecuteInfo(BaseModel):
+    name: str
+    furigana: str | None
+    performer_id: int | None
+
+
+class ExecuteRow(BaseModel):
+    row_number: int
+    title: str | None
+    performers: list[PerformerExecuteInfo]
+    directory_path: str | None
+
+
 class ImportExecuteRequest(BaseModel):
-    rows: list[ImportRow]
+    rows: list[ExecuteRow]
 
 
 class ImportResult(BaseModel):
