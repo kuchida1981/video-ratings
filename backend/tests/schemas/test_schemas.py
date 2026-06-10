@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.custom_field import CustomFieldDefinitionCreate, FieldType
-from app.schemas.imports import ImportRow, ImportPreviewResponse, ImportResult
+from app.schemas.imports import ImportPreviewResponse, ImportResult, ImportRow, PerformerMatch
 from app.schemas.performer import PerformerCreate, PerformerUpdate
 from app.schemas.search import SearchParams
 from app.schemas.tag import EntityType, TagCategoryCreate, TagCreate
@@ -78,12 +78,20 @@ class TestCustomFieldSchemas:
 @pytest.mark.unit
 class TestImportSchemas:
     def test_import_row_defaults(self):
-        row = ImportRow(row_number=1, title="Test", performer_names=[], performer_furiganas=[], directory_path=None)
+        row = ImportRow(row_number=1, title="Test", performers=[], directory_path=None)
         assert row.is_valid is True
         assert row.errors == []
 
+    def test_import_row_with_performer_match(self):
+        p = PerformerMatch(
+            name="田中花子", furigana=None, existing_id=5, existing_name="田中花子", existing_aliases=["はなこ"]
+        )
+        row = ImportRow(row_number=1, title="Test", performers=[p], directory_path=None)
+        assert row.performers[0].existing_id == 5
+        assert row.performers[0].existing_aliases == ["はなこ"]
+
     def test_import_preview_response(self):
-        row = ImportRow(row_number=1, title="T", performer_names=[], performer_furiganas=[], directory_path=None)
+        row = ImportRow(row_number=1, title="T", performers=[], directory_path=None)
         resp = ImportPreviewResponse(rows=[row], valid_count=1, error_count=0)
         assert resp.valid_count == 1
 
