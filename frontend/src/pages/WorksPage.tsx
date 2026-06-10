@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { api } from "@/api/client";
@@ -28,6 +28,8 @@ export default function WorksPage() {
   const [series, setSeries] = useState("");
   const [sortBy, setSortBy] = useState<"created_at" | "total_score">("created_at");
   const [sortDesc, setSortDesc] = useState(true);
+  const [onlyUnrated, setOnlyUnrated] = useState(false);
+  const [onlyNoCover, setOnlyNoCover] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -78,6 +80,8 @@ export default function WorksPage() {
     setMaker("");
     setSeries("");
     setSelectedTagIds([]);
+    setOnlyUnrated(false);
+    setOnlyNoCover(false);
   };
 
   const createWork = async () => {
@@ -90,7 +94,14 @@ export default function WorksPage() {
     navigate(`/works/${work.id}`);
   };
 
-  const hasFilters = keyword || maker || series || selectedTagIds.length > 0;
+  const filteredWorks = useMemo(() => {
+    let result = works;
+    if (onlyUnrated) result = result.filter((w) => w.tags.length === 0);
+    if (onlyNoCover) result = result.filter((w) => w.cover_image_url === null);
+    return result;
+  }, [works, onlyUnrated, onlyNoCover]);
+
+  const hasFilters = keyword || maker || series || selectedTagIds.length > 0 || onlyUnrated || onlyNoCover;
 
   const handleImportFile = async (file: File) => {
     setImportLoading(true);
@@ -440,8 +451,25 @@ export default function WorksPage() {
           </div>
         ))}
 
+        <div className="flex flex-wrap gap-1">
+          <Badge
+            variant={onlyUnrated ? "default" : "outline"}
+            className="cursor-pointer py-1.5"
+            onClick={() => setOnlyUnrated((v) => !v)}
+          >
+            未評価のみ
+          </Badge>
+          <Badge
+            variant={onlyNoCover ? "default" : "outline"}
+            className="cursor-pointer py-1.5"
+            onClick={() => setOnlyNoCover((v) => !v)}
+          >
+            カバー画像なし
+          </Badge>
+        </div>
+
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{works.length} 件</span>
+          <span>{filteredWorks.length} 件</span>
           <Button
             variant="ghost"
             size="sm"
@@ -468,11 +496,11 @@ export default function WorksPage() {
       </div>
 
       {/* Tile grid */}
-      {works.length === 0 ? (
+      {filteredWorks.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">作品が見つかりません</p>
       ) : (
         <div className="grid gap-3" style={gridStyle}>
-          {works.map((w) => (
+          {filteredWorks.map((w) => (
             <WorkTile key={w.id} work={w} onClick={() => navigate(`/works/${w.id}`)} />
           ))}
         </div>

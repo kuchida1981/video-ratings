@@ -6,6 +6,7 @@ import type { Performer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { PerformerTile } from "@/components/PerformerTile";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
@@ -19,6 +20,8 @@ export default function PerformersPage() {
   const [furigana, setFurigana] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "work_count" | "avg_work_score">("name");
   const [sortDesc, setSortDesc] = useState(false);
+  const [onlyUnrated, setOnlyUnrated] = useState(false);
+  const [onlyNoCover, setOnlyNoCover] = useState(false);
 
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(maxCols);
@@ -62,6 +65,13 @@ export default function PerformersPage() {
     return list;
   }, [performers, sortBy, sortDesc]);
 
+  const filteredPerformers = useMemo(() => {
+    let result = sortedPerformers;
+    if (onlyUnrated) result = result.filter((p) => p.tags.length === 0);
+    if (onlyNoCover) result = result.filter((p) => p.cover_image_url === null);
+    return result;
+  }, [sortedPerformers, onlyUnrated, onlyNoCover]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -83,8 +93,25 @@ export default function PerformersPage() {
 
       {/* Search & Filters (Matching WorksPage style) */}
       <div className="space-y-3 rounded-lg border p-4">
+        <div className="flex flex-wrap gap-1">
+          <Badge
+            variant={onlyUnrated ? "default" : "outline"}
+            className="cursor-pointer py-1.5"
+            onClick={() => setOnlyUnrated((v) => !v)}
+          >
+            未評価のみ
+          </Badge>
+          <Badge
+            variant={onlyNoCover ? "default" : "outline"}
+            className="cursor-pointer py-1.5"
+            onClick={() => setOnlyNoCover((v) => !v)}
+          >
+            カバー画像なし
+          </Badge>
+        </div>
+
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{sortedPerformers.length} 件</span>
+          <span>{filteredPerformers.length} 件</span>
           <Button
             variant="ghost"
             size="sm"
@@ -121,11 +148,11 @@ export default function PerformersPage() {
         </div>
       </div>
 
-      {sortedPerformers.length === 0 ? (
+      {filteredPerformers.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">出演者が登録されていません</p>
       ) : (
         <div className="grid gap-3" style={gridStyle}>
-          {sortedPerformers.map((p) => (
+          {filteredPerformers.map((p) => (
             <PerformerTile key={p.id} performer={p} onClick={() => navigate(`/performers/${p.id}`)} />
           ))}
         </div>
