@@ -74,6 +74,7 @@ export interface Performer {
   tags: TagSummary[];
   total_score: number;
   work_count: number;
+  avg_work_score: number;
   cover_image_url: string | null;
 }
 

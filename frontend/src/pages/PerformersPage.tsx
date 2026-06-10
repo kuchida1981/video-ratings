@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, ArrowUpDown } from "lucide-react";
 import { api } from "@/api/client";
 import type { Performer } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ export default function PerformersPage() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [furigana, setFurigana] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "work_count" | "avg_work_score">("name");
+  const [sortDesc, setSortDesc] = useState(false);
 
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(maxCols);
@@ -33,6 +35,32 @@ export default function PerformersPage() {
     setFurigana("");
     navigate(`/performers/${p.id}`);
   };
+
+  const sortedPerformers = useMemo(() => {
+    const list = [...performers];
+    list.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === "name") {
+        const nameA = a.furigana || a.name;
+        const nameB = b.furigana || b.name;
+        comparison = nameA.localeCompare(nameB, "ja");
+      } else if (sortBy === "work_count") {
+        comparison = a.work_count - b.work_count;
+      } else if (sortBy === "avg_work_score") {
+        comparison = a.avg_work_score - b.avg_work_score;
+      }
+
+      if (comparison !== 0) {
+        return sortDesc ? -comparison : comparison;
+      }
+
+      // Fallback sort: always by name ascending
+      const nameA = a.furigana || a.name;
+      const nameB = b.furigana || b.name;
+      return nameA.localeCompare(nameB, "ja");
+    });
+    return list;
+  }, [performers, sortBy, sortDesc]);
 
   return (
     <div className="space-y-4">
@@ -53,11 +81,51 @@ export default function PerformersPage() {
         </Dialog>
       </div>
 
-      {performers.length === 0 ? (
+      {/* Search & Filters (Matching WorksPage style) */}
+      <div className="space-y-3 rounded-lg border p-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{sortedPerformers.length} 件</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (sortBy === "name") setSortDesc((d) => !d);
+              else { setSortBy("name"); setSortDesc(false); }
+            }}
+            className={sortBy === "name" ? "text-primary" : ""}
+          >
+            <ArrowUpDown size={14} />名前順
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (sortBy === "work_count") setSortDesc((d) => !d);
+              else { setSortBy("work_count"); setSortDesc(true); }
+            }}
+            className={sortBy === "work_count" ? "text-primary" : ""}
+          >
+            <ArrowUpDown size={14} />作品数順
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (sortBy === "avg_work_score") setSortDesc((d) => !d);
+              else { setSortBy("avg_work_score"); setSortDesc(true); }
+            }}
+            className={sortBy === "avg_work_score" ? "text-primary" : ""}
+          >
+            <ArrowUpDown size={14} />作品平均点数順
+          </Button>
+        </div>
+      </div>
+
+      {sortedPerformers.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">出演者が登録されていません</p>
       ) : (
         <div className="grid gap-3" style={gridStyle}>
-          {performers.map((p) => (
+          {sortedPerformers.map((p) => (
             <PerformerTile key={p.id} performer={p} onClick={() => navigate(`/performers/${p.id}`)} />
           ))}
         </div>
