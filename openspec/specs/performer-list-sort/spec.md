@@ -35,7 +35,17 @@ The system MUST support sorting the performer list by name, work count, or avera
 - **WHEN** ユーザーが「作品平均点数順」「昇順」を選択する
 - **THEN** 出演者タイルは avg_work_score の低い順に並ぶ
 
-#### Scenario: デフォルトソートは名前昇順
-- **WHEN** ユーザーが出演者一覧ページを初めて開く
+#### Scenario: localStorage に保存値がない場合のデフォルトソートは名前昇順
+- **WHEN** ユーザーが出演者一覧ページを初めて開く、または localStorage に保存値が存在しない
 - **THEN** ソートキーは「名前順」、方向は「昇順」が初期選択されている
 
+### Requirement: 出演者一覧のフィルタ全解除UIを提供する
+出演者一覧においても、フィルタ・ソート条件のいずれかがデフォルト値から変更されている場合、フィルタ全解除ボタンを表示しなければならない。ボタンをクリックすると全条件がデフォルト値に戻る。
+
+#### Scenario: 出演者一覧でソートが変更されている場合にフィルタ全解除ボタンが表示される
+- **WHEN** 出演者一覧でフィルタまたはソートがデフォルト値と異なる
+- **THEN** フィルタ全解除ボタンが表示される
+
+#### Scenario: 出演者一覧でフィルタ全解除するとデフォルト値に戻る
+- **WHEN** ユーザーが出演者一覧のフィルタ全解除ボタンをクリックする
+- **THEN** sortBy="name", sortDesc=false, onlyUnrated=false, onlyNoCover=false にリセットされる

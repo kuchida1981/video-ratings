@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ArrowUpDown } from "lucide-react";
+import { Plus, ArrowUpDown, X } from "lucide-react";
 import { api } from "@/api/client";
 import type { Performer } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,27 @@ import { PerformerTile } from "@/components/PerformerTile";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 
+const PERFORMERS_STORAGE_KEY = "video-ratings:performers-filters";
+const DEFAULT_PERFORMERS_SORT_BY = "name" as const;
+const DEFAULT_PERFORMERS_SORT_DESC = false;
+
+function loadPerformersFilters() {
+  try { return JSON.parse(localStorage.getItem(PERFORMERS_STORAGE_KEY) ?? "{}"); }
+  catch { return {}; }
+}
+
 export default function PerformersPage() {
   const navigate = useNavigate();
   const [performers, setPerformers] = useState<Performer[]>([]);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [furigana, setFurigana] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "work_count" | "avg_work_score">("name");
-  const [sortDesc, setSortDesc] = useState(false);
-  const [onlyUnrated, setOnlyUnrated] = useState(false);
-  const [onlyNoCover, setOnlyNoCover] = useState(false);
+
+  const stored = loadPerformersFilters();
+  const [sortBy, setSortBy] = useState<"name" | "work_count" | "avg_work_score">(stored.sortBy ?? DEFAULT_PERFORMERS_SORT_BY);
+  const [sortDesc, setSortDesc] = useState<boolean>(stored.sortDesc ?? DEFAULT_PERFORMERS_SORT_DESC);
+  const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
+  const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
 
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(maxCols);
@@ -29,6 +40,22 @@ export default function PerformersPage() {
   useEffect(() => {
     api.performers.list().then(setPerformers);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(PERFORMERS_STORAGE_KEY, JSON.stringify({
+      sortBy, sortDesc, onlyUnrated, onlyNoCover,
+    }));
+  }, [sortBy, sortDesc, onlyUnrated, onlyNoCover]);
+
+  const hasFilters = !!(onlyUnrated || onlyNoCover || sortBy !== DEFAULT_PERFORMERS_SORT_BY || sortDesc !== DEFAULT_PERFORMERS_SORT_DESC);
+
+  const resetFilters = () => {
+    setSortBy(DEFAULT_PERFORMERS_SORT_BY);
+    setSortDesc(DEFAULT_PERFORMERS_SORT_DESC);
+    setOnlyUnrated(false);
+    setOnlyNoCover(false);
+    localStorage.removeItem(PERFORMERS_STORAGE_KEY);
+  };
 
   const create = async () => {
     if (!name.trim()) return;
@@ -108,6 +135,9 @@ export default function PerformersPage() {
           >
             カバー画像なし
           </Badge>
+          {hasFilters && (
+            <Button variant="outline" size="sm" onClick={resetFilters} className="ml-1"><X size={14} />フィルタ全解除</Button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
