@@ -49,6 +49,7 @@ export interface WorkListItem {
   custom_fields: Record<string, unknown> | null;
   tags: { id: number; name: string; category_id: number }[];
   cover_image_url: string | null;
+  file_count: number;
 }
 
 export interface TagSummary {

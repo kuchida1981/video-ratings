@@ -102,6 +102,7 @@ class WorkListResponse(BaseModel):
     custom_fields: dict[str, Any] | None = None
     tags: list[TagInWorkList] = []
     cover_image_url: str | None = None
+    file_count: int = 0
 
     model_config = {"from_attributes": True}
 
