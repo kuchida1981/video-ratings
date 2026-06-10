@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { api } from "@/api/client";
@@ -176,72 +176,68 @@ export default function WorksPage() {
     });
   };
 
-  const renderImportRows = (rows: ImportRow[], showErrors: boolean) =>
+  const renderImportRows = (rows: ImportRow[], showErrorCol: boolean) =>
     rows.map((row) => {
       const isSkipped = importRowStates[row.row_number]?.skipped;
-      const rowBg = !row.is_valid ? "bg-destructive/5" : isSkipped ? "bg-muted/30 opacity-70" : "";
+      const rowBg = !row.is_valid ? "bg-destructive/5" : isSkipped ? "bg-muted/30 opacity-60" : "";
       return (
-        <React.Fragment key={row.row_number}>
-          <tr className={`border-t transition-colors ${rowBg}`}>
-            <td className="px-3 pt-2 text-center">
-              {row.is_valid ? (
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 cursor-pointer mx-auto block"
-                  checked={!isSkipped}
-                  onChange={() => toggleImportRowSkipped(row.row_number)}
-                />
-              ) : (
-                <XCircle size={16} className="text-destructive mx-auto" />
-              )}
-            </td>
-            <td className="px-3 pt-2">
-              <div>{row.title ?? <span className="text-muted-foreground">—</span>}</div>
+        <tr key={row.row_number} className={`border-t transition-colors ${rowBg}`}>
+          <td className="px-3 py-2 text-center">
+            {row.is_valid ? (
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 cursor-pointer mx-auto block"
+                checked={!isSkipped}
+                onChange={() => toggleImportRowSkipped(row.row_number)}
+              />
+            ) : (
+              <XCircle size={16} className="text-destructive mx-auto" />
+            )}
+          </td>
+          <td className="px-3 py-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span>{row.title ?? <span className="text-muted-foreground">—</span>}</span>
               {row.is_duplicate_suspect && (
-                <div className="flex items-center gap-1 text-[11px] text-amber-600 font-medium mt-0.5">
-                  <AlertTriangle size={11} className="shrink-0" />
-                  <span>{row.duplicate_hint}</span>
-                </div>
+                <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-600 font-medium bg-amber-50 px-1 py-0.5 rounded whitespace-nowrap">
+                  <AlertTriangle size={9} />重複の可能性
+                </span>
               )}
-            </td>
-            <td className="px-3 pt-2">
-              <div className="flex flex-wrap gap-x-2 gap-y-1">
-                {(row.performers || []).map((p, i) => {
-                  const isOverride = importRowStates[row.row_number]?.performerOverrides?.[p.name] || false;
-                  const isMatched = p.existing_id !== null;
-                  const displayText = p.existing_name
-                    ? p.existing_aliases?.length
-                      ? `${p.existing_name} (${p.existing_aliases.join(", ")})`
-                      : p.existing_name
-                    : p.name;
-                  return (
-                    <div key={i} className="inline-flex items-center gap-1 bg-muted/40 px-1.5 py-0.5 rounded text-xs border border-border">
-                      {isMatched && !isOverride ? (
-                        <>
-                          <span className="text-green-700">{displayText}</span>
-                          <button type="button" className="text-[10px] text-muted-foreground underline border-l border-border pl-1" onClick={() => toggleImportPerformerOverride(row.row_number, p.name)}>別人</button>
-                        </>
-                      ) : isMatched && isOverride ? (
-                        <>
-                          <span className="text-amber-600">{p.name} [新規]</span>
-                          <button type="button" className="text-[10px] text-muted-foreground underline border-l border-border pl-1" onClick={() => toggleImportPerformerOverride(row.row_number, p.name)}>戻す</button>
-                        </>
-                      ) : (
-                        <span>{p.name} <span className="text-muted-foreground">[新規]</span></span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </td>
-          </tr>
-          {showErrors && row.errors && row.errors.length > 0 && (
-            <tr className={`transition-colors ${rowBg}`}>
-              <td className="px-3 pb-2" />
-              <td colSpan={2} className="px-3 pb-2 text-xs text-destructive">{row.errors.join(", ")}</td>
-            </tr>
+            </div>
+          </td>
+          <td className="px-3 py-2">
+            <div className="flex flex-wrap gap-x-2 gap-y-1">
+              {(row.performers || []).map((p, i) => {
+                const isOverride = importRowStates[row.row_number]?.performerOverrides?.[p.name] || false;
+                const isMatched = p.existing_id !== null;
+                const displayText = p.existing_name
+                  ? p.existing_aliases?.length
+                    ? `${p.existing_name} (${p.existing_aliases.join(", ")})`
+                    : p.existing_name
+                  : p.name;
+                return (
+                  <div key={i} className="inline-flex items-center gap-1 bg-muted/40 px-1.5 py-0.5 rounded text-xs border border-border">
+                    {isMatched && !isOverride ? (
+                      <>
+                        <span className="text-green-700">{displayText}</span>
+                        <button type="button" className="text-[10px] text-muted-foreground underline border-l border-border pl-1" onClick={() => toggleImportPerformerOverride(row.row_number, p.name)}>別人</button>
+                      </>
+                    ) : isMatched && isOverride ? (
+                      <>
+                        <span className="text-amber-600">{p.name} [新規]</span>
+                        <button type="button" className="text-[10px] text-muted-foreground underline border-l border-border pl-1" onClick={() => toggleImportPerformerOverride(row.row_number, p.name)}>戻す</button>
+                      </>
+                    ) : (
+                      <span>{p.name} <span className="text-muted-foreground">[新規]</span></span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </td>
+          {showErrorCol && (
+            <td className="px-3 py-2 text-[11px] text-destructive">{row.errors?.join(", ") ?? ""}</td>
           )}
-        </React.Fragment>
+        </tr>
       );
     });
 
@@ -334,6 +330,7 @@ export default function WorksPage() {
                       <th className="w-16 px-3 py-2 text-center">取り込む</th>
                       <th className="text-left px-3 py-2">作品名</th>
                       <th className="text-left px-3 py-2">出演者</th>
+                      <th className="text-left px-3 py-2">エラー</th>
                     </tr>
                   </thead>
                   <tbody>{renderImportRows(importPreview.rows, true)}</tbody>
@@ -364,7 +361,7 @@ export default function WorksPage() {
                   </thead>
                   <tbody>
                     {renderImportRows(
-                      importPreview.rows.filter((r) => r.is_valid && !importRowStates[r.row_number]?.skipped),
+                      importPreview.rows.filter((r) => r.is_valid),
                       false
                     )}
                   </tbody>
