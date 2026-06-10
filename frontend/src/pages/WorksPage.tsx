@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle } from "lucide-react";
 import { api } from "@/api/client";
-import type { WorkListItem, TagCategory, ImportPreviewResponse, ImportRow, ImportResult } from "@/types";
+import type { WorkListItem, TagCategory, ImportPreviewResponse, ImportResult, ExecuteRow } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -99,8 +99,19 @@ export default function WorksPage() {
     if (!importPreview) return;
     setImportLoading(true);
     try {
-      const validRows: ImportRow[] = importPreview.rows.filter((r) => r.is_valid);
-      const res = await api.imports.execute(validRows);
+      const executeRows: ExecuteRow[] = importPreview.rows
+        .filter((r) => r.is_valid && !r.is_duplicate_suspect)
+        .map((r) => ({
+          row_number: r.row_number,
+          title: r.title,
+          performers: r.performers.map((p) => ({
+            name: p.name,
+            furigana: p.furigana,
+            performer_id: p.existing_id,
+          })),
+          directory_path: r.directory_path,
+        }));
+      const res = await api.imports.execute(executeRows);
       setImportResult(res);
       setImportPreview(null);
       fetchWorks();
@@ -211,8 +222,8 @@ export default function WorksPage() {
                         </td>
                         <td className="px-3 py-2">{row.title ?? <span className="text-muted-foreground">—</span>}</td>
                         <td className="px-3 py-2 text-muted-foreground">
-                          {row.performer_names.map((n, i) => (
-                            <span key={i}>{n}{row.performer_furiganas[i] ? ` (${row.performer_furiganas[i]})` : ""}</span>
+                          {(row.performers || []).map((p, i) => (
+                            <span key={i}>{p.name}{p.furigana ? ` (${p.furigana})` : ""}</span>
                           )).reduce((acc, el, i) => i === 0 ? [el] : [...acc, ", ", el], [] as React.ReactNode[])}
                         </td>
                         <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{row.directory_path ?? "—"}</td>
