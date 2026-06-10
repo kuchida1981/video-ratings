@@ -17,20 +17,30 @@ import { WorkTile } from "@/components/WorkTile";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 
+const WORKS_STORAGE_KEY = "video-ratings:works-filters";
+const DEFAULT_WORKS_SORT_BY = "created_at" as const;
+const DEFAULT_WORKS_SORT_DESC = true;
+
+function loadWorksFilters() {
+  try { return JSON.parse(localStorage.getItem(WORKS_STORAGE_KEY) ?? "{}"); }
+  catch { return {}; }
+}
+
 export default function WorksPage() {
   const navigate = useNavigate();
   const [works, setWorks] = useState<WorkListItem[]>([]);
   const [categories, setCategories] = useState<TagCategory[]>([]);
 
-  const [keyword, setKeyword] = useState("");
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
-  const [maker, setMaker] = useState("");
-  const [series, setSeries] = useState("");
-  const [sortBy, setSortBy] = useState<"created_at" | "total_score">("created_at");
-  const [sortDesc, setSortDesc] = useState(true);
-  const [onlyUnrated, setOnlyUnrated] = useState(false);
-  const [onlyNoCover, setOnlyNoCover] = useState(false);
-  const [onlyNoFiles, setOnlyNoFiles] = useState(false);
+  const stored = loadWorksFilters();
+  const [keyword, setKeyword] = useState<string>(stored.keyword ?? "");
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>(stored.selectedTagIds ?? []);
+  const [maker, setMaker] = useState<string>(stored.maker ?? "");
+  const [series, setSeries] = useState<string>(stored.series ?? "");
+  const [sortBy, setSortBy] = useState<"created_at" | "total_score">(stored.sortBy ?? DEFAULT_WORKS_SORT_BY);
+  const [sortDesc, setSortDesc] = useState<boolean>(stored.sortDesc ?? DEFAULT_WORKS_SORT_DESC);
+  const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
+  const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
+  const [onlyNoFiles, setOnlyNoFiles] = useState<boolean>(stored.onlyNoFiles ?? false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -70,6 +80,13 @@ export default function WorksPage() {
     api.tagCategories.list("work").then(setCategories);
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem(WORKS_STORAGE_KEY, JSON.stringify({
+      keyword, selectedTagIds, maker, series, sortBy, sortDesc,
+      onlyUnrated, onlyNoCover, onlyNoFiles,
+    }));
+  }, [keyword, selectedTagIds, maker, series, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles]);
+
   const toggleTag = (tagId: number) => {
     setSelectedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
@@ -84,6 +101,9 @@ export default function WorksPage() {
     setOnlyUnrated(false);
     setOnlyNoCover(false);
     setOnlyNoFiles(false);
+    setSortBy(DEFAULT_WORKS_SORT_BY);
+    setSortDesc(DEFAULT_WORKS_SORT_DESC);
+    localStorage.removeItem(WORKS_STORAGE_KEY);
   };
 
   const createWork = async () => {
@@ -104,7 +124,7 @@ export default function WorksPage() {
     return result;
   }, [works, onlyUnrated, onlyNoCover, onlyNoFiles]);
 
-  const hasFilters = keyword || maker || series || selectedTagIds.length > 0 || onlyUnrated || onlyNoCover || onlyNoFiles;
+  const hasFilters = !!(keyword || maker || series || selectedTagIds.length > 0 || onlyUnrated || onlyNoCover || onlyNoFiles || sortBy !== DEFAULT_WORKS_SORT_BY || sortDesc !== DEFAULT_WORKS_SORT_DESC);
 
   const handleImportFile = async (file: File) => {
     setImportLoading(true);
@@ -432,7 +452,7 @@ export default function WorksPage() {
           <Input className="w-40 h-11" placeholder="メーカー" value={maker} onChange={(e) => setMaker(e.target.value)} />
           <Input className="w-40 h-11" placeholder="シリーズ" value={series} onChange={(e) => setSeries(e.target.value)} />
           {hasFilters && (
-            <Button variant="outline" onClick={resetFilters}><X size={16} />リセット</Button>
+            <Button variant="outline" onClick={resetFilters}><X size={16} />フィルタ全解除</Button>
           )}
         </div>
 
