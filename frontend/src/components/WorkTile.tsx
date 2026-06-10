@@ -1,4 +1,4 @@
-import { Film } from "lucide-react";
+import { Film, Files } from "lucide-react";
 import type { WorkListItem } from "@/types";
 
 interface WorkTileProps {
@@ -33,9 +33,17 @@ export function WorkTile({ work, onClick }: WorkTileProps) {
         <p className="text-xs text-muted-foreground truncate" title={performers}>
           {performers}
         </p>
-        <p className="text-xs font-mono text-primary text-right mt-0.5">
-          {work.total_score}
-        </p>
+        <div className="flex items-center justify-between mt-0.5">
+          {work.file_count > 0 ? (
+            <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+              <Files size={11} />
+              {work.file_count}
+            </span>
+          ) : (
+            <span />
+          )}
+          <p className="text-xs font-mono text-primary">{work.total_score}</p>
+        </div>
       </div>
     </div>
   );

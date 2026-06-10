@@ -109,6 +109,7 @@ def list_works(db: Session = Depends(get_db)):
             .joinedload(Performer.performer_tags)
             .joinedload(PerformerTag.tag),
             joinedload(Work.work_tags).joinedload(WorkTag.tag),
+            joinedload(Work.files),
         )
         .order_by(Work.created_at.desc())
         .all()
@@ -129,6 +130,7 @@ def list_works(db: Session = Depends(get_db)):
                     {"id": wt.tag.id, "name": wt.tag.name, "category_id": wt.tag.category_id} for wt in w.work_tags
                 ],
                 "cover_image_url": f"/static/covers/{w.cover_image_path}" if w.cover_image_path else None,
+                "file_count": len(w.files),
             }
         )
     return result

@@ -30,6 +30,7 @@ export default function WorksPage() {
   const [sortDesc, setSortDesc] = useState(true);
   const [onlyUnrated, setOnlyUnrated] = useState(false);
   const [onlyNoCover, setOnlyNoCover] = useState(false);
+  const [onlyNoFiles, setOnlyNoFiles] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -82,6 +83,7 @@ export default function WorksPage() {
     setSelectedTagIds([]);
     setOnlyUnrated(false);
     setOnlyNoCover(false);
+    setOnlyNoFiles(false);
   };
 
   const createWork = async () => {
@@ -98,10 +100,11 @@ export default function WorksPage() {
     let result = works;
     if (onlyUnrated) result = result.filter((w) => w.tags.length === 0);
     if (onlyNoCover) result = result.filter((w) => w.cover_image_url === null);
+    if (onlyNoFiles) result = result.filter((w) => w.file_count === 0);
     return result;
-  }, [works, onlyUnrated, onlyNoCover]);
+  }, [works, onlyUnrated, onlyNoCover, onlyNoFiles]);
 
-  const hasFilters = keyword || maker || series || selectedTagIds.length > 0 || onlyUnrated || onlyNoCover;
+  const hasFilters = keyword || maker || series || selectedTagIds.length > 0 || onlyUnrated || onlyNoCover || onlyNoFiles;
 
   const handleImportFile = async (file: File) => {
     setImportLoading(true);
@@ -465,6 +468,13 @@ export default function WorksPage() {
             onClick={() => setOnlyNoCover((v) => !v)}
           >
             カバー画像なし
+          </Badge>
+          <Badge
+            variant={onlyNoFiles ? "default" : "outline"}
+            className="cursor-pointer py-1.5"
+            onClick={() => setOnlyNoFiles((v) => !v)}
+          >
+            ファイルなし
           </Badge>
         </div>
 
