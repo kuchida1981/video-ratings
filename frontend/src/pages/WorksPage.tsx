@@ -35,6 +35,8 @@ export default function WorksPage() {
   const [newSeries, setNewSeries] = useState("");
 
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [importPhase, setImportPhase] = useState<"upload" | "preview" | "confirm" | "result">("upload");
+  const [confirmRowNumbers, setConfirmRowNumbers] = useState<Set<number>>(new Set());
   const [importPreview, setImportPreview] = useState<ImportPreviewResponse | null>(null);
   const [importRowStates, setImportRowStates] = useState<Record<number, RowState>>({});
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -101,6 +103,7 @@ export default function WorksPage() {
         initialStates[row.row_number] = { skipped: row.is_duplicate_suspect, performerOverrides: {} };
       });
       setImportRowStates(initialStates);
+      setImportPhase("preview");
     } finally {
       setImportLoading(false);
     }
@@ -139,6 +142,7 @@ export default function WorksPage() {
         }));
       const res = await api.imports.execute(executeRows);
       setImportResult(res);
+      setImportPhase("result");
       setImportPreview(null);
       setImportRowStates({});
       fetchWorks();
@@ -147,7 +151,97 @@ export default function WorksPage() {
     }
   };
 
-  const resetImport = () => { setImportPreview(null); setImportRowStates({}); setImportResult(null); };
+  const resetImport = () => { setImportPreview(null); setImportRowStates({}); setImportResult(null); setImportPhase("upload"); setConfirmRowNumbers(new Set()); };
+
+  const selectAllImport = () => {
+    if (!importPreview) return;
+    setImportRowStates((prev) => {
+      const next = { ...prev };
+      importPreview.rows.forEach((row) => {
+        if (row.is_valid)
+          next[row.row_number] = { ...(next[row.row_number] || { performerOverrides: {} }), skipped: false };
+      });
+      return next;
+    });
+  };
+
+  const deselectAllImport = () => {
+    if (!importPreview) return;
+    setImportRowStates((prev) => {
+      const next = { ...prev };
+      importPreview.rows.forEach((row) => {
+        if (row.is_valid)
+          next[row.row_number] = { ...(next[row.row_number] || { performerOverrides: {} }), skipped: true };
+      });
+      return next;
+    });
+  };
+
+  const renderImportRows = (rows: ImportRow[]) =>
+    rows.map((row) => {
+      const isSkipped = importRowStates[row.row_number]?.skipped;
+      const rowBg = !row.is_valid ? "bg-destructive/5" : isSkipped ? "bg-muted/30 opacity-60" : "";
+      return (
+        <tr key={row.row_number} className={`border-t transition-colors ${rowBg}`}>
+          <td className="px-3 py-2 text-center">
+            {row.is_valid ? (
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 cursor-pointer mx-auto block"
+                checked={!isSkipped}
+                onChange={() => toggleImportRowSkipped(row.row_number)}
+              />
+            ) : (
+              <XCircle
+                size={16}
+                className="text-destructive mx-auto cursor-help"
+                title={row.errors?.join("\n")}
+              />
+            )}
+          </td>
+          <td className="px-3 py-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span>{row.title ?? <span className="text-muted-foreground">—</span>}</span>
+              {row.is_duplicate_suspect && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-600 font-medium bg-amber-50 px-1 py-0.5 rounded whitespace-nowrap">
+                  <AlertTriangle size={9} />重複の可能性
+                </span>
+              )}
+            </div>
+          </td>
+          <td className="px-3 py-2">
+            <div className="flex flex-wrap gap-x-2 gap-y-1">
+              {(row.performers || []).map((p, i) => {
+                const isOverride = importRowStates[row.row_number]?.performerOverrides?.[p.name] || false;
+                const isMatched = p.existing_id !== null;
+                const displayText = p.existing_name
+                  ? p.existing_aliases?.length
+                    ? `${p.existing_name} (${p.existing_aliases.join(", ")})`
+                    : p.existing_name
+                  : p.name;
+                return (
+                  <div key={i} className="inline-flex items-center gap-1 bg-muted/40 px-1.5 py-0.5 rounded text-xs border border-border">
+                    {isMatched && !isOverride ? (
+                      <>
+                        <span className="text-green-700">{displayText}</span>
+                        <button type="button" className="text-[10px] text-muted-foreground underline border-l border-border pl-1" onClick={() => toggleImportPerformerOverride(row.row_number, p.name)}>別人</button>
+                      </>
+                    ) : isMatched && isOverride ? (
+                      <>
+                        <span className="text-amber-600">{p.name} [新規]</span>
+                        <button type="button" className="text-[10px] text-muted-foreground underline border-l border-border pl-1" onClick={() => toggleImportPerformerOverride(row.row_number, p.name)}>戻す</button>
+                      </>
+                    ) : (
+                      <span>{p.name} <span className="text-muted-foreground">[新規]</span></span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </td>
+        </tr>
+      );
+    });
 
   const closeBulkImport = () => { setBulkImportOpen(false); resetImport(); };
 
@@ -188,7 +282,7 @@ export default function WorksPage() {
             CSVファイルから作品を一括登録します。列: <code>title</code>, <code>performer_names</code>（カンマ区切り）, <code>performer_furiganas</code>（任意）, <code>directory_path</code>（任意）
           </p>
 
-          {!importPreview && !importResult && (
+          {importPhase === "upload" && (
             <div
               className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors ${
                 importDragOver ? "border-primary bg-primary/5" : "border-border"
@@ -218,14 +312,26 @@ export default function WorksPage() {
 
           {importLoading && <div className="text-center text-muted-foreground py-4">読み込み中…</div>}
 
-          {importPreview && (
+          {importPhase === "preview" && importPreview && (
             <div className="space-y-4">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm">全 {importPreview.rows.length} 行 / インポート対象 {importCount} 件 / エラー {importPreview.error_count} 件</span>
-                <div className="flex gap-2 ml-auto">
+                <div className="flex gap-2 ml-auto flex-wrap">
+                  <Button variant="outline" size="sm" onClick={selectAllImport}>全選択</Button>
+                  <Button variant="outline" size="sm" onClick={deselectAllImport}>全解除</Button>
                   <Button variant="outline" onClick={resetImport}>キャンセル</Button>
-                  <Button onClick={executeImport} disabled={importCount === 0 || importLoading}>
-                    {importCount}件をインポート
+                  <Button
+                    onClick={() => {
+                      setConfirmRowNumbers(new Set(
+                        importPreview.rows
+                          .filter((r) => r.is_valid && !importRowStates[r.row_number]?.skipped)
+                          .map((r) => r.row_number)
+                      ));
+                      setImportPhase("confirm");
+                    }}
+                    disabled={importCount === 0}
+                  >
+                    確認へ →（{importCount}件）
                   </Button>
                 </div>
               </div>
@@ -236,77 +342,47 @@ export default function WorksPage() {
                       <th className="w-16 px-3 py-2 text-center">取り込む</th>
                       <th className="text-left px-3 py-2">作品名</th>
                       <th className="text-left px-3 py-2">出演者</th>
-                      <th className="text-left px-3 py-2">エラー</th>
+                    </tr>
+                  </thead>
+                  <tbody>{renderImportRows(importPreview.rows)}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {importPhase === "confirm" && importPreview && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="text-sm font-medium">
+              {[...confirmRowNumbers].filter((n) => !importRowStates[n]?.skipped).length}件をインポートします
+            </span>
+                <div className="flex gap-2 ml-auto">
+                  <Button variant="outline" onClick={() => setImportPhase("preview")}>← 戻る</Button>
+                  <Button onClick={executeImport} disabled={[...confirmRowNumbers].filter((n) => !importRowStates[n]?.skipped).length === 0 || importLoading}>
+                    インポート実行
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-lg border overflow-hidden max-h-80 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="w-16 px-3 py-2 text-center">取り込む</th>
+                      <th className="text-left px-3 py-2">作品名</th>
+                      <th className="text-left px-3 py-2">出演者</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {importPreview.rows.map((row) => {
-                      const isSkipped = importRowStates[row.row_number]?.skipped;
-                      const rowBg = !row.is_valid ? "bg-destructive/5" : isSkipped ? "bg-muted/30 opacity-70" : "";
-                      return (
-                        <tr key={row.row_number} className={`border-t transition-colors ${rowBg}`}>
-                          <td className="px-3 py-2 text-center">
-                            {row.is_valid ? (
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-gray-300 cursor-pointer mx-auto block"
-                                checked={!isSkipped}
-                                onChange={() => toggleImportRowSkipped(row.row_number)}
-                              />
-                            ) : (
-                              <XCircle size={16} className="text-destructive mx-auto" />
-                            )}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div>{row.title ?? <span className="text-muted-foreground">—</span>}</div>
-                            {row.is_duplicate_suspect && (
-                              <div className="flex items-center gap-1 text-[11px] text-amber-600 font-medium mt-0.5">
-                                <AlertTriangle size={11} className="shrink-0" />
-                                <span>{row.duplicate_hint}</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="flex flex-wrap gap-x-2 gap-y-1">
-                              {(row.performers || []).map((p, i) => {
-                                const isOverride = importRowStates[row.row_number]?.performerOverrides?.[p.name] || false;
-                                const isMatched = p.existing_id !== null;
-                                const displayText = p.existing_name
-                                  ? p.existing_aliases?.length
-                                    ? `${p.existing_name} (${p.existing_aliases.join(", ")})`
-                                    : p.existing_name
-                                  : p.name;
-                                return (
-                                  <div key={i} className="inline-flex items-center gap-1 bg-muted/40 px-1.5 py-0.5 rounded text-xs border border-border">
-                                    {isMatched && !isOverride ? (
-                                      <>
-                                        <span className="text-green-700">{displayText}</span>
-                                        <button type="button" className="text-[10px] text-muted-foreground underline border-l border-border pl-1" onClick={() => toggleImportPerformerOverride(row.row_number, p.name)}>別人</button>
-                                      </>
-                                    ) : isMatched && isOverride ? (
-                                      <>
-                                        <span className="text-amber-600">{p.name} [新規]</span>
-                                        <button type="button" className="text-[10px] text-muted-foreground underline border-l border-border pl-1" onClick={() => toggleImportPerformerOverride(row.row_number, p.name)}>戻す</button>
-                                      </>
-                                    ) : (
-                                      <span>{p.name} <span className="text-muted-foreground">[新規]</span></span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-destructive text-xs">{row.errors?.join(", ") ?? ""}</td>
-                        </tr>
-                      );
-                    })}
+                    {renderImportRows(
+                      importPreview.rows.filter((r) => confirmRowNumbers.has(r.row_number))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
 
-          {importResult && (
+          {importPhase === "result" && importResult && (
             <div className="space-y-4">
               <div className="rounded-lg border p-6 text-center space-y-2">
                 <CheckCircle2 size={36} className="mx-auto text-green-500" />
