@@ -26,6 +26,7 @@ def search_works(
         .joinedload(Performer.performer_tags)
         .joinedload(PerformerTag.tag),
         joinedload(Work.work_tags).joinedload(WorkTag.tag),
+        joinedload(Work.files),
     )
 
     if keyword:
@@ -69,6 +70,7 @@ def search_works(
             "custom_fields": w.custom_fields,
             "tags": [{"id": wt.tag.id, "name": wt.tag.name, "category_id": wt.tag.category_id} for wt in w.work_tags],
             "cover_image_url": f"/static/covers/{w.cover_image_path}" if w.cover_image_path else None,
+            "file_count": len(w.files),
         }
         for w in works
     ]
