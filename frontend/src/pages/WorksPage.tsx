@@ -36,6 +36,7 @@ export default function WorksPage() {
 
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [importPhase, setImportPhase] = useState<"upload" | "preview" | "confirm" | "result">("upload");
+  const [confirmRowNumbers, setConfirmRowNumbers] = useState<Set<number>>(new Set());
   const [importPreview, setImportPreview] = useState<ImportPreviewResponse | null>(null);
   const [importRowStates, setImportRowStates] = useState<Record<number, RowState>>({});
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -150,7 +151,7 @@ export default function WorksPage() {
     }
   };
 
-  const resetImport = () => { setImportPreview(null); setImportRowStates({}); setImportResult(null); setImportPhase("upload"); };
+  const resetImport = () => { setImportPreview(null); setImportRowStates({}); setImportResult(null); setImportPhase("upload"); setConfirmRowNumbers(new Set()); };
 
   const selectAllImport = () => {
     if (!importPreview) return;
@@ -318,7 +319,17 @@ export default function WorksPage() {
                   <Button variant="outline" size="sm" onClick={selectAllImport}>全選択</Button>
                   <Button variant="outline" size="sm" onClick={deselectAllImport}>全解除</Button>
                   <Button variant="outline" onClick={resetImport}>キャンセル</Button>
-                  <Button onClick={() => setImportPhase("confirm")} disabled={importCount === 0}>
+                  <Button
+                    onClick={() => {
+                      setConfirmRowNumbers(new Set(
+                        importPreview.rows
+                          .filter((r) => r.is_valid && !importRowStates[r.row_number]?.skipped)
+                          .map((r) => r.row_number)
+                      ));
+                      setImportPhase("confirm");
+                    }}
+                    disabled={importCount === 0}
+                  >
                     確認へ →（{importCount}件）
                   </Button>
                 </div>
@@ -342,10 +353,12 @@ export default function WorksPage() {
           {importPhase === "confirm" && importPreview && (
             <div className="space-y-4">
               <div className="flex items-center gap-4 flex-wrap">
-                <span className="text-sm font-medium">{importCount}件をインポートします</span>
+                <span className="text-sm font-medium">
+              {[...confirmRowNumbers].filter((n) => !importRowStates[n]?.skipped).length}件をインポートします
+            </span>
                 <div className="flex gap-2 ml-auto">
                   <Button variant="outline" onClick={() => setImportPhase("preview")}>← 戻る</Button>
-                  <Button onClick={executeImport} disabled={importCount === 0 || importLoading}>
+                  <Button onClick={executeImport} disabled={[...confirmRowNumbers].filter((n) => !importRowStates[n]?.skipped).length === 0 || importLoading}>
                     インポート実行
                   </Button>
                 </div>
@@ -361,7 +374,7 @@ export default function WorksPage() {
                   </thead>
                   <tbody>
                     {renderImportRows(
-                      importPreview.rows.filter((r) => r.is_valid),
+                      importPreview.rows.filter((r) => confirmRowNumbers.has(r.row_number)),
                       false
                     )}
                   </tbody>
