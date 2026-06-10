@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { api } from "@/api/client";
-import type { WorkListItem, TagCategory, ImportPreviewResponse, ImportResult, ExecuteRow, ImportRow } from "@/types";
+import type { WorkListItem, TagCategory, ImportPreviewResponse, ImportResult, ExecuteRow } from "@/types";
 
 type RowState = {
   skipped: boolean;
@@ -177,7 +177,7 @@ export default function WorksPage() {
     });
   };
 
-  const renderImportRows = (rows: ImportRow[], showErrorCol: boolean) =>
+  const renderImportRows = (rows: ImportRow[]) =>
     rows.map((row) => {
       const isSkipped = importRowStates[row.row_number]?.skipped;
       const rowBg = !row.is_valid ? "bg-destructive/5" : isSkipped ? "bg-muted/30 opacity-60" : "";
@@ -192,7 +192,11 @@ export default function WorksPage() {
                 onChange={() => toggleImportRowSkipped(row.row_number)}
               />
             ) : (
-              <XCircle size={16} className="text-destructive mx-auto" />
+              <XCircle
+                size={16}
+                className="text-destructive mx-auto cursor-help"
+                title={row.errors?.join("\n")}
+              />
             )}
           </td>
           <td className="px-3 py-2">
@@ -235,9 +239,6 @@ export default function WorksPage() {
               })}
             </div>
           </td>
-          {showErrorCol && (
-            <td className="px-3 py-2 text-[11px] text-destructive">{row.errors?.join(", ") ?? ""}</td>
-          )}
         </tr>
       );
     });
@@ -341,10 +342,9 @@ export default function WorksPage() {
                       <th className="w-16 px-3 py-2 text-center">取り込む</th>
                       <th className="text-left px-3 py-2">作品名</th>
                       <th className="text-left px-3 py-2">出演者</th>
-                      <th className="text-left px-3 py-2">エラー</th>
                     </tr>
                   </thead>
-                  <tbody>{renderImportRows(importPreview.rows, true)}</tbody>
+                  <tbody>{renderImportRows(importPreview.rows)}</tbody>
                 </table>
               </div>
             </div>
@@ -374,8 +374,7 @@ export default function WorksPage() {
                   </thead>
                   <tbody>
                     {renderImportRows(
-                      importPreview.rows.filter((r) => confirmRowNumbers.has(r.row_number)),
-                      false
+                      importPreview.rows.filter((r) => confirmRowNumbers.has(r.row_number))
                     )}
                   </tbody>
                 </table>
