@@ -105,6 +105,8 @@ export interface CustomFieldDefinition {
   name: string;
   field_type: "text" | "number" | "date" | "boolean";
   entity_type: "work" | "performer";
+  sort_order: number;
+  is_sortable: boolean;
   created_at: string;
 }
 
