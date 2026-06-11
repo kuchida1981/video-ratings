@@ -88,6 +88,7 @@ class PerformerNameOnly(BaseModel):
 class TagInWorkList(BaseModel):
     id: int
     name: str
+    score: int | None
     category_id: int
 
 

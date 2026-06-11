@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
@@ -16,10 +16,15 @@ def search_works(
     tag_ids: list[int] | None = Query(None),
     maker: str | None = Query(None),
     series: str | None = Query(None),
+    performer_id: int | None = Query(None),
     sort_by: str = Query("created_at"),
     sort_desc: bool = Query(True),
     db: Session = Depends(get_db),
 ):
+    if performer_id is not None:
+        if not db.query(Performer).filter(Performer.id == performer_id).first():
+            raise HTTPException(status_code=404, detail="Performer not found")
+
     q = db.query(Work).options(
         joinedload(Work.work_performers)
         .joinedload(WorkPerformer.performer)
@@ -56,6 +61,9 @@ def search_works(
         for tid in tag_ids:
             q = q.filter(Work.work_tags.any(WorkTag.tag_id == tid))
 
+    if performer_id is not None:
+        q = q.filter(Work.work_performers.any(WorkPerformer.performer_id == performer_id))
+
     works = q.all()
 
     result = [
@@ -68,7 +76,10 @@ def search_works(
             "total_score": score_calculator.calculate_work_total_score(w),
             "performers": [{"id": wp.performer.id, "name": wp.performer.name} for wp in w.work_performers],
             "custom_fields": w.custom_fields,
-            "tags": [{"id": wt.tag.id, "name": wt.tag.name, "category_id": wt.tag.category_id} for wt in w.work_tags],
+            "tags": [
+                {"id": wt.tag.id, "name": wt.tag.name, "score": wt.tag.score, "category_id": wt.tag.category_id}
+                for wt in w.work_tags
+            ],
             "cover_image_url": f"/static/covers/{w.cover_image_path}" if w.cover_image_path else None,
             "file_count": len(w.files),
         }

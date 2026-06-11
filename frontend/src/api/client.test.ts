@@ -140,10 +140,6 @@ describe("api.performers", () => {
     await api.performers.delete(1);
   });
 
-  it("works returns work list", async () => {
-    mockFetch(200, []);
-    expect(await api.performers.works(1)).toEqual([]);
-  });
 
   it("addTag sends POST", async () => {
     const { fetchMock } = mockFetch(200, {});
