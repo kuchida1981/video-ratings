@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 function SortableItem({ id, children, className, handle = false }: { id: number; children: React.ReactNode; className?: string; handle?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -53,6 +54,7 @@ function SortableItem({ id, children, className, handle = false }: { id: number;
 
 export default function TagsPage() {
   const queryClient = useQueryClient();
+  useDocumentTitle("タグ管理");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [catOpen, setCatOpen] = useState(false);
   const [catName, setCatName] = useState("");

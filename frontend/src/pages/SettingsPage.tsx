@@ -32,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 type FieldType = "text" | "number" | "date" | "boolean";
 
@@ -81,6 +82,7 @@ function SortableRow({
 export default function SettingsPage() {
   const { maxCols, setMaxCols } = useTileMaxColumns();
   const queryClient = useQueryClient();
+  useDocumentTitle("設定");
   const [name, setName] = useState("");
   const [fieldType, setFieldType] = useState<FieldType>("text");
   const [entityType, setEntityType] = useState<"work" | "performer">("work");

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { CustomFieldDefinition, ImportRow } from "@/types";
 import { useImportFlow } from "@/hooks/useImportFlow";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ function defaultSortDescForFieldType(fieldType: CustomFieldDefinition["field_typ
 export default function WorksPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  useDocumentTitle("作品一覧");
 
   const stored = loadWorksFilters();
   const [keyword, setKeyword] = useState<string>(stored.keyword ?? "");

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 function processImageFile(file: File, onUpload: (file: File) => void) {
   if (!file.type.startsWith("image/")) return;
@@ -78,6 +79,7 @@ export default function WorkDetailPage() {
     queryKey: ["works", workId],
     queryFn: () => api.works.get(workId),
   });
+  useDocumentTitle(work ? work.title : "作品詳細");
 
   const { data: categories = [] } = useQuery({
     queryKey: ["tagCategories", "work"],
