@@ -162,11 +162,11 @@ export default function WorksPage() {
   };
 
   const toggleWorkColumn = (key: WorkColumnKey) => {
-    setVisibleWorkColumns((prev) => {
-      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
-      localStorage.setItem(WORKS_TABLE_COLUMNS_KEY, JSON.stringify(next));
-      return next;
-    });
+    const next = visibleWorkColumns.includes(key)
+      ? visibleWorkColumns.filter((k) => k !== key)
+      : [...visibleWorkColumns, key];
+    setVisibleWorkColumns(next);
+    localStorage.setItem(WORKS_TABLE_COLUMNS_KEY, JSON.stringify(next));
   };
 
   const handleWorkTableSort = (key: string) => {

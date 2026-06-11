@@ -98,11 +98,11 @@ export default function PerformersPage() {
   };
 
   const togglePerformerColumn = (key: PerformerColumnKey) => {
-    setVisiblePerformerColumns((prev) => {
-      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
-      localStorage.setItem(PERFORMERS_TABLE_COLUMNS_KEY, JSON.stringify(next));
-      return next;
-    });
+    const next = visiblePerformerColumns.includes(key)
+      ? visiblePerformerColumns.filter((k) => k !== key)
+      : [...visiblePerformerColumns, key];
+    setVisiblePerformerColumns(next);
+    localStorage.setItem(PERFORMERS_TABLE_COLUMNS_KEY, JSON.stringify(next));
   };
 
   const handlePerformerTableSort = (key: string) => {
