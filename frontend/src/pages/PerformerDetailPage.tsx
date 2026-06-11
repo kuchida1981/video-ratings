@@ -24,6 +24,7 @@ export default function PerformerDetailPage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", furigana: "" });
   const [memo, setMemo] = useState("");
+  const [initializedId, setInitializedId] = useState<number | null>(null);
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(Math.max(2, maxCols - 1));
 
@@ -74,10 +75,11 @@ export default function PerformerDetailPage() {
   }, [performer, customFieldDefs]);
 
   useEffect(() => {
-    if (performer) {
+    if (performer && initializedId !== performer.id) {
       setMemo(performer.memo ?? "");
+      setInitializedId(performer.id);
     }
-  }, [performer]);
+  }, [performer, initializedId]);
 
   const updateMutation = useMutation({
     mutationFn: (data: { name: string; furigana?: string }) =>
@@ -90,7 +92,7 @@ export default function PerformerDetailPage() {
 
   const updateMemoMutation = useMutation({
     mutationFn: (memoValue: string) =>
-      api.performers.update(performerId, { name: performer?.name ?? "", memo: memoValue === "" ? null : memoValue }),
+      api.performers.update(performerId, { memo: memoValue === "" ? null : memoValue }),
     onSuccess: () => {
       invalidatePerformer();
     },

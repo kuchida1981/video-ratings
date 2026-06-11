@@ -55,6 +55,7 @@ export default function WorkDetailPage() {
   const [form, setForm] = useState({ title: "", maker: "", series: "" });
   const [newFilePath, setNewFilePath] = useState("");
   const [memo, setMemo] = useState("");
+  const [initializedId, setInitializedId] = useState<number | null>(null);
   const [newFileDisplayName, setNewFileDisplayName] = useState("");
   const [addPerformerId, setAddPerformerId] = useState("");
   const [playingFileId, setPlayingFileId] = useState<number | null>(null);
@@ -119,10 +120,11 @@ export default function WorkDetailPage() {
   }, [work, customFields]);
 
   useEffect(() => {
-    if (work) {
+    if (work && initializedId !== work.id) {
       setMemo(work.memo ?? "");
+      setInitializedId(work.id);
     }
-  }, [work]);
+  }, [work, initializedId]);
 
   useEffect(() => {
     if (!playingFile && videoRef.current) {
