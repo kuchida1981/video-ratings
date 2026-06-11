@@ -1,5 +1,3 @@
-import uuid
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
@@ -21,6 +19,7 @@ from app.schemas.work import (
     WorkResponse,
     WorkUpdate,
 )
+from app.services import cover_service, work_service
 from app.services.score_calculator import score_calculator
 from app.services.smb import (
     get_smb_file_size,
@@ -31,72 +30,6 @@ from app.services.smb import (
 )
 
 router = APIRouter(prefix="/works", tags=["works"])
-
-
-def _load_work(db: Session, work_id: int) -> Work:
-    work = (
-        db.query(Work)
-        .options(
-            joinedload(Work.work_performers)
-            .joinedload(WorkPerformer.performer)
-            .joinedload(Performer.performer_tags)
-            .joinedload(PerformerTag.tag),
-            joinedload(Work.files),
-            joinedload(Work.work_tags).joinedload(WorkTag.tag),
-        )
-        .filter(Work.id == work_id)
-        .first()
-    )
-    if not work:
-        raise HTTPException(status_code=404, detail="Work not found")
-    return work
-
-
-def _build_work_response(work: Work) -> dict[str, Any]:
-    total_score = score_calculator.calculate_work_total_score(work)
-    performers = [
-        {
-            "id": wp.performer.id,
-            "name": wp.performer.name,
-            "furigana": wp.performer.furigana,
-            "is_main": wp.is_main,
-            "tags": [
-                {
-                    "id": pt.tag.id,
-                    "name": pt.tag.name,
-                    "score": pt.tag.score,
-                    "category_id": pt.tag.category_id,
-                }
-                for pt in wp.performer.performer_tags
-            ],
-            "total_score": score_calculator.calculate_performer_score(wp.performer),
-            "custom_fields": wp.performer.custom_fields,
-        }
-        for wp in work.work_performers
-    ]
-    tags = [
-        {
-            "id": wt.tag.id,
-            "name": wt.tag.name,
-            "score": wt.tag.score,
-            "category_id": wt.tag.category_id,
-        }
-        for wt in work.work_tags
-    ]
-    return {
-        "id": work.id,
-        "title": work.title,
-        "maker": work.maker,
-        "series": work.series,
-        "custom_fields": work.custom_fields,
-        "created_at": work.created_at,
-        "updated_at": work.updated_at,
-        "files": work.files,
-        "performers": performers,
-        "tags": tags,
-        "total_score": total_score,
-        "cover_image_url": f"/static/covers/{work.cover_image_path}" if work.cover_image_path else None,
-    }
 
 
 @router.get("", response_model=list[WorkListResponse])
@@ -138,8 +71,8 @@ def list_works(db: Session = Depends(get_db)):
 
 @router.get("/{work_id}", response_model=WorkResponse)
 def get_work(work_id: int, db: Session = Depends(get_db)):
-    work = _load_work(db, work_id)
-    return _build_work_response(work)
+    work = work_service.load_work(db, work_id)
+    return work_service.build_work_response(work)
 
 
 @router.post("", response_model=WorkResponse, status_code=status.HTTP_201_CREATED)
@@ -148,7 +81,7 @@ def create_work(data: WorkCreate, db: Session = Depends(get_db)):
     db.add(work)
     db.commit()
     db.refresh(work)
-    return _build_work_response(_load_work(db, work.id))
+    return work_service.build_work_response(work_service.load_work(db, work.id))
 
 
 @router.put("/{work_id}", response_model=WorkResponse)
@@ -159,7 +92,7 @@ def update_work(work_id: int, data: WorkUpdate, db: Session = Depends(get_db)):
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(work, field, value)
     db.commit()
-    return _build_work_response(_load_work(db, work_id))
+    return work_service.build_work_response(work_service.load_work(db, work_id))
 
 
 @router.delete("/{work_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -272,7 +205,7 @@ def add_performer(work_id: int, data: AddPerformerToWork, db: Session = Depends(
     wp = WorkPerformer(work_id=work_id, performer_id=data.performer_id, is_main=data.is_main)
     db.add(wp)
     db.commit()
-    return _build_work_response(_load_work(db, work_id))
+    return work_service.build_work_response(work_service.load_work(db, work_id))
 
 
 @router.delete("/{work_id}/performers/{performer_id}", response_model=WorkResponse)
@@ -286,7 +219,7 @@ def remove_performer(work_id: int, performer_id: int, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Association not found")
     db.delete(wp)
     db.commit()
-    return _build_work_response(_load_work(db, work_id))
+    return work_service.build_work_response(work_service.load_work(db, work_id))
 
 
 @router.patch("/{work_id}/performers/{performer_id}", response_model=WorkResponse)
@@ -302,12 +235,12 @@ def set_main_performer(work_id: int, performer_id: int, data: SetMainPerformer, 
         db.query(WorkPerformer).filter(WorkPerformer.work_id == work_id).update({"is_main": False})
     wp.is_main = data.is_main
     db.commit()
-    return _build_work_response(_load_work(db, work_id))
+    return work_service.build_work_response(work_service.load_work(db, work_id))
 
 
 @router.post("/{work_id}/tags/{tag_id}", response_model=WorkResponse)
 def add_tag(work_id: int, tag_id: int, db: Session = Depends(get_db)):
-    work = _load_work(db, work_id)
+    work_service.load_work(db, work_id)
     tag = db.query(Tag).options(joinedload(Tag.category)).filter(Tag.id == tag_id).first()
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
@@ -324,7 +257,7 @@ def add_tag(work_id: int, tag_id: int, db: Session = Depends(get_db)):
     if not existing:
         db.add(WorkTag(work_id=work_id, tag_id=tag_id))
         db.commit()
-    return _build_work_response(work)
+    return work_service.build_work_response(work_service.load_work(db, work_id))
 
 
 @router.delete("/{work_id}/tags/{tag_id}", response_model=WorkResponse)
@@ -334,10 +267,7 @@ def remove_tag(work_id: int, tag_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tag association not found")
     db.delete(wt)
     db.commit()
-    return _build_work_response(_load_work(db, work_id))
-
-
-_ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+    return work_service.build_work_response(work_service.load_work(db, work_id))
 
 
 @router.post("/{work_id}/cover", response_model=WorkResponse)
@@ -345,23 +275,10 @@ async def upload_cover(work_id: int, file: UploadFile, db: Session = Depends(get
     work = db.query(Work).filter(Work.id == work_id).first()
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
-    ext = Path(file.filename or "image.jpg").suffix.lower() or ".jpg"
-    if ext not in _ALLOWED_IMAGE_EXTS:
-        raise HTTPException(status_code=400, detail="Unsupported image format")
-    covers_dir = Path("uploads/covers/works")
-    covers_dir.mkdir(parents=True, exist_ok=True)
-    rel_path = f"works/{work_id}_{uuid.uuid4().hex[:8]}{ext}"
-    file_path = Path("uploads/covers") / rel_path
-    if work.cover_image_path and work.cover_image_path != rel_path:
-        try:
-            (Path("uploads/covers") / work.cover_image_path).unlink(missing_ok=True)
-        except Exception:
-            pass
-    contents = await file.read()
-    file_path.write_bytes(contents)
+    rel_path = await cover_service.save_cover(file, "works", work_id, work.cover_image_path)
     work.cover_image_path = rel_path
     db.commit()
-    return _build_work_response(_load_work(db, work_id))
+    return work_service.build_work_response(work_service.load_work(db, work_id))
 
 
 @router.delete("/{work_id}/cover", response_model=WorkResponse)
@@ -370,13 +287,10 @@ def delete_cover(work_id: int, db: Session = Depends(get_db)):
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
     if work.cover_image_path:
-        try:
-            (Path("uploads/covers") / work.cover_image_path).unlink(missing_ok=True)
-        except Exception:
-            pass
+        cover_service.delete_cover(work.cover_image_path)
         work.cover_image_path = None
         db.commit()
-    return _build_work_response(_load_work(db, work_id))
+    return work_service.build_work_response(work_service.load_work(db, work_id))
 
 
 @router.patch("/{work_id}/custom-fields", response_model=WorkResponse)
@@ -389,4 +303,4 @@ def update_custom_fields(work_id: int, fields: dict[str, Any], db: Session = Dep
     work.custom_fields = {k: v for k, v in current.items() if v is not None}
     flag_modified(work, "custom_fields")
     db.commit()
-    return _build_work_response(_load_work(db, work_id))
+    return work_service.build_work_response(work_service.load_work(db, work_id))
