@@ -7,7 +7,7 @@ import type {
   Tag,
   CustomFieldDefinition,
   ImportPreviewResponse,
-  ImportRow,
+  ExecuteRow,
   ImportResult,
 } from "@/types";
 
@@ -98,9 +98,9 @@ export const api = {
   tagCategories: {
     list: (entityType?: string) =>
       req<TagCategory[]>(`/tag-categories${entityType ? `?entity_type=${entityType}` : ""}`),
-    create: (data: { name: string; entity_type: string; is_multi_select: boolean }) =>
+    create: (data: { name: string; entity_type: string; is_multi_select: boolean; description?: string | null }) =>
       req<TagCategory>("/tag-categories", { method: "POST", body: JSON.stringify(data) }),
-    update: (id: number, data: { name?: string; is_multi_select?: boolean }) =>
+    update: (id: number, data: { name?: string; is_multi_select?: boolean; description?: string | null }) =>
       req<TagCategory>(`/tag-categories/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) => req<void>(`/tag-categories/${id}`, { method: "DELETE" }),
     reorder: (ids: number[]) =>
@@ -110,9 +110,9 @@ export const api = {
   tags: {
     list: (categoryId?: number) =>
       req<Tag[]>(`/tags${categoryId ? `?category_id=${categoryId}` : ""}`),
-    create: (data: { name: string; category_id: number; score?: number | null }) =>
+    create: (data: { name: string; category_id: number; score?: number | null; description?: string | null }) =>
       req<Tag>("/tags", { method: "POST", body: JSON.stringify(data) }),
-    update: (id: number, data: { name?: string; score?: number | null }) =>
+    update: (id: number, data: { name?: string; score?: number | null; description?: string | null }) =>
       req<Tag>(`/tags/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) => req<void>(`/tags/${id}`, { method: "DELETE" }),
     reorder: (ids: number[]) =>
@@ -138,7 +138,7 @@ export const api = {
       return fetch(`${BASE}/import/preview`, { method: "POST", body: form })
         .then((r) => r.json() as Promise<ImportPreviewResponse>);
     },
-    execute: (rows: ImportRow[]) =>
+    execute: (rows: ExecuteRow[]) =>
       req<ImportResult>("/import/execute", { method: "POST", body: JSON.stringify({ rows }) }),
   },
 

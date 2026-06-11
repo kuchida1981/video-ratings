@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Trash2, Search, X } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import type { CustomFieldDefinition, Performer, WorkListItem, TagCategory } from "@/types";
+import type { CustomFieldDefinition } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,11 +17,8 @@ export default function PerformerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const performerId = Number(id);
+  const queryClient = useQueryClient();
 
-  const [performer, setPerformer] = useState<Performer | null>(null);
-  const [works, setWorks] = useState<WorkListItem[]>([]);
-  const [categories, setCategories] = useState<TagCategory[]>([]);
-  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", furigana: "" });
@@ -33,16 +31,29 @@ export default function PerformerDetailPage() {
   const [editingAliasName, setEditingAliasName] = useState("");
   const [editingAliasFurigana, setEditingAliasFurigana] = useState("");
 
-  const reload = () => {
-    api.performers.get(performerId).then(setPerformer);
-    api.performers.works(performerId).then(setWorks);
+  const invalidatePerformer = () => {
+    queryClient.invalidateQueries({ queryKey: ["performers", performerId] });
   };
 
-  useEffect(() => {
-    reload();
-    api.tagCategories.list("performer").then(setCategories);
-    api.customFields.list("performer").then(setCustomFieldDefs);
-  }, [performerId]);
+  const { data: performer } = useQuery({
+    queryKey: ["performers", performerId],
+    queryFn: () => api.performers.get(performerId),
+  });
+
+  const { data: works = [] } = useQuery({
+    queryKey: ["performerWorks", performerId],
+    queryFn: () => api.performers.works(performerId),
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["tagCategories", "performer"],
+    queryFn: () => api.tagCategories.list("performer"),
+  });
+
+  const { data: customFieldDefs = [] } = useQuery<CustomFieldDefinition[]>({
+    queryKey: ["customFields", "performer"],
+    queryFn: () => api.customFields.list("performer"),
+  });
 
   useEffect(() => {
     if (performer && editing) setForm({ name: performer.name, furigana: performer.furigana ?? "" });
@@ -59,84 +70,74 @@ export default function PerformerDetailPage() {
     }
   }, [performer, customFieldDefs]);
 
-  if (!performer) return <div className="text-muted-foreground">読み込み中…</div>;
+  const updateMutation = useMutation({
+    mutationFn: (data: { name: string; furigana?: string }) =>
+      api.performers.update(performerId, data),
+    onSuccess: () => {
+      setEditing(false);
+      invalidatePerformer();
+    },
+  });
 
-  const save = async () => {
-    await api.performers.update(performerId, { name: form.name, furigana: form.furigana || undefined });
-    setEditing(false);
-    reload();
-  };
+  const deleteMutation = useMutation({
+    mutationFn: () => api.performers.delete(performerId),
+    onSuccess: () => navigate("/performers"),
+  });
 
-  const deletePerformer = async () => {
-    if (!confirm("この出演者を削除しますか？")) return;
-    await api.performers.delete(performerId);
-    navigate("/performers");
-  };
-
-  const addAlias = async () => {
-    if (!newAliasName.trim()) return;
-    try {
-      await api.performers.addAlias(performerId, {
-        name: newAliasName.trim(),
-        furigana: newAliasFurigana.trim() || null,
-      });
+  const addAliasMutation = useMutation({
+    mutationFn: (data: { name: string; furigana: string | null }) =>
+      api.performers.addAlias(performerId, data),
+    onSuccess: () => {
       setNewAliasName("");
       setNewAliasFurigana("");
-      reload();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "別名の追加に失敗しました";
-      alert(msg);
-    }
-  };
+      invalidatePerformer();
+    },
+    onError: (e) => alert(e instanceof Error ? e.message : "別名の追加に失敗しました"),
+  });
 
-  const updateAlias = async (aliasId: number) => {
-    if (!editingAliasName.trim()) return;
-    try {
-      await api.performers.updateAlias(performerId, aliasId, {
-        name: editingAliasName.trim(),
-        furigana: editingAliasFurigana.trim() || null,
-      });
+  const updateAliasMutation = useMutation({
+    mutationFn: ({ aliasId, data }: { aliasId: number; data: { name: string; furigana: string | null } }) =>
+      api.performers.updateAlias(performerId, aliasId, data),
+    onSuccess: () => {
       setEditingAliasId(null);
-      reload();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "別名の更新に失敗しました";
-      alert(msg);
-    }
-  };
+      invalidatePerformer();
+    },
+    onError: (e) => alert(e instanceof Error ? e.message : "別名の更新に失敗しました"),
+  });
 
-  const removeAlias = async (aliasId: number) => {
-    if (!confirm("この別名を削除しますか？")) return;
-    try {
-      await api.performers.removeAlias(performerId, aliasId);
-      reload();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "別名の削除に失敗しました";
-      alert(msg);
-    }
-  };
+  const removeAliasMutation = useMutation({
+    mutationFn: (aliasId: number) => api.performers.removeAlias(performerId, aliasId),
+    onSuccess: () => invalidatePerformer(),
+    onError: (e) => alert(e instanceof Error ? e.message : "別名の削除に失敗しました"),
+  });
 
-  const toggleTag = async (tagId: number) => {
-    const has = performer.tags.some((t) => t.id === tagId);
-    if (has) await api.performers.removeTag(performerId, tagId);
-    else await api.performers.addTag(performerId, tagId);
-    reload();
-  };
+  const toggleTagMutation = useMutation({
+    mutationFn: async (tagId: number) => {
+      if (!performer) return;
+      const has = performer.tags.some((t) => t.id === tagId);
+      if (has) await api.performers.removeTag(performerId, tagId);
+      else await api.performers.addTag(performerId, tagId);
+    },
+    onSuccess: () => invalidatePerformer(),
+  });
 
-  const updateCustomField = async (name: string, value: string | boolean) => {
-    setCustomFieldValues((prev) => ({ ...prev, [name]: value }));
-    await api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value });
-    reload();
-  };
+  const updateCustomFieldMutation = useMutation({
+    mutationFn: ({ name, value }: { name: string; value: string | boolean }) =>
+      api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value }),
+    onSuccess: () => invalidatePerformer(),
+  });
 
-  const uploadCover = async (file: File) => {
-    await api.performers.uploadCover(performerId, file);
-    reload();
-  };
+  const uploadCoverMutation = useMutation({
+    mutationFn: (file: File) => api.performers.uploadCover(performerId, file),
+    onSuccess: () => invalidatePerformer(),
+  });
 
-  const deleteCover = async () => {
-    await api.performers.deleteCover(performerId);
-    reload();
-  };
+  const deleteCoverMutation = useMutation({
+    mutationFn: () => api.performers.deleteCover(performerId),
+    onSuccess: () => invalidatePerformer(),
+  });
+
+  if (!performer) return <div className="text-muted-foreground">読み込み中…</div>;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -146,14 +147,14 @@ export default function PerformerDetailPage() {
           <div className="relative aspect-video rounded-lg overflow-hidden border">
             <img src={performer.cover_image_url} alt={performer.name} className="w-full h-full object-cover" />
             <button
-              onClick={deleteCover}
+              onClick={() => deleteCoverMutation.mutate()}
               className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
             >
               <X size={14} />
             </button>
           </div>
         ) : (
-          <CoverUploadZone onUpload={uploadCover} />
+          <CoverUploadZone onUpload={uploadCoverMutation.mutate} />
         )}
       </section>
 
@@ -165,7 +166,7 @@ export default function PerformerDetailPage() {
                 <div><Label>名前</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 <div><Label>ふりがな</Label><Input value={form.furigana} onChange={(e) => setForm({ ...form, furigana: e.target.value })} /></div>
                 <div className="flex gap-2">
-                  <Button onClick={save}>保存</Button>
+                  <Button onClick={() => updateMutation.mutate({ name: form.name, furigana: form.furigana || undefined })}>保存</Button>
                   <Button variant="outline" onClick={() => setEditing(false)}>キャンセル</Button>
                 </div>
               </div>
@@ -173,7 +174,7 @@ export default function PerformerDetailPage() {
               {/* 別名管理セクション */}
               <div className="border-t pt-4 space-y-3">
                 <h3 className="text-sm font-semibold">別名管理</h3>
-                
+
                 {/* 既存の別名リスト */}
                 <div className="space-y-2">
                   {(performer.aliases ?? []).map((alias) => (
@@ -193,7 +194,7 @@ export default function PerformerDetailPage() {
                             />
                           </div>
                           <div className="flex gap-1">
-                            <Button size="sm" onClick={() => updateAlias(alias.id)}>保存</Button>
+                            <Button size="sm" onClick={() => updateAliasMutation.mutate({ aliasId: alias.id, data: { name: editingAliasName.trim(), furigana: editingAliasFurigana.trim() || null } })}>保存</Button>
                             <Button size="sm" variant="outline" onClick={() => setEditingAliasId(null)}>キャンセル</Button>
                           </div>
                         </>
@@ -215,7 +216,7 @@ export default function PerformerDetailPage() {
                             >
                               編集
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => removeAlias(alias.id)}>
+                            <Button size="sm" variant="destructive" onClick={() => { if (confirm("この別名を削除しますか？")) removeAliasMutation.mutate(alias.id); }}>
                               削除
                             </Button>
                           </div>
@@ -242,7 +243,7 @@ export default function PerformerDetailPage() {
                       value={newAliasFurigana}
                       onChange={(e) => setNewAliasFurigana(e.target.value)}
                     />
-                    <Button onClick={addAlias}>追加</Button>
+                    <Button onClick={() => { if (!newAliasName.trim()) return; addAliasMutation.mutate({ name: newAliasName.trim(), furigana: newAliasFurigana.trim() || null }); }}>追加</Button>
                   </div>
                 </div>
               </div>
@@ -278,7 +279,7 @@ export default function PerformerDetailPage() {
         <div className="flex gap-2 items-center">
           <div className="text-2xl font-bold text-primary">{performer.total_score}点</div>
           {!editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
-          <Button variant="destructive" size="sm" onClick={deletePerformer}><Trash2 size={14} /></Button>
+          <Button variant="destructive" size="sm" onClick={() => { if (confirm("この出演者を削除しますか？")) deleteMutation.mutate(); }}><Trash2 size={14} /></Button>
         </div>
       </div>
 
@@ -297,7 +298,7 @@ export default function PerformerDetailPage() {
                   <Badge
                     variant={performer.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
                     className="cursor-pointer"
-                    onClick={() => toggleTag(tag.id)}
+                    onClick={() => toggleTagMutation.mutate(tag.id)}
                   >
                     {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
                   </Badge>
@@ -327,7 +328,10 @@ export default function PerformerDetailPage() {
                       type="checkbox"
                       className="h-4 w-4"
                       checked={Boolean(customFieldValues[cf.name])}
-                      onChange={(e) => updateCustomField(cf.name, e.target.checked)}
+                      onChange={(e) => {
+                        setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.checked }));
+                        updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.checked });
+                      }}
                     />
                   </div>
                 ) : (
@@ -335,7 +339,7 @@ export default function PerformerDetailPage() {
                     type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
                     value={String(customFieldValues[cf.name] ?? "")}
                     onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
-                    onBlur={(e) => updateCustomField(cf.name, e.target.value)}
+                    onBlur={(e) => updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.value })}
                   />
                 )}
               </div>

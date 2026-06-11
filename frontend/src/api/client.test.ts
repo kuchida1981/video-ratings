@@ -284,7 +284,7 @@ describe("api.imports", () => {
 describe("api.data", () => {
   it("import sends POST", async () => {
     const { fetchMock } = mockFetch(200, { message: "ok" });
-    await api.data.import({ works: [] });
+    await api.data.import(new File([], "backup.zip", { type: "application/zip" }));
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/import"), expect.objectContaining({ method: "POST" }));
   });
 });

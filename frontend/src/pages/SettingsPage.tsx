@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { Plus, Trash2, GripVertical, Download, Upload } from "lucide-react";
 import {
@@ -18,6 +18,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { CustomFieldDefinition } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -67,13 +68,11 @@ function SortableRow({ def, onRemove }: { def: CustomFieldDefinition; onRemove: 
 
 export default function SettingsPage() {
   const { maxCols, setMaxCols } = useTileMaxColumns();
-  const [workDefs, setWorkDefs] = useState<CustomFieldDefinition[]>([]);
-  const [performerDefs, setPerformerDefs] = useState<CustomFieldDefinition[]>([]);
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [fieldType, setFieldType] = useState<FieldType>("text");
   const [entityType, setEntityType] = useState<"work" | "performer">("work");
 
-  // データ管理セクションの状態
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -85,35 +84,39 @@ export default function SettingsPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const reload = () => {
-    api.customFields.list("work").then(setWorkDefs);
-    api.customFields.list("performer").then(setPerformerDefs);
-  };
-  useEffect(() => { reload(); }, []);
+  const { data: workDefs = [] } = useQuery<CustomFieldDefinition[]>({
+    queryKey: ["customFields", "work"],
+    queryFn: () => api.customFields.list("work"),
+  });
 
-  const create = async () => {
-    if (!name.trim()) return;
-    await api.customFields.create({ name, field_type: fieldType, entity_type: entityType });
-    setName("");
-    reload();
+  const { data: performerDefs = [] } = useQuery<CustomFieldDefinition[]>({
+    queryKey: ["customFields", "performer"],
+    queryFn: () => api.customFields.list("performer"),
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["customFields"] });
   };
 
-  const remove = async (id: number, defName: string, defEntityType: string) => {
-    const target = defEntityType === "performer" ? "全出演者" : "全作品";
-    if (!confirm(`「${defName}」を削除すると${target}からこの項目の値も削除されます。続けますか？`)) return;
-    await api.customFields.delete(id);
-    reload();
-  };
+  const createMutation = useMutation({
+    mutationFn: (data: Parameters<typeof api.customFields.create>[0]) => api.customFields.create(data),
+    onSuccess: () => { setName(""); invalidate(); },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: number) => api.customFields.delete(id),
+    onSuccess: () => invalidate(),
+  });
 
   const handleDragEnd = (event: DragEndEvent, entityTypeScope: "work" | "performer") => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const setter = entityTypeScope === "work" ? setWorkDefs : setPerformerDefs;
-    setter((prev) => {
+    const key = ["customFields", entityTypeScope] as const;
+    queryClient.setQueryData<CustomFieldDefinition[]>(key, (prev = []) => {
       const oldIndex = prev.findIndex((d) => d.id === active.id);
       const newIndex = prev.findIndex((d) => d.id === over.id);
       const moved = arrayMove(prev, oldIndex, newIndex);
-      api.customFields.reorder(moved.map((d) => d.id)).catch(() => reload());
+      api.customFields.reorder(moved.map((d) => d.id)).catch(() => invalidate());
       return moved;
     });
   };
@@ -140,7 +143,12 @@ export default function SettingsPage() {
                 <SortableRow
                   key={d.id}
                   def={d}
-                  onRemove={() => remove(d.id, d.name, d.entity_type)}
+                  onRemove={() => {
+                    const target = d.entity_type === "performer" ? "全出演者" : "全作品";
+                    if (confirm(`「${d.name}」を削除すると${target}からこの項目の値も削除されます。続けますか？`)) {
+                      removeMutation.mutate(d.id);
+                    }
+                  }}
                 />
               ))}
             </SortableContext>
@@ -252,7 +260,7 @@ export default function SettingsPage() {
               </Select>
             </div>
           </div>
-          <Button onClick={create} disabled={!name.trim()}><Plus size={16} />追加</Button>
+          <Button onClick={() => { if (!name.trim()) return; createMutation.mutate({ name, field_type: fieldType, entity_type: entityType }); }} disabled={!name.trim()}><Plus size={16} />追加</Button>
         </div>
       </section>
 

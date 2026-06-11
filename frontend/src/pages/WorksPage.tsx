@@ -1,13 +1,11 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import type { WorkListItem, TagCategory, ImportPreviewResponse, ImportResult, ExecuteRow } from "@/types";
+import type { ImportRow } from "@/types";
+import { useImportFlow } from "@/hooks/useImportFlow";
 
-type RowState = {
-  skipped: boolean;
-  performerOverrides: Record<string, boolean>;
-};
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +26,7 @@ function loadWorksFilters() {
 
 export default function WorksPage() {
   const navigate = useNavigate();
-  const [works, setWorks] = useState<WorkListItem[]>([]);
-  const [categories, setCategories] = useState<TagCategory[]>([]);
+  const queryClient = useQueryClient();
 
   const stored = loadWorksFilters();
   const [keyword, setKeyword] = useState<string>(stored.keyword ?? "");
@@ -46,46 +43,76 @@ export default function WorksPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newMaker, setNewMaker] = useState("");
   const [newSeries, setNewSeries] = useState("");
-
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
-  const [importPhase, setImportPhase] = useState<"upload" | "preview" | "confirm" | "result">("upload");
-  const [confirmRowNumbers, setConfirmRowNumbers] = useState<Set<number>>(new Set());
-  const [importPreview, setImportPreview] = useState<ImportPreviewResponse | null>(null);
-  const [importRowStates, setImportRowStates] = useState<Record<number, RowState>>({});
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [importLoading, setImportLoading] = useState(false);
-  const [importDragOver, setImportDragOver] = useState(false);
 
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(maxCols);
 
-  const fetchWorks = useCallback(async () => {
-    const params: Record<string, string | number | boolean | string[]> = {
-      sort_by: sortBy,
-      sort_desc: sortDesc,
-    };
-    if (keyword) params.keyword = keyword;
-    if (maker) params.maker = maker;
-    if (series) params.series = series;
-    if (selectedTagIds.length) params.tag_ids = selectedTagIds.map(String);
-    const data = await api.works.search(params);
-    setWorks(data);
-  }, [keyword, maker, series, selectedTagIds, sortBy, sortDesc]);
+  const filterParams = { keyword, maker, series, selectedTagIds, sortBy, sortDesc };
 
-  useEffect(() => {
-    fetchWorks();
-  }, [fetchWorks]);
+  const { data: works = [] } = useQuery({
+    queryKey: ["works", filterParams],
+    queryFn: async () => {
+      const params: Record<string, string | number | boolean | string[]> = {
+        sort_by: sortBy,
+        sort_desc: sortDesc,
+      };
+      if (keyword) params.keyword = keyword;
+      if (maker) params.maker = maker;
+      if (series) params.series = series;
+      if (selectedTagIds.length) params.tag_ids = selectedTagIds.map(String);
 
-  useEffect(() => {
-    api.tagCategories.list("work").then(setCategories);
-  }, []);
+      localStorage.setItem(WORKS_STORAGE_KEY, JSON.stringify({
+        keyword, selectedTagIds, maker, series, sortBy, sortDesc,
+        onlyUnrated, onlyNoCover, onlyNoFiles,
+      }));
 
-  useEffect(() => {
-    localStorage.setItem(WORKS_STORAGE_KEY, JSON.stringify({
-      keyword, selectedTagIds, maker, series, sortBy, sortDesc,
-      onlyUnrated, onlyNoCover, onlyNoFiles,
-    }));
-  }, [keyword, selectedTagIds, maker, series, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles]);
+      return api.works.search(params);
+    },
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["tagCategories", "work"],
+    queryFn: () => api.tagCategories.list("work"),
+  });
+
+  const createWorkMutation = useMutation({
+    mutationFn: (data: { title: string; maker?: string; series?: string }) =>
+      api.works.create(data),
+    onSuccess: (work) => {
+      queryClient.invalidateQueries({ queryKey: ["works"] });
+      setCreateOpen(false);
+      setNewTitle("");
+      setNewMaker("");
+      setNewSeries("");
+      navigate(`/works/${work.id}`);
+    },
+  });
+
+  const handleImportComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ["works"] });
+  };
+
+  const {
+    importPhase,
+    setImportPhase,
+    confirmRowNumbers,
+    setConfirmRowNumbers,
+    importPreview,
+    importRowStates,
+    importResult,
+    importLoading,
+    importDragOver,
+    setImportDragOver,
+    importCount,
+    handleImportFile,
+    toggleImportRowSkipped,
+    toggleImportPerformerOverride,
+    executeImport,
+    resetImport,
+    selectAllImport,
+    deselectAllImport,
+  } = useImportFlow(handleImportComplete);
 
   const toggleTag = (tagId: number) => {
     setSelectedTagIds((prev) =>
@@ -106,16 +133,6 @@ export default function WorksPage() {
     localStorage.removeItem(WORKS_STORAGE_KEY);
   };
 
-  const createWork = async () => {
-    if (!newTitle.trim()) return;
-    const work = await api.works.create({ title: newTitle, maker: newMaker || undefined, series: newSeries || undefined });
-    setCreateOpen(false);
-    setNewTitle("");
-    setNewMaker("");
-    setNewSeries("");
-    navigate(`/works/${work.id}`);
-  };
-
   const filteredWorks = useMemo(() => {
     let result = works;
     if (onlyUnrated) result = result.filter((w) => w.tags.length === 0);
@@ -125,91 +142,6 @@ export default function WorksPage() {
   }, [works, onlyUnrated, onlyNoCover, onlyNoFiles]);
 
   const hasFilters = !!(keyword || maker || series || selectedTagIds.length > 0 || onlyUnrated || onlyNoCover || onlyNoFiles || sortBy !== DEFAULT_WORKS_SORT_BY || sortDesc !== DEFAULT_WORKS_SORT_DESC);
-
-  const handleImportFile = async (file: File) => {
-    setImportLoading(true);
-    setImportResult(null);
-    try {
-      const data = await api.imports.preview(file);
-      setImportPreview(data);
-      const initialStates: Record<number, RowState> = {};
-      data.rows.forEach((row) => {
-        initialStates[row.row_number] = { skipped: row.is_duplicate_suspect, performerOverrides: {} };
-      });
-      setImportRowStates(initialStates);
-      setImportPhase("preview");
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const toggleImportRowSkipped = (rowNumber: number) => {
-    setImportRowStates((prev) => {
-      const state = prev[rowNumber] || { skipped: false, performerOverrides: {} };
-      return { ...prev, [rowNumber]: { ...state, skipped: !state.skipped } };
-    });
-  };
-
-  const toggleImportPerformerOverride = (rowNumber: number, name: string) => {
-    setImportRowStates((prev) => {
-      const state = prev[rowNumber] || { skipped: false, performerOverrides: {} };
-      const overrides = { ...state.performerOverrides, [name]: !state.performerOverrides[name] };
-      return { ...prev, [rowNumber]: { ...state, performerOverrides: overrides } };
-    });
-  };
-
-  const executeImport = async () => {
-    if (!importPreview) return;
-    setImportLoading(true);
-    try {
-      const executeRows: ExecuteRow[] = importPreview.rows
-        .filter((r) => r.is_valid && !importRowStates[r.row_number]?.skipped)
-        .map((r) => ({
-          row_number: r.row_number,
-          title: r.title,
-          performers: r.performers.map((p) => ({
-            name: p.name,
-            furigana: p.furigana,
-            performer_id: importRowStates[r.row_number]?.performerOverrides?.[p.name] ? null : p.existing_id,
-          })),
-          directory_path: r.directory_path,
-        }));
-      const res = await api.imports.execute(executeRows);
-      setImportResult(res);
-      setImportPhase("result");
-      setImportPreview(null);
-      setImportRowStates({});
-      fetchWorks();
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const resetImport = () => { setImportPreview(null); setImportRowStates({}); setImportResult(null); setImportPhase("upload"); setConfirmRowNumbers(new Set()); };
-
-  const selectAllImport = () => {
-    if (!importPreview) return;
-    setImportRowStates((prev) => {
-      const next = { ...prev };
-      importPreview.rows.forEach((row) => {
-        if (row.is_valid)
-          next[row.row_number] = { ...(next[row.row_number] || { performerOverrides: {} }), skipped: false };
-      });
-      return next;
-    });
-  };
-
-  const deselectAllImport = () => {
-    if (!importPreview) return;
-    setImportRowStates((prev) => {
-      const next = { ...prev };
-      importPreview.rows.forEach((row) => {
-        if (row.is_valid)
-          next[row.row_number] = { ...(next[row.row_number] || { performerOverrides: {} }), skipped: true };
-      });
-      return next;
-    });
-  };
 
   const renderImportRows = (rows: ImportRow[]) =>
     rows.map((row) => {
@@ -226,11 +158,9 @@ export default function WorksPage() {
                 onChange={() => toggleImportRowSkipped(row.row_number)}
               />
             ) : (
-              <XCircle
-                size={16}
-                className="text-destructive mx-auto cursor-help"
-                title={row.errors?.join("\n")}
-              />
+              <span title={row.errors?.join("\n")}>
+                <XCircle size={16} className="text-destructive mx-auto cursor-help" />
+              </span>
             )}
           </td>
           <td className="px-3 py-2">
@@ -279,10 +209,6 @@ export default function WorksPage() {
 
   const closeBulkImport = () => { setBulkImportOpen(false); resetImport(); };
 
-  const importCount = importPreview
-    ? importPreview.rows.filter((r) => r.is_valid && !importRowStates[r.row_number]?.skipped).length
-    : 0;
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -301,7 +227,11 @@ export default function WorksPage() {
                 <div><Label>作品名 *</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="作品名" /></div>
                 <div><Label>メーカー</Label><Input value={newMaker} onChange={(e) => setNewMaker(e.target.value)} placeholder="メーカー" /></div>
                 <div><Label>シリーズ</Label><Input value={newSeries} onChange={(e) => setNewSeries(e.target.value)} placeholder="シリーズ" /></div>
-                <Button onClick={createWork} disabled={!newTitle.trim()} className="w-full">登録する</Button>
+                <Button
+                  onClick={() => createWorkMutation.mutate({ title: newTitle, maker: newMaker || undefined, series: newSeries || undefined })}
+                  disabled={!newTitle.trim()}
+                  className="w-full"
+                >登録する</Button>
               </div>
             </DialogContent>
           </Dialog>
