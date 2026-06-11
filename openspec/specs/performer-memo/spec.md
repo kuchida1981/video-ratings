@@ -4,7 +4,7 @@
 TBD - created by archiving change add-memo-to-works-and-performers. Update Purpose after archive.
 ## Requirements
 ### Requirement: 出演者メモの表示と編集
-システムは出演者詳細ページの下部（カスタム項目セクションの下）にメモ入力欄を常に表示しなければならない。メモは任意の文字列（空白可）を入力できる Textarea として提供する。
+システムは出演者詳細ページの下部（カスタム項目セクションの下）にメモ入力欄を常に表示しなければならない（SHALL）。メモは任意の文字列（空白可）を入力できる Textarea として提供する。
 
 #### Scenario: 出演者詳細ページにメモ欄が表示される
 - **WHEN** ユーザーが出演者詳細ページを表示する
@@ -19,7 +19,7 @@ TBD - created by archiving change add-memo-to-works-and-performers. Update Purpo
 - **THEN** システムは保存されたメモのテキストを Textarea に表示する
 
 ### Requirement: 出演者メモのブラー時自動保存
-システムは出演者メモの Textarea からフォーカスが外れた時点で、メモの内容を自動的に保存しなければならない。
+システムは出演者メモの Textarea からフォーカスが外れた時点で、メモの内容を自動的に保存しなければならない（SHALL）。
 
 #### Scenario: メモを入力してフォーカスを外すと保存される
 - **WHEN** ユーザーが Textarea にテキストを入力し、フォーカスを外す

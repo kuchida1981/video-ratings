@@ -4,7 +4,7 @@
 TBD - created by archiving change tile-view-and-cover-images. Update Purpose after archive.
 ## Requirements
 ### Requirement: 作品にカバー画像を設定できる
-システムは作品詳細ページからカバー画像をアップロードして設定できなければならない。ファイル選択・ドラッグ&ドロップ・クリップボード貼り付けに対応する。アップロード前にクライアント側で最大 1200px 幅・JPEG 85% 品質にリサイズして送信しなければならない。
+システムは作品詳細ページからカバー画像をアップロードして設定できなければならない（SHALL）。ファイル選択・ドラッグ&ドロップ・クリップボード貼り付けに対応する。アップロード前にクライアント側で最大 1200px 幅・JPEG 85% 品質にリサイズして送信しなければならない（SHALL）。
 
 #### Scenario: ファイル選択でアップロード
 - **WHEN** ユーザーが作品詳細ページでファイルを選択してアップロードする
@@ -25,7 +25,7 @@ TBD - created by archiving change tile-view-and-cover-images. Update Purpose aft
 ---
 
 ### Requirement: 出演者にカバー画像を設定できる
-システムは出演者詳細ページからカバー画像をアップロードして設定できなければならない。ファイル選択・ドラッグ&ドロップ・クリップボード貼り付けに対応する。アップロード前にクライアント側で最大 1200px 幅・JPEG 85% 品質にリサイズして送信しなければならない。
+システムは出演者詳細ページからカバー画像をアップロードして設定できなければならない（SHALL）。ファイル選択・ドラッグ&ドロップ・クリップボード貼り付けに対応する。アップロード前にクライアント側で最大 1200px 幅・JPEG 85% 品質にリサイズして送信しなければならない（SHALL）。
 
 #### Scenario: ファイル選択でアップロード
 - **WHEN** ユーザーが出演者詳細ページでファイルを選択してアップロードする
@@ -38,7 +38,7 @@ TBD - created by archiving change tile-view-and-cover-images. Update Purpose aft
 ---
 
 ### Requirement: カバー画像を削除できる
-システムは設定済みのカバー画像を削除できなければならない。
+システムは設定済みのカバー画像を削除できなければならない（SHALL）。
 
 #### Scenario: 作品のカバー画像を削除する
 - **WHEN** ユーザーが作品詳細ページでカバー画像の削除ボタンをクリックする
@@ -51,7 +51,7 @@ TBD - created by archiving change tile-view-and-cover-images. Update Purpose aft
 ---
 
 ### Requirement: カバー画像 URL が API レスポンスに含まれる
-作品検索 API および出演者 API のレスポンスに `cover_image_url` フィールドを含まなければならない。
+作品検索 API および出演者 API のレスポンスに `cover_image_url` フィールドを含まなければならない（SHALL）。
 
 #### Scenario: カバー画像が設定されている場合
 - **WHEN** カバー画像が設定されている作品または出演者の API レスポンスを取得する
@@ -64,7 +64,7 @@ TBD - created by archiving change tile-view-and-cover-images. Update Purpose aft
 ---
 
 ### Requirement: タイル一覧の画像は遅延読み込みしなければならない
-システムは作品タイルおよび出演者タイルのカバー画像を `loading="lazy"` で遅延読み込みしなければならない。
+システムは作品タイルおよび出演者タイルのカバー画像を `loading="lazy"` で遅延読み込みしなければならない（SHALL）。
 
 #### Scenario: スクロール前のタイルは画像を読み込まない
 - **WHEN** 一覧ページを開いたときにビューポート外にタイルが存在する

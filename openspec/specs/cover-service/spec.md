@@ -1,12 +1,12 @@
 # Cover Service
 
 ## Purpose
-TBD (カバー画像の保存・削除の共通ロジックを提供する)
+Works と Performers で共通のカバー画像保存・削除ロジックを `cover_service.py` サービス層に集約し、ルーターからの重複実装を排除する。
 
 ## Requirements
 
 ### Requirement: cover_service がカバー画像の保存・削除の共通ロジックを提供する
-`app/services/cover_service.py` は、Works と Performers で共通のカバー画像アップロード・削除ロジックを提供しなければならない。
+`app/services/cover_service.py` は、Works と Performers で共通のカバー画像アップロード・削除ロジックを提供しなければならない（SHALL）。
 
 #### Scenario: save_cover が画像を保存して相対パスを返す
 - **WHEN** `save_cover(file, entity_type, entity_id, old_path)` を呼び出す
@@ -25,7 +25,7 @@ TBD (カバー画像の保存・削除の共通ロジックを提供する)
 - **THEN** 対応するファイルが削除される（ファイルが存在しない場合は無視する）
 
 ### Requirement: ルーターは cover_service を使用する
-`app/routers/works.py` と `app/routers/performers.py` のカバー画像操作は `cover_service.save_cover` / `cover_service.delete_cover` を呼び出さなければならない。
+`app/routers/works.py` と `app/routers/performers.py` のカバー画像操作は `cover_service.save_cover` / `cover_service.delete_cover` を呼び出さなければならない（SHALL）。
 
 #### Scenario: Works と Performers で同じ cover_service が使われる
 - **WHEN** `POST /works/{id}/cover` または `POST /performers/{id}/cover` リクエストが来る

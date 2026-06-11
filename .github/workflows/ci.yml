@@ -22,6 +22,25 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
+            openspec:
+              - 'openspec/**'
+
+  validate-docs:
+    needs: changes
+    if: needs.changes.outputs.openspec == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install openspec
+        run: npm install -g @fission-ai/openspec
+
+      - name: Validate openspec docs
+        run: openspec validate --strict --all --no-interactive
 
   lint-test-backend:
     needs: changes

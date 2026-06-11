@@ -10,6 +10,13 @@ repos:
 
   - repo: local
     hooks:
+      - id: openspec-validate
+        name: openspec validate (strict)
+        entry: openspec validate --strict --all --no-interactive
+        language: system
+        files: ^openspec/
+        pass_filenames: false
+
       - id: pytest-unit
         name: pytest unit tests (backend)
         entry: bash -c "cd backend && uv run pytest -m unit --no-cov -q"

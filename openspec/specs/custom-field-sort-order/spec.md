@@ -7,7 +7,7 @@
 ## Requirements
 
 ### Requirement: カスタム項目定義の表示順管理
-システムはカスタム項目定義に表示順（sort_order）を持ち、entity_type（work / performer）ごとに独立して管理しなければならない。list API は sort_order 昇順で返す。
+システムはカスタム項目定義に表示順（sort_order）を持ち、entity_type（work / performer）ごとに独立して管理しなければならない（SHALL）。list API は sort_order 昇順で返す。
 
 #### Scenario: 作品用カスタム項目が sort_order 順で返される
 - **WHEN** クライアントが entity_type=work でカスタム項目定義一覧を取得する
@@ -20,7 +20,7 @@
 ---
 
 ### Requirement: カスタム項目定義の並び替え
-システムはユーザーが設定UIでカスタム項目の表示順をドラッグ＆ドロップで変更できなければならない。並び替えは entity_type ごとに独立して行われる。
+システムはユーザーが設定UIでカスタム項目の表示順をドラッグ＆ドロップで変更できなければならない（SHALL）。並び替えは entity_type ごとに独立して行われる。
 
 #### Scenario: 設定UIで作品用カスタム項目をD&Dで並び替えできる
 - **WHEN** ユーザーが設定UIの作品用カスタム項目リストで行をドラッグして順序を変更する
@@ -41,7 +41,7 @@
 ---
 
 ### Requirement: カスタム項目新規作成時の表示順
-システムは新たに作成されたカスタム項目定義を、同じ entity_type 内の末尾（最大 sort_order + 1）に配置しなければならない。
+システムは新たに作成されたカスタム項目定義を、同じ entity_type 内の末尾（最大 sort_order + 1）に配置しなければならない（SHALL）。
 
 #### Scenario: 新規作成した項目が末尾に追加される
 - **WHEN** ユーザーが新しいカスタム項目定義を作成する

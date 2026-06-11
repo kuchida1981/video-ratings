@@ -1,3 +1,9 @@
+## Purpose
+
+GitHub Actions による自動 CI パイプラインの仕様。push および Pull Request 時にバックエンド・フロントエンドのlint・テストを自動実行する。
+
+## Requirements
+
 ### Requirement: CI ワークフローの自動実行
 システムは GitHub への push または Pull Request 作成・更新時に、バックエンドおよびフロントエンドの CI ジョブを自動実行しなければならない（SHALL）。
 
