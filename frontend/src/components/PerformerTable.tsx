@@ -73,8 +73,8 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, so
                 key={p.id}
                 className="border-t transition-colors"
               >
-                <td className="px-3 py-2 font-medium whitespace-nowrap">
-                  <Link to={`/performers/${p.id}`} className="hover:underline text-primary hover:text-primary/80">
+                <td className="font-medium whitespace-nowrap p-0">
+                  <Link to={`/performers/${p.id}`} className="block px-3 py-2 hover:underline text-primary hover:text-primary/80">
                     {p.name}
                   </Link>
                 </td>

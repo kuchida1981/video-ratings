@@ -77,8 +77,8 @@ export function WorkTable({ works, visibleColumns, customFieldDefs, sortBy, sort
                   key={w.id}
                   className="border-t transition-colors"
                 >
-                  <td className="px-3 py-2 font-medium max-w-xs">
-                    <Link to={`/works/${w.id}`} className="line-clamp-2 hover:underline text-primary hover:text-primary/80">
+                  <td className="font-medium max-w-xs p-0">
+                    <Link to={`/works/${w.id}`} className="block px-3 py-2 line-clamp-2 hover:underline text-primary hover:text-primary/80">
                       {w.title}
                     </Link>
                   </td>
