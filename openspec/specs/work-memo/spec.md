@@ -1,0 +1,35 @@
+# work-memo Specification
+
+## Purpose
+TBD - created by archiving change add-memo-to-works-and-performers. Update Purpose after archive.
+## Requirements
+### Requirement: 作品メモの表示と編集
+システムは作品詳細ページの下部（カスタム項目セクションの下）にメモ入力欄を常に表示しなければならない。メモは任意の文字列（空白可）を入力できる Textarea として提供する。
+
+#### Scenario: 作品詳細ページにメモ欄が表示される
+- **WHEN** ユーザーが作品詳細ページを表示する
+- **THEN** システムはページ下部のカスタム項目セクションの下にメモ入力欄（Textarea）を表示する
+
+#### Scenario: メモが未登録の場合は空の Textarea が表示される
+- **WHEN** ユーザーが memo が null の作品詳細ページを表示する
+- **THEN** システムは空の Textarea を表示する
+
+#### Scenario: 登録済みのメモが表示される
+- **WHEN** ユーザーが memo が設定された作品詳細ページを表示する
+- **THEN** システムは保存されたメモのテキストを Textarea に表示する
+
+### Requirement: 作品メモのブラー時自動保存
+システムは作品メモの Textarea からフォーカスが外れた時点で、メモの内容を自動的に保存しなければならない。
+
+#### Scenario: メモを入力してフォーカスを外すと保存される
+- **WHEN** ユーザーが Textarea にテキストを入力し、フォーカスを外す
+- **THEN** システムは入力内容を PATCH /works/{id} で保存する
+
+#### Scenario: メモを空にしてフォーカスを外すと空文字で保存される
+- **WHEN** ユーザーが Textarea の内容を全て削除してフォーカスを外す
+- **THEN** システムは空文字列または null でメモを上書き保存する
+
+#### Scenario: 内容が変わっていない場合は API を呼ばない
+- **WHEN** ユーザーが Textarea をクリックしてそのままフォーカスを外す（変更なし）
+- **THEN** システムは PATCH リクエストを送信しない
+

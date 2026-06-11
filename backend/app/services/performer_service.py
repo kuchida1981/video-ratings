@@ -42,6 +42,7 @@ def build_performer_response(p: Performer) -> dict:
         "name": p.name,
         "furigana": p.furigana,
         "custom_fields": p.custom_fields,
+        "memo": p.memo,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
         "tags": [{"id": pt.tag.id, "name": pt.tag.name, "score": pt.tag.score} for pt in p.performer_tags],

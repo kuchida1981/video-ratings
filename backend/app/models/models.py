@@ -5,6 +5,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -25,6 +26,7 @@ class Work(Base):
     series = Column(String, nullable=True, index=True)
     cover_image_path = Column(String, nullable=True)
     custom_fields = Column(JSONB, nullable=True, default=dict)
+    memo = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -41,6 +43,7 @@ class Performer(Base):
     furigana = Column(String, nullable=True, index=True)
     cover_image_path = Column(String, nullable=True)
     custom_fields = Column(JSONB, nullable=True, default=dict)
+    memo = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
