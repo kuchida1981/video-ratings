@@ -7,7 +7,7 @@
 ## Requirements
 
 ### Requirement: フィルタ・ソート条件をlocalStorageに保存する
-作品一覧および出演者一覧のフィルタ・ソート条件は、変更されるたびに localStorage に保存されなければならない。ストレージキーは `video-ratings:works-filters`（作品一覧）および `video-ratings:performers-filters`（出演者一覧）とする。
+作品一覧および出演者一覧のフィルタ・ソート条件は、変更されるたびに localStorage に保存されなければならない（SHALL）。ストレージキーは `video-ratings:works-filters`（作品一覧）および `video-ratings:performers-filters`（出演者一覧）とする。
 
 保存対象:
 - 作品一覧: keyword, selectedTagIds, maker, series, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles
@@ -30,7 +30,7 @@
 - **THEN** 前回設定していたフィルタ・ソート条件が復元される
 
 ### Requirement: フィルタ全解除ボタンを表示する
-作品一覧および出演者一覧で、フィルタ・ソート条件のいずれかがデフォルト値から変更されている場合、「フィルタ全解除」ボタンを表示しなければならない。
+作品一覧および出演者一覧で、フィルタ・ソート条件のいずれかがデフォルト値から変更されている場合、「フィルタ全解除」ボタンを表示しなければならない（SHALL）。
 
 デフォルト値:
 - 作品一覧: keyword="", selectedTagIds=[], maker="", series="", sortBy="created_at", sortDesc=true, onlyUnrated=false, onlyNoCover=false, onlyNoFiles=false

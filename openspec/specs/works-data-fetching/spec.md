@@ -1,7 +1,11 @@
-## ADDED Requirements
+## Purpose
+
+TanStack Query を使った Works データフェッチの仕様。useQuery / useMutation によるデータ取得・更新とキャッシュ無効化のパターンを定義する。
+
+## Requirements
 
 ### Requirement: Works 一覧を useQuery でフェッチする
-WorksPage は `useQuery` を使って works 一覧を取得しなければならない。フィルター・ソート条件が変化したとき、queryKey が変わり自動的に再フェッチされる。
+WorksPage は `useQuery` を使って works 一覧を取得しなければならない（SHALL）。フィルター・ソート条件が変化したとき、queryKey が変わり自動的に再フェッチされる。
 
 #### Scenario: 初期表示時にデータがフェッチされる
 - **WHEN** WorksPage が表示される
@@ -12,7 +16,7 @@ WorksPage は `useQuery` を使って works 一覧を取得しなければなら
 - **THEN** 新しい条件で自動的に再フェッチが実行される（手動での fetchWorks 呼び出しは不要）
 
 ### Requirement: Work の CRUD 操作を useMutation で実行する
-Work の作成・更新・削除・タグ追加削除・出演者追加削除・カバー画像操作はすべて `useMutation` を通じて実行し、成功後に works キャッシュを無効化しなければならない。
+Work の作成・更新・削除・タグ追加削除・出演者追加削除・カバー画像操作はすべて `useMutation` を通じて実行し、成功後に works キャッシュを無効化しなければならない（SHALL）。
 
 #### Scenario: Work 作成後に一覧が更新される
 - **WHEN** ユーザーが新しい Work を作成する

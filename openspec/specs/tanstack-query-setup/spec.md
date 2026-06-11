@@ -1,7 +1,11 @@
-## ADDED Requirements
+## Purpose
+
+TanStack Query の QueryClient セットアップ仕様。QueryClientProvider によるアプリ全体へのキャッシュ提供と初期設定を定義する。
+
+## Requirements
 
 ### Requirement: QueryClient をアプリ全体で利用可能にする
-アプリケーションは `@tanstack/react-query` の `QueryClient` を初期化し、`QueryClientProvider` でコンポーネントツリー全体をラップしなければならない。
+アプリケーションは `@tanstack/react-query` の `QueryClient` を初期化し、`QueryClientProvider` でコンポーネントツリー全体をラップしなければならない（SHALL）。
 
 #### Scenario: アプリ起動時に QueryClient が利用可能になる
 - **WHEN** アプリケーションが起動する
