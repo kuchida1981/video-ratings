@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle, LayoutGrid, List } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import type { CustomFieldDefinition, ImportRow } from "@/types";
+import type { CustomFieldDefinition, ImportRow, WorkColumnKey } from "@/types";
 import { useImportFlow } from "@/hooks/useImportFlow";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
@@ -13,10 +13,22 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { WorkTile } from "@/components/WorkTile";
+import { WorkTable } from "@/components/WorkTable";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 
 const WORKS_STORAGE_KEY = "video-ratings:works-filters";
+const WORKS_TABLE_COLUMNS_KEY = "video-ratings:works-table-columns";
+const DEFAULT_WORKS_TABLE_COLUMNS: WorkColumnKey[] = ["maker", "total_score"];
+
+function loadWorksTableColumns(): WorkColumnKey[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(WORKS_TABLE_COLUMNS_KEY) ?? "null");
+    return Array.isArray(saved) ? saved : DEFAULT_WORKS_TABLE_COLUMNS;
+  } catch {
+    return DEFAULT_WORKS_TABLE_COLUMNS;
+  }
+}
 const DEFAULT_WORKS_SORT_BY = "created_at";
 const DEFAULT_WORKS_SORT_DESC = true;
 
@@ -44,6 +56,8 @@ export default function WorksPage() {
   const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
   const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
   const [onlyNoFiles, setOnlyNoFiles] = useState<boolean>(stored.onlyNoFiles ?? false);
+  const [viewMode, setViewMode] = useState<"tile" | "table">("tile");
+  const [visibleWorkColumns, setVisibleWorkColumns] = useState<WorkColumnKey[]>(loadWorksTableColumns);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -147,6 +161,23 @@ export default function WorksPage() {
     localStorage.removeItem(WORKS_STORAGE_KEY);
   };
 
+  const toggleWorkColumn = (key: WorkColumnKey) => {
+    const next = visibleWorkColumns.includes(key)
+      ? visibleWorkColumns.filter((k) => k !== key)
+      : [...visibleWorkColumns, key];
+    setVisibleWorkColumns(next);
+    localStorage.setItem(WORKS_TABLE_COLUMNS_KEY, JSON.stringify(next));
+  };
+
+  const handleWorkTableSort = (key: string) => {
+    if (sortBy === key) {
+      setSortDesc((d) => !d);
+    } else {
+      setSortBy(key);
+      setSortDesc(key !== "created_at");
+    }
+  };
+
   const filteredWorks = useMemo(() => {
     let result = works;
     if (onlyUnrated) result = result.filter((w) => w.tags.length === 0);
@@ -228,6 +259,26 @@ export default function WorksPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">作品一覧</h1>
         <div className="flex gap-2">
+          <div className="flex rounded-md border overflow-hidden">
+            <Button
+              variant={viewMode === "tile" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none border-0"
+              onClick={() => setViewMode("tile")}
+              title="タイル表示"
+            >
+              <LayoutGrid size={16} />
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none border-0"
+              onClick={() => setViewMode("table")}
+              title="テーブル表示"
+            >
+              <List size={16} />
+            </Button>
+          </div>
           <Button variant="outline" onClick={() => setBulkImportOpen(true)}>
             <Upload size={16} />一括登録
           </Button>
@@ -484,11 +535,61 @@ export default function WorksPage() {
             );
           })}
         </div>
+
+        {viewMode === "table" && (
+          <div>
+            <div className="text-xs text-muted-foreground mb-1.5">表示列</div>
+            <div className="flex flex-wrap gap-1">
+              {(
+                [
+                  { key: "maker" as WorkColumnKey, label: "メーカー" },
+                  { key: "series" as WorkColumnKey, label: "シリーズ" },
+                  { key: "total_score" as WorkColumnKey, label: "スコア" },
+                  { key: "tags" as WorkColumnKey, label: "タグ" },
+                  { key: "file_count" as WorkColumnKey, label: "ファイル数" },
+                  { key: "created_at" as WorkColumnKey, label: "登録日" },
+                ] as { key: WorkColumnKey; label: string }[]
+              ).map(({ key, label }) => (
+                <Badge
+                  key={key}
+                  variant={visibleWorkColumns.includes(key) ? "default" : "outline"}
+                  className="cursor-pointer py-1.5"
+                  onClick={() => toggleWorkColumn(key)}
+                >
+                  {label}
+                </Badge>
+              ))}
+              {customFieldDefs.map((cf) => {
+                const key = `custom:${cf.name}` as WorkColumnKey;
+                return (
+                  <Badge
+                    key={cf.id}
+                    variant={visibleWorkColumns.includes(key) ? "default" : "outline"}
+                    className="cursor-pointer py-1.5"
+                    onClick={() => toggleWorkColumn(key)}
+                  >
+                    {cf.name}
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Tile grid */}
+      {/* Content */}
       {filteredWorks.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">作品が見つかりません</p>
+      ) : viewMode === "table" ? (
+        <WorkTable
+          works={filteredWorks}
+          visibleColumns={visibleWorkColumns}
+          customFieldDefs={customFieldDefs}
+          sortBy={sortBy}
+          sortDesc={sortDesc}
+          onSort={handleWorkTableSort}
+          onRowClick={(id) => navigate(`/works/${id}`)}
+        />
       ) : (
         <div className="grid gap-3" style={gridStyle}>
           {filteredWorks.map((w) => (
