@@ -47,7 +47,7 @@ export interface WorkListItem {
   total_score: number;
   performers: { id: number; name: string }[];
   custom_fields: Record<string, unknown> | null;
-  tags: { id: number; name: string; category_id: number }[];
+  tags: { id: number; name: string; score: number | null; category_id: number }[];
   cover_image_url: string | null;
   file_count: number;
 }

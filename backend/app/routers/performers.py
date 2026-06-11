@@ -13,9 +13,7 @@ from app.schemas.performer import (
     PerformerResponse,
     PerformerUpdate,
 )
-from app.schemas.work import WorkListResponse
 from app.services import cover_service, performer_service
-from app.services.score_calculator import score_calculator
 
 router = APIRouter(prefix="/performers", tags=["performers"])
 
@@ -76,40 +74,6 @@ def delete_performer(performer_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Performer not found")
     db.delete(p)
     db.commit()
-
-
-@router.get("/{performer_id}/works", response_model=list[WorkListResponse])
-def get_performer_works(performer_id: int, db: Session = Depends(get_db)):
-    if not db.query(Performer).filter(Performer.id == performer_id).first():
-        raise HTTPException(status_code=404, detail="Performer not found")
-    works = (
-        db.query(Work)
-        .join(WorkPerformer)
-        .options(
-            joinedload(Work.work_performers)
-            .joinedload(WorkPerformer.performer)
-            .joinedload(Performer.performer_tags)
-            .joinedload(PerformerTag.tag),
-            joinedload(Work.work_tags).joinedload(WorkTag.tag),
-        )
-        .filter(WorkPerformer.performer_id == performer_id)
-        .all()
-    )
-    return [
-        {
-            "id": w.id,
-            "title": w.title,
-            "maker": w.maker,
-            "series": w.series,
-            "created_at": w.created_at,
-            "total_score": score_calculator.calculate_work_total_score(w),
-            "performers": [{"id": wp.performer.id, "name": wp.performer.name} for wp in w.work_performers],
-            "custom_fields": w.custom_fields,
-            "tags": [{"id": wt.tag.id, "name": wt.tag.name, "category_id": wt.tag.category_id} for wt in w.work_tags],
-            "cover_image_url": f"/static/covers/{w.cover_image_path}" if w.cover_image_path else None,
-        }
-        for w in works
-    ]
 
 
 @router.post("/{performer_id}/tags/{tag_id}", response_model=PerformerResponse)

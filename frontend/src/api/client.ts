@@ -62,11 +62,12 @@ export const api = {
       req<Work>(`/works/${id}/custom-fields`, { method: "PATCH", body: JSON.stringify(fields) }),
     uploadCover: (id: number, file: File) => upload<Work>(`/works/${id}/cover`, file),
     deleteCover: (id: number) => req<Work>(`/works/${id}/cover`, { method: "DELETE" }),
-    search: (params: Record<string, string | number | boolean | string[]>) => {
+    search: (params: Record<string, string | number | boolean | string[] | undefined | null>) => {
       const qs = new URLSearchParams();
       for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null) continue;
         if (Array.isArray(v)) v.forEach((val) => qs.append(k, String(val)));
-        else if (v !== undefined && v !== "") qs.append(k, String(v));
+        else if (v !== "") qs.append(k, String(v));
       }
       return req<WorkListItem[]>(`/works/search?${qs}`);
     },
@@ -80,7 +81,6 @@ export const api = {
     update: (id: number, data: { name?: string; furigana?: string }) =>
       req<Performer>(`/performers/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) => req<void>(`/performers/${id}`, { method: "DELETE" }),
-    works: (id: number) => req<WorkListItem[]>(`/performers/${id}/works`),
     addTag: (id: number, tagId: number) => req<Performer>(`/performers/${id}/tags/${tagId}`, { method: "POST" }),
     removeTag: (id: number, tagId: number) => req<Performer>(`/performers/${id}/tags/${tagId}`, { method: "DELETE" }),
     updateCustomFields: (id: number, fields: Record<string, unknown>) =>

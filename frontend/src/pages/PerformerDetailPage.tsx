@@ -23,7 +23,8 @@ export default function PerformerDetailPage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", furigana: "" });
   const { maxCols } = useTileMaxColumns();
-  const gridStyle = useTileGridStyle(maxCols);
+  const gridStyle = useTileGridStyle(Math.max(2, maxCols - 1));
+
 
   const [newAliasName, setNewAliasName] = useState("");
   const [newAliasFurigana, setNewAliasFurigana] = useState("");
@@ -42,7 +43,7 @@ export default function PerformerDetailPage() {
 
   const { data: works = [] } = useQuery({
     queryKey: ["performerWorks", performerId],
-    queryFn: () => api.performers.works(performerId),
+    queryFn: () => api.works.search({ performer_id: performerId }),
   });
 
   const { data: categories = [] } = useQuery({
@@ -140,7 +141,8 @@ export default function PerformerDetailPage() {
   if (!performer) return <div className="text-muted-foreground">読み込み中…</div>;
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
+    <div className="max-w-2xl space-y-6">
       {/* カバー画像 */}
       <section className="space-y-2">
         {performer.cover_image_url ? (
@@ -348,7 +350,9 @@ export default function PerformerDetailPage() {
         </section>
       )}
 
-      {/* Works */}
+      </div>
+
+      {/* Works — full width */}
       <section className="space-y-2">
         <h2 className="font-semibold">出演作品 ({works.length})</h2>
         {works.length === 0 ? (
@@ -356,7 +360,7 @@ export default function PerformerDetailPage() {
         ) : (
           <div className="grid gap-3" style={gridStyle}>
             {works.map((w) => (
-              <WorkTile key={w.id} work={w} onClick={() => navigate(`/works/${w.id}`)} />
+              <WorkTile key={w.id} work={w} onClick={() => navigate(`/works/${w.id}`)} variant="default" />
             ))}
           </div>
         )}
