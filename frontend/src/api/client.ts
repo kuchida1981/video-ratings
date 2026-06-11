@@ -62,10 +62,10 @@ export const api = {
       req<Work>(`/works/${id}/custom-fields`, { method: "PATCH", body: JSON.stringify(fields) }),
     uploadCover: (id: number, file: File) => upload<Work>(`/works/${id}/cover`, file),
     deleteCover: (id: number) => req<Work>(`/works/${id}/cover`, { method: "DELETE" }),
-    search: (params: Record<string, string | number | boolean | string[] | undefined>) => {
+    search: (params: Record<string, string | number | boolean | string[] | undefined | null>) => {
       const qs = new URLSearchParams();
       for (const [k, v] of Object.entries(params)) {
-        if (v === undefined) continue;
+        if (v === undefined || v === null) continue;
         if (Array.isArray(v)) v.forEach((val) => qs.append(k, String(val)));
         else if (v !== "") qs.append(k, String(v));
       }

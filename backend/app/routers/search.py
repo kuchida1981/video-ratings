@@ -22,7 +22,7 @@ def search_works(
     db: Session = Depends(get_db),
 ):
     if performer_id is not None:
-        if not db.query(Performer).filter(Performer.id == performer_id).first():
+        if not db.query(Performer.id).filter(Performer.id == performer_id).first():
             raise HTTPException(status_code=404, detail="Performer not found")
 
     q = db.query(Work).options(

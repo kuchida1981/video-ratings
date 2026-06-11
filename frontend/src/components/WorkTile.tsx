@@ -37,15 +37,15 @@ export function WorkTile({ work, onClick, variant = "compact" }: WorkTileProps) 
           {performers}
         </p>
         {variant === "default" && (
-          <p className="text-xs text-muted-foreground truncate">{meta || " "}</p>
+          <p className="text-xs text-muted-foreground truncate min-h-[1rem]">{meta}</p>
         )}
         {variant === "default" && (
-          <div className="flex gap-1 overflow-hidden mt-0.5">
-            {work.tags.length > 0 ? work.tags.map((tag) => (
+          <div className="flex gap-1 overflow-hidden mt-0.5 min-h-[1.25rem]">
+            {work.tags.map((tag) => (
               <Badge key={tag.id} variant="secondary" className="text-[10px] px-1 py-0 whitespace-nowrap shrink-0">
                 {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
               </Badge>
-            )) : <span className="text-[10px] invisible">_</span>}
+            ))}
           </div>
         )}
         <div className="flex items-center justify-between mt-0.5">
