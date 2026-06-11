@@ -63,6 +63,7 @@ def build_work_response(work: Work) -> dict[str, Any]:
         "maker": work.maker,
         "series": work.series,
         "custom_fields": work.custom_fields,
+        "memo": work.memo,
         "created_at": work.created_at,
         "updated_at": work.updated_at,
         "files": work.files,

@@ -29,6 +29,7 @@ export interface Work {
   maker: string | null;
   series: string | null;
   custom_fields: Record<string, unknown> | null;
+  memo: string | null;
   created_at: string;
   updated_at: string;
   files: WorkFile[];
@@ -70,6 +71,7 @@ export interface Performer {
   furigana: string | null;
   aliases: PerformerAlias[];
   custom_fields: Record<string, unknown> | null;
+  memo: string | null;
   created_at: string;
   updated_at: string;
   tags: TagSummary[];

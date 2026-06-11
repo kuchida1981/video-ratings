@@ -78,7 +78,7 @@ export const api = {
     get: (id: number) => req<Performer>(`/performers/${id}`),
     create: (data: { name: string; furigana?: string }) =>
       req<Performer>("/performers", { method: "POST", body: JSON.stringify(data) }),
-    update: (id: number, data: { name?: string; furigana?: string }) =>
+    update: (id: number, data: { name?: string; furigana?: string; memo?: string | null }) =>
       req<Performer>(`/performers/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) => req<void>(`/performers/${id}`, { method: "DELETE" }),
     addTag: (id: number, tagId: number) => req<Performer>(`/performers/${id}/tags/${tagId}`, { method: "POST" }),

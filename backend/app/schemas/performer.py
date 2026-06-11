@@ -16,6 +16,7 @@ class PerformerCreate(PerformerBase):
 class PerformerUpdate(BaseModel):
     name: str | None = None
     furigana: str | None = None
+    memo: str | None = None
 
 
 class TagSummary(BaseModel):
@@ -47,6 +48,7 @@ class AliasResponse(BaseModel):
 class PerformerResponse(PerformerBase):
     id: int
     custom_fields: dict[str, Any] | None = None
+    memo: str | None = None
     created_at: datetime
     updated_at: datetime
     tags: list[TagSummary] = []

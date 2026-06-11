@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
 function processImageFile(file: File, onUpload: (file: File) => void) {
   if (!file.type.startsWith("image/")) return;
@@ -53,6 +54,8 @@ export default function WorkDetailPage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: "", maker: "", series: "" });
   const [newFilePath, setNewFilePath] = useState("");
+  const [memo, setMemo] = useState("");
+  const [initializedId, setInitializedId] = useState<number | null>(null);
   const [newFileDisplayName, setNewFileDisplayName] = useState("");
   const [addPerformerId, setAddPerformerId] = useState("");
   const [playingFileId, setPlayingFileId] = useState<number | null>(null);
@@ -117,6 +120,13 @@ export default function WorkDetailPage() {
   }, [work, customFields]);
 
   useEffect(() => {
+    if (work && initializedId !== work.id) {
+      setMemo(work.memo ?? "");
+      setInitializedId(work.id);
+    }
+  }, [work, initializedId]);
+
+  useEffect(() => {
     if (!playingFile && videoRef.current) {
       videoRef.current.pause();
       videoRef.current.src = "";
@@ -179,6 +189,21 @@ export default function WorkDetailPage() {
       invalidateWork();
     },
   });
+
+  const updateMemoMutation = useMutation({
+    mutationFn: (memoValue: string) =>
+      api.works.update(workId, { memo: memoValue === "" ? null : memoValue }),
+    onSuccess: () => {
+      invalidateWork();
+    },
+  });
+
+  const handleMemoBlur = () => {
+    const originalMemo = work?.memo ?? "";
+    if (memo !== originalMemo) {
+      updateMemoMutation.mutate(memo);
+    }
+  };
 
   const deleteWorkMutation = useMutation({
     mutationFn: () => api.works.delete(workId),
@@ -702,6 +727,18 @@ export default function WorkDetailPage() {
           </div>
         </section>
       )}
+
+      {/* Memo */}
+      <section className="space-y-2">
+        <h2 className="font-semibold">メモ</h2>
+        <Textarea
+          placeholder="メモを入力..."
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          onBlur={handleMemoBlur}
+          className="min-h-[120px]"
+        />
+      </section>
     </div>
   );
 }

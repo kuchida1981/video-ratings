@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { WorkTile } from "@/components/WorkTile";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
@@ -22,6 +23,8 @@ export default function PerformerDetailPage() {
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", furigana: "" });
+  const [memo, setMemo] = useState("");
+  const [initializedId, setInitializedId] = useState<number | null>(null);
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(Math.max(2, maxCols - 1));
 
@@ -71,6 +74,13 @@ export default function PerformerDetailPage() {
     }
   }, [performer, customFieldDefs]);
 
+  useEffect(() => {
+    if (performer && initializedId !== performer.id) {
+      setMemo(performer.memo ?? "");
+      setInitializedId(performer.id);
+    }
+  }, [performer, initializedId]);
+
   const updateMutation = useMutation({
     mutationFn: (data: { name: string; furigana?: string }) =>
       api.performers.update(performerId, data),
@@ -79,6 +89,21 @@ export default function PerformerDetailPage() {
       invalidatePerformer();
     },
   });
+
+  const updateMemoMutation = useMutation({
+    mutationFn: (memoValue: string) =>
+      api.performers.update(performerId, { memo: memoValue === "" ? null : memoValue }),
+    onSuccess: () => {
+      invalidatePerformer();
+    },
+  });
+
+  const handleMemoBlur = () => {
+    const originalMemo = performer?.memo ?? "";
+    if (memo !== originalMemo) {
+      updateMemoMutation.mutate(memo);
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: () => api.performers.delete(performerId),
@@ -349,6 +374,18 @@ export default function PerformerDetailPage() {
           </div>
         </section>
       )}
+
+      {/* Memo */}
+      <section className="space-y-2">
+        <h2 className="font-semibold">メモ</h2>
+        <Textarea
+          placeholder="メモを入力..."
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          onBlur={handleMemoBlur}
+          className="min-h-[120px]"
+        />
+      </section>
 
       </div>
 

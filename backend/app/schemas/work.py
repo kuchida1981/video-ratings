@@ -52,6 +52,7 @@ class WorkBase(BaseModel):
     maker: str | None = None
     series: str | None = None
     custom_fields: dict[str, Any] | None = None
+    memo: str | None = None
 
 
 class WorkCreate(WorkBase):
@@ -63,6 +64,7 @@ class WorkUpdate(BaseModel):
     maker: str | None = None
     series: str | None = None
     custom_fields: dict[str, Any] | None = None
+    memo: str | None = None
 
 
 class WorkResponse(WorkBase):
