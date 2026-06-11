@@ -30,6 +30,8 @@ export function useImportFlow(onImportComplete?: () => void) {
       });
       setImportRowStates(initialStates);
       setImportPhase("preview");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "インポートプレビューの取得に失敗しました");
     } finally {
       setImportLoading(false);
     }
@@ -72,6 +74,8 @@ export function useImportFlow(onImportComplete?: () => void) {
       setImportPreview(null);
       setImportRowStates({});
       onImportComplete?.();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "インポートの実行に失敗しました");
     } finally {
       setImportLoading(false);
     }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -52,7 +52,7 @@ export default function WorksPage() {
 
   const { data: works = [] } = useQuery({
     queryKey: ["works", filterParams],
-    queryFn: async () => {
+    queryFn: () => {
       const params: Record<string, string | number | boolean | string[]> = {
         sort_by: sortBy,
         sort_desc: sortDesc,
@@ -61,15 +61,16 @@ export default function WorksPage() {
       if (maker) params.maker = maker;
       if (series) params.series = series;
       if (selectedTagIds.length) params.tag_ids = selectedTagIds.map(String);
-
-      localStorage.setItem(WORKS_STORAGE_KEY, JSON.stringify({
-        keyword, selectedTagIds, maker, series, sortBy, sortDesc,
-        onlyUnrated, onlyNoCover, onlyNoFiles,
-      }));
-
       return api.works.search(params);
     },
   });
+
+  useEffect(() => {
+    localStorage.setItem(WORKS_STORAGE_KEY, JSON.stringify({
+      keyword, selectedTagIds, maker, series, sortBy, sortDesc,
+      onlyUnrated, onlyNoCover, onlyNoFiles,
+    }));
+  }, [keyword, selectedTagIds, maker, series, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["tagCategories", "work"],

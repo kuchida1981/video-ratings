@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import {
   DndContext,
@@ -80,13 +80,13 @@ export default function TagsPage() {
   const { data: categories = [] } = useQuery<TagCategory[]>({
     queryKey: ["tagCategories"],
     queryFn: () => api.tagCategories.list(),
-    select: (data) => {
-      if (expanded.size === 0 && data.length > 0) {
-        setExpanded(new Set(data.map((c) => c.id)));
-      }
-      return data;
-    },
   });
+
+  useEffect(() => {
+    if (categories.length > 0 && expanded.size === 0) {
+      setExpanded(new Set(categories.map((c) => c.id)));
+    }
+  }, [categories, expanded.size]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["tagCategories"] });
 
@@ -124,33 +124,36 @@ export default function TagsPage() {
 
   const handleDragEndCategories = (event: DragEndEvent, entityType: string) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      queryClient.setQueryData<TagCategory[]>(["tagCategories"], (prev = []) => {
-        const etCats = prev.filter((c) => c.entity_type === entityType);
-        const others = prev.filter((c) => c.entity_type !== entityType);
-        const oldIndex = etCats.findIndex((c) => c.id === active.id);
-        const newIndex = etCats.findIndex((c) => c.id === over.id);
-        const moved = arrayMove(etCats, oldIndex, newIndex);
-        api.tagCategories.reorder(moved.map((c) => c.id)).catch(() => invalidate());
-        return entityType === "work" ? [...moved, ...others] : [...others, ...moved];
-      });
-    }
+    if (!over || active.id === over.id) return;
+    const prev = queryClient.getQueryData<TagCategory[]>(["tagCategories"]) ?? [];
+    const etCats = prev.filter((c) => c.entity_type === entityType);
+    const others = prev.filter((c) => c.entity_type !== entityType);
+    const oldIndex = etCats.findIndex((c) => c.id === active.id);
+    const newIndex = etCats.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const moved = arrayMove(etCats, oldIndex, newIndex);
+    queryClient.setQueryData<TagCategory[]>(
+      ["tagCategories"],
+      entityType === "work" ? [...moved, ...others] : [...others, ...moved]
+    );
+    api.tagCategories.reorder(moved.map((c) => c.id)).catch(() => invalidate());
   };
 
   const handleDragEndTags = (event: DragEndEvent, categoryId: number) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      queryClient.setQueryData<TagCategory[]>(["tagCategories"], (prev = []) => {
-        return prev.map((cat) => {
-          if (cat.id !== categoryId) return cat;
-          const oldIndex = cat.tags.findIndex((t) => t.id === active.id);
-          const newIndex = cat.tags.findIndex((t) => t.id === over.id);
-          const moved = arrayMove(cat.tags, oldIndex, newIndex);
-          api.tags.reorder(moved.map((t) => t.id)).catch(() => invalidate());
-          return { ...cat, tags: moved };
-        });
-      });
-    }
+    if (!over || active.id === over.id) return;
+    const prev = queryClient.getQueryData<TagCategory[]>(["tagCategories"]) ?? [];
+    const cat = prev.find((c) => c.id === categoryId);
+    if (!cat) return;
+    const oldIndex = cat.tags.findIndex((t) => t.id === active.id);
+    const newIndex = cat.tags.findIndex((t) => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const moved = arrayMove(cat.tags, oldIndex, newIndex);
+    queryClient.setQueryData<TagCategory[]>(
+      ["tagCategories"],
+      prev.map((c) => (c.id === categoryId ? { ...c, tags: moved } : c))
+    );
+    api.tags.reorder(moved.map((t) => t.id)).catch(() => invalidate());
   };
 
   const openEdit = (tag: { id: number; name: string; score: number | null; description: string | null }) => {

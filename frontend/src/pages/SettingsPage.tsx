@@ -112,13 +112,13 @@ export default function SettingsPage() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const key = ["customFields", entityTypeScope] as const;
-    queryClient.setQueryData<CustomFieldDefinition[]>(key, (prev = []) => {
-      const oldIndex = prev.findIndex((d) => d.id === active.id);
-      const newIndex = prev.findIndex((d) => d.id === over.id);
-      const moved = arrayMove(prev, oldIndex, newIndex);
-      api.customFields.reorder(moved.map((d) => d.id)).catch(() => invalidate());
-      return moved;
-    });
+    const prev = queryClient.getQueryData<CustomFieldDefinition[]>(key) ?? [];
+    const oldIndex = prev.findIndex((d) => d.id === active.id);
+    const newIndex = prev.findIndex((d) => d.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const moved = arrayMove(prev, oldIndex, newIndex);
+    queryClient.setQueryData<CustomFieldDefinition[]>(key, moved);
+    api.customFields.reorder(moved.map((d) => d.id)).catch(() => invalidate());
   };
 
   const renderTable = (defs: CustomFieldDefinition[], emptyMsg: string, entityTypeScope: "work" | "performer") => (
