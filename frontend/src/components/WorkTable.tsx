@@ -1,4 +1,5 @@
 import { ArrowUp, ArrowDown, ArrowUpDown, Files } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { WorkListItem, WorkColumnKey, CustomFieldDefinition } from "@/types";
 
@@ -9,7 +10,6 @@ interface WorkTableProps {
   sortBy: string;
   sortDesc: boolean;
   onSort: (key: string) => void;
-  onRowClick: (id: number) => void;
 }
 
 const SORTABLE_KEYS = new Set(["total_score", "created_at"]);
@@ -21,7 +21,7 @@ function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["fie
   return String(value);
 }
 
-export function WorkTable({ works, visibleColumns, customFieldDefs, sortBy, sortDesc, onSort, onRowClick }: WorkTableProps) {
+export function WorkTable({ works, visibleColumns, customFieldDefs, sortBy, sortDesc, onSort }: WorkTableProps) {
   const customColDefs = customFieldDefs.filter((d) =>
     visibleColumns.includes(`custom:${d.name}` as WorkColumnKey)
   );
@@ -75,11 +75,12 @@ export function WorkTable({ works, visibleColumns, customFieldDefs, sortBy, sort
               return (
                 <tr
                   key={w.id}
-                  className="border-t hover:bg-accent/30 cursor-pointer transition-colors"
-                  onClick={() => onRowClick(w.id)}
+                  className="border-t transition-colors"
                 >
                   <td className="px-3 py-2 font-medium max-w-xs">
-                    <span className="line-clamp-2">{w.title}</span>
+                    <Link to={`/works/${w.id}`} className="line-clamp-2 hover:underline text-primary hover:text-primary/80">
+                      {w.title}
+                    </Link>
                   </td>
                   <td className="px-3 py-2 text-muted-foreground max-w-xs">
                     <span className="line-clamp-1">{performers}</span>

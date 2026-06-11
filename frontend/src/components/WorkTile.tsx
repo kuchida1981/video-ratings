@@ -1,10 +1,11 @@
 import { Film, Files } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { WorkListItem } from "@/types";
 
 interface WorkTileProps {
   work: WorkListItem;
-  onClick: () => void;
+  onClick?: () => void;
   variant?: "compact" | "default";
 }
 
@@ -13,7 +14,8 @@ export function WorkTile({ work, onClick, variant = "compact" }: WorkTileProps) 
   const meta = [work.maker, work.series].filter(Boolean).join(" / ");
 
   return (
-    <div
+    <Link
+      to={`/works/${work.id}`}
       onClick={onClick}
       className="rounded-lg border bg-card hover:bg-accent/30 cursor-pointer transition-colors overflow-hidden flex flex-col"
     >
@@ -60,6 +62,6 @@ export function WorkTile({ work, onClick, variant = "compact" }: WorkTileProps) 
           <p className="text-xs font-mono text-primary">{work.total_score}</p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
