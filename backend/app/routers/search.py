@@ -88,6 +88,20 @@ def search_works(
 
     if sort_by == "total_score":
         result.sort(key=lambda x: x["total_score"], reverse=sort_desc)
+    elif sort_by.startswith("custom:"):
+        field_name = sort_by[len("custom:") :]
+
+        def custom_sort_key(x: dict) -> tuple:
+            v = (x["custom_fields"] or {}).get(field_name)
+            if v is None:
+                return (1, 0, "")
+            if isinstance(v, bool):
+                return (0, int(v), "")
+            if isinstance(v, int | float):
+                return (0, v, "")
+            return (0, 0, str(v))
+
+        result.sort(key=custom_sort_key, reverse=sort_desc)
     else:
         result.sort(key=lambda x: x["created_at"], reverse=sort_desc)
 

@@ -1,6 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: 作品一覧でカスタム項目ソートボタンを表示する
+The works list page MUST dynamically display sort buttons for work custom fields with `is_sortable=true`, alongside the existing sort buttons.
 作品一覧ページ（WorksPage）は `is_sortable=true` の作品用カスタム項目を、既存のソートボタン（スコア順・登録日順）の隣に動的に表示しなければならない。
 
 #### Scenario: is_sortable=true の作品用項目がソートボタンとして表示される
@@ -22,6 +23,7 @@
 ---
 
 ### Requirement: 出演者一覧でカスタム項目ソートボタンを表示する
+The performers list page MUST dynamically display sort buttons for performer custom fields with `is_sortable=true`, alongside the existing sort buttons.
 出演者一覧ページ（PerformersPage）は `is_sortable=true` の出演者用カスタム項目を、既存のソートボタンの隣に動的に表示しなければならない。
 
 #### Scenario: is_sortable=true の出演者用項目がソートボタンとして表示される
@@ -35,6 +37,7 @@
 ---
 
 ### Requirement: 出演者詳細ページの作品一覧でカスタム項目ソートを提供する
+The performer detail page MUST provide a sort UI (by score, registration date, and sortable custom fields) for the works list section.
 出演者詳細ページの作品一覧（PerformerDetailPage）に、作品用ソートUI（登録日順・スコア順・カスタム項目）を追加しなければならない。
 
 #### Scenario: 出演者詳細ページの作品一覧に登録日順・スコア順のソートボタンが追加される
@@ -48,6 +51,7 @@
 ---
 
 ### Requirement: カスタム項目ソートの型別動作
+Custom field sorting MUST use field_type-aware comparison logic; null/missing values MUST always be placed last (nulls last).
 カスタム項目ソートは field_type に応じた比較ロジックで実行されなければならない。未入力値は常に末尾（nulls last）に置かれる。
 
 #### Scenario: number 型はデフォルト降順でソートされる
@@ -69,6 +73,7 @@
 ---
 
 ### Requirement: カスタム項目ソート状態の保持
+The works list and performers list MUST persist their sort state (including custom field sort keys) in localStorage so it is restored on subsequent visits.
 作品一覧・出演者一覧のソート状態（カスタム項目含む）は localStorage に保持されなければならない。出演者詳細ページの作品ソート状態は保持不要。
 
 #### Scenario: ページ再訪時にカスタム項目ソート状態が復元される

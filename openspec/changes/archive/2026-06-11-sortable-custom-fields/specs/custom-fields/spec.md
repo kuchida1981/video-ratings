@@ -1,6 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: カスタム項目定義の管理
+The system MUST allow users to create and delete custom field definitions for works or performers; each definition MUST include a name, field type, target entity type, and `is_sortable` flag (default false).
 システムはユーザーが作品または出演者に追加できるカスタム項目を定義・削除できなければならない。定義は名前、型（text / number / date / boolean）、対象エンティティ（work / performer）、および並べ替え使用可否（`is_sortable`、デフォルト false）を持つ。名前のユニーク性は同一 entity_type の中でのみ保証される（異なる entity_type では同一名を使用できる）。
 
 #### Scenario: 作品用のカスタム項目定義を作成できる

@@ -1,6 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: is_sortable フラグの管理
+Each CustomFieldDefinition MUST have an `is_sortable` flag (default `false`) indicating whether it can be used for sorting.
 システムは各 CustomFieldDefinition に対して「並べ替えに使えるかどうか」を示す `is_sortable` フラグを持たなければならない。デフォルトは `false`。
 
 #### Scenario: 新規作成時は is_sortable=false
@@ -18,6 +19,7 @@
 ---
 
 ### Requirement: カスタム項目設定ページの is_sortable トグルUI
+The settings page MUST display an `is_sortable` toggle for each custom field definition row, applicable to all field types (text/number/date/boolean).
 カスタム項目設定ページの各定義行に、「並べ替えに使う」トグルを表示しなければならない。全てのフィールド型（text/number/date/boolean）でトグル可能。
 
 #### Scenario: トグルの初期状態は is_sortable の値を反映する

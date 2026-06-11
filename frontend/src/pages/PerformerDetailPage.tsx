@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2, Search, X } from "lucide-react";
+import { Trash2, Search, X, ArrowUpDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { CustomFieldDefinition } from "@/types";
@@ -14,6 +14,20 @@ import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 
+const PERFORMER_WORKS_SORT_KEY = "video-ratings:performer-detail-works-sort";
+
+function loadWorksSort(): { sortBy: string; sortDesc: boolean } {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PERFORMER_WORKS_SORT_KEY) ?? "{}");
+    return {
+      sortBy: typeof stored.sortBy === "string" ? stored.sortBy : "created_at",
+      sortDesc: typeof stored.sortDesc === "boolean" ? stored.sortDesc : true,
+    };
+  } catch {
+    return { sortBy: "created_at", sortDesc: true };
+  }
+}
+
 export default function PerformerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -25,6 +39,9 @@ export default function PerformerDetailPage() {
   const [form, setForm] = useState({ name: "", furigana: "" });
   const [memo, setMemo] = useState("");
   const [initializedId, setInitializedId] = useState<number | null>(null);
+  const storedSort = loadWorksSort();
+  const [workSortBy, setWorkSortBy] = useState<string>(storedSort.sortBy);
+  const [workSortDesc, setWorkSortDesc] = useState<boolean>(storedSort.sortDesc);
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(Math.max(2, maxCols - 1));
 
@@ -45,8 +62,8 @@ export default function PerformerDetailPage() {
   });
 
   const { data: works = [] } = useQuery({
-    queryKey: ["performerWorks", performerId],
-    queryFn: () => api.works.search({ performer_id: performerId }),
+    queryKey: ["performerWorks", performerId, workSortBy, workSortDesc],
+    queryFn: () => api.works.search({ performer_id: performerId, sort_by: workSortBy, sort_desc: workSortDesc }),
   });
 
   const { data: categories = [] } = useQuery({
@@ -58,6 +75,13 @@ export default function PerformerDetailPage() {
     queryKey: ["customFields", "performer"],
     queryFn: () => api.customFields.list("performer"),
   });
+
+  const { data: workCustomFieldDefs = [] } = useQuery<CustomFieldDefinition[]>({
+    queryKey: ["customFields", "work"],
+    queryFn: () => api.customFields.list("work"),
+  });
+
+  const sortableWorkCustomFields = workCustomFieldDefs.filter((d) => d.is_sortable);
 
   useEffect(() => {
     if (performer && editing) setForm({ name: performer.name, furigana: performer.furigana ?? "" });
@@ -391,7 +415,54 @@ export default function PerformerDetailPage() {
 
       {/* Works — full width */}
       <section className="space-y-2">
-        <h2 className="font-semibold">出演作品 ({works.length})</h2>
+        <div className="flex flex-wrap items-center gap-1">
+          <h2 className="font-semibold mr-2">出演作品 ({works.length})</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const newBy = "total_score";
+              const newDesc = workSortBy === newBy ? !workSortDesc : true;
+              setWorkSortBy(newBy); setWorkSortDesc(newDesc);
+              localStorage.setItem(PERFORMER_WORKS_SORT_KEY, JSON.stringify({ sortBy: newBy, sortDesc: newDesc }));
+            }}
+            className={workSortBy === "total_score" ? "text-primary" : ""}
+          >
+            <ArrowUpDown size={14} />スコア順
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const newBy = "created_at";
+              const newDesc = workSortBy === newBy ? !workSortDesc : true;
+              setWorkSortBy(newBy); setWorkSortDesc(newDesc);
+              localStorage.setItem(PERFORMER_WORKS_SORT_KEY, JSON.stringify({ sortBy: newBy, sortDesc: newDesc }));
+            }}
+            className={workSortBy === "created_at" ? "text-primary" : ""}
+          >
+            <ArrowUpDown size={14} />登録日順
+          </Button>
+          {sortableWorkCustomFields.map((cf) => {
+            const key = `custom:${cf.name}`;
+            const defaultDesc = cf.field_type !== "text";
+            return (
+              <Button
+                key={cf.id}
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const newDesc = workSortBy === key ? !workSortDesc : defaultDesc;
+                  setWorkSortBy(key); setWorkSortDesc(newDesc);
+                  localStorage.setItem(PERFORMER_WORKS_SORT_KEY, JSON.stringify({ sortBy: key, sortDesc: newDesc }));
+                }}
+                className={workSortBy === key ? "text-primary" : ""}
+              >
+                <ArrowUpDown size={14} />{cf.name}
+              </Button>
+            );
+          })}
+        </div>
         {works.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4">出演作品なし</p>
         ) : (

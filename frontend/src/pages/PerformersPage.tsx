@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, ArrowUpDown, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
+import type { CustomFieldDefinition } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +14,12 @@ import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 
 const PERFORMERS_STORAGE_KEY = "video-ratings:performers-filters";
-const DEFAULT_PERFORMERS_SORT_BY = "name" as const;
+const DEFAULT_PERFORMERS_SORT_BY = "name";
 const DEFAULT_PERFORMERS_SORT_DESC = false;
+
+function defaultSortDescForFieldType(fieldType: CustomFieldDefinition["field_type"]): boolean {
+  return fieldType !== "text";
+}
 
 function loadPerformersFilters() {
   try { return JSON.parse(localStorage.getItem(PERFORMERS_STORAGE_KEY) ?? "{}"); }
@@ -29,7 +34,7 @@ export default function PerformersPage() {
   const [furigana, setFurigana] = useState("");
 
   const stored = loadPerformersFilters();
-  const [sortBy, setSortBy] = useState<"name" | "work_count" | "avg_work_score">(stored.sortBy ?? DEFAULT_PERFORMERS_SORT_BY);
+  const [sortBy, setSortBy] = useState<string>(stored.sortBy ?? DEFAULT_PERFORMERS_SORT_BY);
   const [sortDesc, setSortDesc] = useState<boolean>(stored.sortDesc ?? DEFAULT_PERFORMERS_SORT_DESC);
   const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
   const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
@@ -41,6 +46,13 @@ export default function PerformersPage() {
     queryKey: ["performers"],
     queryFn: () => api.performers.list(),
   });
+
+  const { data: customFieldDefs = [] } = useQuery<CustomFieldDefinition[]>({
+    queryKey: ["customFields", "performer"],
+    queryFn: () => api.customFields.list("performer"),
+  });
+
+  const sortableCustomFields = customFieldDefs.filter((d) => d.is_sortable);
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; furigana?: string }) => api.performers.create(data),
@@ -81,6 +93,16 @@ export default function PerformersPage() {
         comparison = a.work_count - b.work_count;
       } else if (sortBy === "avg_work_score") {
         comparison = a.avg_work_score - b.avg_work_score;
+      } else if (sortBy.startsWith("custom:")) {
+        const fieldName = sortBy.slice("custom:".length);
+        const va = (a.custom_fields ?? {})[fieldName] ?? null;
+        const vb = (b.custom_fields ?? {})[fieldName] ?? null;
+        if (va === null && vb === null) comparison = 0;
+        else if (va === null) comparison = 1;
+        else if (vb === null) comparison = -1;
+        else if (typeof va === "number" && typeof vb === "number") comparison = va - vb;
+        else if (typeof va === "boolean" && typeof vb === "boolean") comparison = Number(va) - Number(vb);
+        else comparison = String(va).localeCompare(String(vb), "ja");
       }
 
       if (comparison !== 0) {
@@ -187,6 +209,25 @@ export default function PerformersPage() {
           >
             <ArrowUpDown size={14} />作品平均点数順
           </Button>
+          {sortableCustomFields.map((cf) => {
+            const key = `custom:${cf.name}`;
+            return (
+              <Button
+                key={cf.id}
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const newDesc = sortBy === key ? !sortDesc : defaultSortDescForFieldType(cf.field_type);
+                  setSortBy(key);
+                  setSortDesc(newDesc);
+                  saveSortState(key, newDesc, onlyUnrated, onlyNoCover);
+                }}
+                className={sortBy === key ? "text-primary" : ""}
+              >
+                <ArrowUpDown size={14} />{cf.name}
+              </Button>
+            );
+          })}
         </div>
       </div>
 

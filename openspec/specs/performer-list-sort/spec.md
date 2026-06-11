@@ -4,11 +4,11 @@
 TBD - created by archiving change performer-list-sort. Update Purpose after archive.
 ## Requirements
 ### Requirement: 出演者一覧のソート
-The system MUST support sorting the performer list by name, work count, or average work score.
-システムは出演者一覧ページで、表示順を「名前順 / 作品数順 / 作品平均点数順」× 昇順/降順に切り替えられなければならない。
+The system MUST support sorting the performer list by name, work count, average work score, or any performer custom field with `is_sortable=true`.
+システムは出演者一覧ページで、表示順を「名前順 / 作品数順 / 作品平均点数順 / is_sortable=true の出演者用カスタム項目」× 昇順/降順に切り替えられなければならない。
 
 #### Scenario: ソートキーと方向を変更できる
-- **WHEN** ユーザーがソートキーセレクトまたは昇順/降順トグルを操作する
+- **WHEN** ユーザーがソートボタンを操作する
 - **THEN** システムはページ内の出演者タイルを即座に再並び替えして表示する
 
 #### Scenario: 名前順ソート（昇順）
@@ -35,11 +35,16 @@ The system MUST support sorting the performer list by name, work count, or avera
 - **WHEN** ユーザーが「作品平均点数順」「昇順」を選択する
 - **THEN** 出演者タイルは avg_work_score の低い順に並ぶ
 
+#### Scenario: カスタム項目ソート（降順）
+- **WHEN** ユーザーが is_sortable=true の出演者用カスタム項目のソートボタンをクリックする（初回またはアクティブでない状態）
+- **THEN** 出演者タイルはそのカスタム項目の値で型に応じたデフォルト方向にソートされ、未入力値は末尾になる
+
 #### Scenario: localStorage に保存値がない場合のデフォルトソートは名前昇順
 - **WHEN** ユーザーが出演者一覧ページを初めて開く、または localStorage に保存値が存在しない
 - **THEN** ソートキーは「名前順」、方向は「昇順」が初期選択されている
 
 ### Requirement: 出演者一覧のフィルタ全解除UIを提供する
+The performers list MUST display a clear-all-filters button whenever any filter or sort condition differs from its default value.
 出演者一覧においても、フィルタ・ソート条件のいずれかがデフォルト値から変更されている場合、フィルタ全解除ボタンを表示しなければならない。ボタンをクリックすると全条件がデフォルト値に戻る。
 
 #### Scenario: 出演者一覧でソートが変更されている場合にフィルタ全解除ボタンが表示される
@@ -49,3 +54,4 @@ The system MUST support sorting the performer list by name, work count, or avera
 #### Scenario: 出演者一覧でフィルタ全解除するとデフォルト値に戻る
 - **WHEN** ユーザーが出演者一覧のフィルタ全解除ボタンをクリックする
 - **THEN** sortBy="name", sortDesc=false, onlyUnrated=false, onlyNoCover=false にリセットされる
+

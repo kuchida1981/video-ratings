@@ -1,6 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: 検索結果のソート
+The search API MUST support sorting results by fixed keys (`created_at`, `total_score`) as well as by custom field values using the `custom:<field_name>` prefix format.
 システムは検索結果を複数の基準でソートできなければならない。`sort_by` パラメータには固定値（`created_at`, `total_score`）に加え、`custom:<フィールド名>` 形式でカスタム項目名を指定できる。
 
 #### Scenario: 合計スコア順でソートできる

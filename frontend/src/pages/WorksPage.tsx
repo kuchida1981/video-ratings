@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import type { ImportRow } from "@/types";
+import type { CustomFieldDefinition, ImportRow } from "@/types";
 import { useImportFlow } from "@/hooks/useImportFlow";
 
 import { Button } from "@/components/ui/button";
@@ -16,12 +16,16 @@ import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 
 const WORKS_STORAGE_KEY = "video-ratings:works-filters";
-const DEFAULT_WORKS_SORT_BY = "created_at" as const;
+const DEFAULT_WORKS_SORT_BY = "created_at";
 const DEFAULT_WORKS_SORT_DESC = true;
 
 function loadWorksFilters() {
   try { return JSON.parse(localStorage.getItem(WORKS_STORAGE_KEY) ?? "{}"); }
   catch { return {}; }
+}
+
+function defaultSortDescForFieldType(fieldType: CustomFieldDefinition["field_type"]): boolean {
+  return fieldType !== "text";
 }
 
 export default function WorksPage() {
@@ -33,7 +37,7 @@ export default function WorksPage() {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>(stored.selectedTagIds ?? []);
   const [maker, setMaker] = useState<string>(stored.maker ?? "");
   const [series, setSeries] = useState<string>(stored.series ?? "");
-  const [sortBy, setSortBy] = useState<"created_at" | "total_score">(stored.sortBy ?? DEFAULT_WORKS_SORT_BY);
+  const [sortBy, setSortBy] = useState<string>(stored.sortBy ?? DEFAULT_WORKS_SORT_BY);
   const [sortDesc, setSortDesc] = useState<boolean>(stored.sortDesc ?? DEFAULT_WORKS_SORT_DESC);
   const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
   const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
@@ -76,6 +80,13 @@ export default function WorksPage() {
     queryKey: ["tagCategories", "work"],
     queryFn: () => api.tagCategories.list("work"),
   });
+
+  const { data: customFieldDefs = [] } = useQuery<CustomFieldDefinition[]>({
+    queryKey: ["customFields", "work"],
+    queryFn: () => api.customFields.list("work"),
+  });
+
+  const sortableCustomFields = customFieldDefs.filter((d) => d.is_sortable);
 
   const createWorkMutation = useMutation({
     mutationFn: (data: { title: string; maker?: string; series?: string }) =>
@@ -429,7 +440,7 @@ export default function WorksPage() {
           </Badge>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>{filteredWorks.length} 件</span>
           <Button
             variant="ghost"
@@ -453,6 +464,23 @@ export default function WorksPage() {
           >
             <ArrowUpDown size={14} />登録日順
           </Button>
+          {sortableCustomFields.map((cf) => {
+            const key = `custom:${cf.name}`;
+            return (
+              <Button
+                key={cf.id}
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (sortBy === key) setSortDesc((d) => !d);
+                  else { setSortBy(key); setSortDesc(defaultSortDescForFieldType(cf.field_type)); }
+                }}
+                className={sortBy === key ? "text-primary" : ""}
+              >
+                <ArrowUpDown size={14} />{cf.name}
+              </Button>
+            );
+          })}
         </div>
       </div>
 

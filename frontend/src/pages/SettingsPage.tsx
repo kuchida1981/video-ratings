@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,15 @@ import {
 
 type FieldType = "text" | "number" | "date" | "boolean";
 
-function SortableRow({ def, onRemove }: { def: CustomFieldDefinition; onRemove: () => void }) {
+function SortableRow({
+  def,
+  onRemove,
+  onToggleSortable,
+}: {
+  def: CustomFieldDefinition;
+  onRemove: () => void;
+  onToggleSortable: (checked: boolean) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: def.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -57,6 +66,9 @@ function SortableRow({ def, onRemove }: { def: CustomFieldDefinition; onRemove: 
       </td>
       <td className="px-4 py-2">{def.name}</td>
       <td className="px-4 py-2 text-muted-foreground">{typeLabel(def.field_type)}</td>
+      <td className="px-4 py-2 text-center">
+        <Switch checked={def.is_sortable} onCheckedChange={onToggleSortable} />
+      </td>
       <td className="px-4 py-2 text-right">
         <button className="text-muted-foreground hover:text-destructive" onClick={onRemove}>
           <Trash2 size={14} />
@@ -103,6 +115,12 @@ export default function SettingsPage() {
     onSuccess: () => { setName(""); invalidate(); },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { is_sortable?: boolean } }) =>
+      api.customFields.update(id, data),
+    onSuccess: () => invalidate(),
+  });
+
   const removeMutation = useMutation({
     mutationFn: (id: number) => api.customFields.delete(id),
     onSuccess: () => invalidate(),
@@ -134,6 +152,7 @@ export default function SettingsPage() {
               <th className="px-2 py-2 w-6"></th>
               <th className="text-left px-4 py-2 font-medium">項目名</th>
               <th className="text-left px-4 py-2 font-medium">型</th>
+              <th className="px-4 py-2 font-medium text-center text-xs">並べ替えOK</th>
               <th className="px-4 py-2"></th>
             </tr>
           </thead>
@@ -143,6 +162,7 @@ export default function SettingsPage() {
                 <SortableRow
                   key={d.id}
                   def={d}
+                  onToggleSortable={(checked) => updateMutation.mutate({ id: d.id, data: { is_sortable: checked } })}
                   onRemove={() => {
                     const target = d.entity_type === "performer" ? "全出演者" : "全作品";
                     if (confirm(`「${d.name}」を削除すると${target}からこの項目の値も削除されます。続けますか？`)) {
@@ -154,7 +174,7 @@ export default function SettingsPage() {
             </SortableContext>
             {defs.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">{emptyMsg}</td>
+                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{emptyMsg}</td>
               </tr>
             )}
           </tbody>
