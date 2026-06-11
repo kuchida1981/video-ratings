@@ -30,6 +30,10 @@ import { useEffect } from "react";
 export function useDocumentTitle(title?: string) {
   useEffect(() => {
     document.title = title ? `${title} | Video Ratings` : "Video Ratings";
+
+    return () => {
+      document.title = "Video Ratings";
+    };
   }, [title]);
 }
 ```
@@ -47,7 +51,7 @@ useDocumentTitle(work ? work.title : "作品詳細");
 ## Risks / Trade-offs
 
 - **アンマウント時のタイトル差し戻し**:
-  ページを離れた時に元のタイトルに戻すべきかという問題があるが、このアプリではすべてのルートで必ず `useDocumentTitle` を呼び出すようにするため、アンマウント時の差し戻し処理は不要。遷移先のコンポーネントがマウントされた時点で新しいタイトルに上書きされる。
+  将来的に `useDocumentTitle` を呼び出していない新しいページが追加された際、直前のページのタイトルが残る「タイトルリーク」を防ぐため、アンマウント時にデフォルトタイトル `"Video Ratings"` へリセットするクリーンアップ関数をフック内に実装する。
 
 ## Migration Plan
 
