@@ -114,7 +114,7 @@ def get_performer_works(performer_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{performer_id}/tags/{tag_id}", response_model=PerformerResponse)
 def add_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
-    p = performer_service.load_performer(db, performer_id)
+    performer_service.load_performer(db, performer_id)
     tag = db.query(Tag).options(joinedload(Tag.category)).filter(Tag.id == tag_id).first()
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
@@ -133,7 +133,7 @@ def add_tag(performer_id: int, tag_id: int, db: Session = Depends(get_db)):
     if not existing:
         db.add(PerformerTag(performer_id=performer_id, tag_id=tag_id))
         db.commit()
-    return performer_service.build_performer_response(p)
+    return performer_service.build_performer_response(performer_service.load_performer(db, performer_id))
 
 
 @router.delete("/{performer_id}/tags/{tag_id}", response_model=PerformerResponse)
@@ -155,7 +155,7 @@ def add_alias(performer_id: int, data: AliasCreate, db: Session = Depends(get_db
     db.add(alias)
     db.commit()
     db.refresh(p)
-    return performer_service.build_performer_response(p)
+    return performer_service.build_performer_response(performer_service.load_performer(db, performer_id))
 
 
 @router.put("/{performer_id}/aliases/{alias_id}", response_model=PerformerResponse)
@@ -179,7 +179,7 @@ def update_alias(performer_id: int, alias_id: int, data: AliasUpdate, db: Sessio
 
     db.commit()
     db.refresh(p)
-    return performer_service.build_performer_response(p)
+    return performer_service.build_performer_response(performer_service.load_performer(db, performer_id))
 
 
 @router.delete("/{performer_id}/aliases/{alias_id}", response_model=PerformerResponse)
@@ -196,7 +196,7 @@ def remove_alias(performer_id: int, alias_id: int, db: Session = Depends(get_db)
     db.delete(alias)
     db.commit()
     db.refresh(p)
-    return performer_service.build_performer_response(p)
+    return performer_service.build_performer_response(performer_service.load_performer(db, performer_id))
 
 
 @router.post("/{performer_id}/cover", response_model=PerformerResponse)

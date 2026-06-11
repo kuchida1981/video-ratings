@@ -23,14 +23,15 @@ async def save_cover(
     rel_path = f"{entity_type}/{entity_id}_{uuid.uuid4().hex[:8]}{ext}"
     file_path = Path("uploads/covers") / rel_path
 
+    contents = await file.read()
+    file_path.write_bytes(contents)
+
     if old_path and old_path != rel_path:
         try:
             (Path("uploads/covers") / old_path).unlink(missing_ok=True)
         except Exception:
             pass
 
-    contents = await file.read()
-    file_path.write_bytes(contents)
     return rel_path
 
 
