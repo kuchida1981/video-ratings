@@ -13,6 +13,7 @@ import { WorkTile } from "@/components/WorkTile";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const PERFORMER_WORKS_SORT_KEY = "video-ratings:performer-detail-works-sort";
 
@@ -60,6 +61,7 @@ export default function PerformerDetailPage() {
     queryKey: ["performers", performerId],
     queryFn: () => api.performers.get(performerId),
   });
+  useDocumentTitle(performer ? performer.name : "出演者詳細");
 
   const { data: works = [] } = useQuery({
     queryKey: ["performerWorks", performerId, workSortBy, workSortDesc],

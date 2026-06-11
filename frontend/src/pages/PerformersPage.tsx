@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { PerformerTile } from "@/components/PerformerTile";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const PERFORMERS_STORAGE_KEY = "video-ratings:performers-filters";
 const DEFAULT_PERFORMERS_SORT_BY = "name";
@@ -29,6 +30,7 @@ function loadPerformersFilters() {
 export default function PerformersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  useDocumentTitle("出演者一覧");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [furigana, setFurigana] = useState("");
