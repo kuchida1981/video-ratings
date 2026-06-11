@@ -98,8 +98,8 @@ export default function PerformersPage() {
         const va = (a.custom_fields ?? {})[fieldName] ?? null;
         const vb = (b.custom_fields ?? {})[fieldName] ?? null;
         if (va === null && vb === null) comparison = 0;
-        else if (va === null) comparison = 1;
-        else if (vb === null) comparison = -1;
+        else if (va === null) return 1;
+        else if (vb === null) return -1;
         else if (typeof va === "number" && typeof vb === "number") comparison = va - vb;
         else if (typeof va === "boolean" && typeof vb === "boolean") comparison = Number(va) - Number(vb);
         else comparison = String(va).localeCompare(String(vb), "ja");

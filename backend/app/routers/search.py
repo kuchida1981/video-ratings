@@ -94,7 +94,7 @@ def search_works(
         def custom_sort_key(x: dict) -> tuple:
             v = (x["custom_fields"] or {}).get(field_name)
             if v is None:
-                return (1, 0, "")
+                return (1 if not sort_desc else -1, 0, "")
             if isinstance(v, bool):
                 return (0, int(v), "")
             if isinstance(v, int | float):
