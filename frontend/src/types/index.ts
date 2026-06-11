@@ -100,6 +100,22 @@ export interface TagCategory {
   tags: Tag[];
 }
 
+export type WorkColumnKey =
+  | "maker"
+  | "series"
+  | "total_score"
+  | "tags"
+  | "file_count"
+  | "created_at"
+  | `custom:${string}`;
+
+export type PerformerColumnKey =
+  | "work_count"
+  | "avg_work_score"
+  | "total_score"
+  | "tags"
+  | `custom:${string}`;
+
 export interface CustomFieldDefinition {
   id: number;
   name: string;

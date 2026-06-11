@@ -1,20 +1,32 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ArrowUpDown, X } from "lucide-react";
+import { Plus, ArrowUpDown, X, LayoutGrid, List } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import type { CustomFieldDefinition } from "@/types";
+import type { CustomFieldDefinition, PerformerColumnKey } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { PerformerTile } from "@/components/PerformerTile";
+import { PerformerTable } from "@/components/PerformerTable";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const PERFORMERS_STORAGE_KEY = "video-ratings:performers-filters";
+const PERFORMERS_TABLE_COLUMNS_KEY = "video-ratings:performers-table-columns";
+const DEFAULT_PERFORMERS_TABLE_COLUMNS: PerformerColumnKey[] = ["work_count", "avg_work_score"];
+
+function loadPerformersTableColumns(): PerformerColumnKey[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PERFORMERS_TABLE_COLUMNS_KEY) ?? "null");
+    return Array.isArray(saved) ? saved : DEFAULT_PERFORMERS_TABLE_COLUMNS;
+  } catch {
+    return DEFAULT_PERFORMERS_TABLE_COLUMNS;
+  }
+}
 const DEFAULT_PERFORMERS_SORT_BY = "name";
 const DEFAULT_PERFORMERS_SORT_DESC = false;
 
@@ -40,6 +52,8 @@ export default function PerformersPage() {
   const [sortDesc, setSortDesc] = useState<boolean>(stored.sortDesc ?? DEFAULT_PERFORMERS_SORT_DESC);
   const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
   const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
+  const [viewMode, setViewMode] = useState<"tile" | "table">("tile");
+  const [visiblePerformerColumns, setVisiblePerformerColumns] = useState<PerformerColumnKey[]>(loadPerformersTableColumns);
 
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(maxCols);
@@ -81,6 +95,23 @@ export default function PerformersPage() {
     setOnlyUnrated(false);
     setOnlyNoCover(false);
     localStorage.removeItem(PERFORMERS_STORAGE_KEY);
+  };
+
+  const togglePerformerColumn = (key: PerformerColumnKey) => {
+    setVisiblePerformerColumns((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      localStorage.setItem(PERFORMERS_TABLE_COLUMNS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handlePerformerTableSort = (key: string) => {
+    if (sortBy === key) {
+      setSortDesc((d) => !d);
+    } else {
+      setSortBy(key);
+      setSortDesc(key !== "name");
+    }
   };
 
   const sortedPerformers = useMemo(() => {
@@ -130,7 +161,28 @@ export default function PerformersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">出演者一覧</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <div className="flex gap-2">
+          <div className="flex rounded-md border overflow-hidden">
+            <Button
+              variant={viewMode === "tile" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none border-0"
+              onClick={() => setViewMode("tile")}
+              title="タイル表示"
+            >
+              <LayoutGrid size={16} />
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none border-0"
+              onClick={() => setViewMode("table")}
+              title="テーブル表示"
+            >
+              <List size={16} />
+            </Button>
+          </div>
+          <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><Plus size={16} />新規登録</Button>
           </DialogTrigger>
@@ -142,7 +194,8 @@ export default function PerformersPage() {
               <Button onClick={() => createMutation.mutate({ name, furigana: furigana || undefined })} disabled={!name.trim()} className="w-full">登録する</Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Search & Filters (Matching WorksPage style) */}
@@ -231,10 +284,58 @@ export default function PerformersPage() {
             );
           })}
         </div>
+
+        {viewMode === "table" && (
+          <div>
+            <div className="text-xs text-muted-foreground mb-1.5">表示列</div>
+            <div className="flex flex-wrap gap-1">
+              {(
+                [
+                  { key: "work_count" as PerformerColumnKey, label: "作品数" },
+                  { key: "avg_work_score" as PerformerColumnKey, label: "平均スコア" },
+                  { key: "total_score" as PerformerColumnKey, label: "合計スコア" },
+                  { key: "tags" as PerformerColumnKey, label: "タグ" },
+                ] as { key: PerformerColumnKey; label: string }[]
+              ).map(({ key, label }) => (
+                <Badge
+                  key={key}
+                  variant={visiblePerformerColumns.includes(key) ? "default" : "outline"}
+                  className="cursor-pointer py-1.5"
+                  onClick={() => togglePerformerColumn(key)}
+                >
+                  {label}
+                </Badge>
+              ))}
+              {customFieldDefs.map((cf) => {
+                const key = `custom:${cf.name}` as PerformerColumnKey;
+                return (
+                  <Badge
+                    key={cf.id}
+                    variant={visiblePerformerColumns.includes(key) ? "default" : "outline"}
+                    className="cursor-pointer py-1.5"
+                    onClick={() => togglePerformerColumn(key)}
+                  >
+                    {cf.name}
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {filteredPerformers.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">出演者が登録されていません</p>
+      ) : viewMode === "table" ? (
+        <PerformerTable
+          performers={filteredPerformers}
+          visibleColumns={visiblePerformerColumns}
+          customFieldDefs={customFieldDefs}
+          sortBy={sortBy}
+          sortDesc={sortDesc}
+          onSort={handlePerformerTableSort}
+          onRowClick={(id) => navigate(`/performers/${id}`)}
+        />
       ) : (
         <div className="grid gap-3" style={gridStyle}>
           {filteredPerformers.map((p) => (
