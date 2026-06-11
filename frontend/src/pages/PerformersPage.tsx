@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ArrowUpDown, X } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import type { Performer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ function loadPerformersFilters() {
 
 export default function PerformersPage() {
   const navigate = useNavigate();
-  const [performers, setPerformers] = useState<Performer[]>([]);
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [furigana, setFurigana] = useState("");
@@ -37,15 +37,27 @@ export default function PerformersPage() {
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(maxCols);
 
-  useEffect(() => {
-    api.performers.list().then(setPerformers);
-  }, []);
+  const { data: performers = [] } = useQuery({
+    queryKey: ["performers"],
+    queryFn: () => api.performers.list(),
+  });
 
-  useEffect(() => {
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; furigana?: string }) => api.performers.create(data),
+    onSuccess: (p) => {
+      queryClient.invalidateQueries({ queryKey: ["performers"] });
+      setOpen(false);
+      setName("");
+      setFurigana("");
+      navigate(`/performers/${p.id}`);
+    },
+  });
+
+  const saveSortState = (newSortBy: typeof sortBy, newSortDesc: boolean, newOnlyUnrated: boolean, newOnlyNoCover: boolean) => {
     localStorage.setItem(PERFORMERS_STORAGE_KEY, JSON.stringify({
-      sortBy, sortDesc, onlyUnrated, onlyNoCover,
+      sortBy: newSortBy, sortDesc: newSortDesc, onlyUnrated: newOnlyUnrated, onlyNoCover: newOnlyNoCover,
     }));
-  }, [sortBy, sortDesc, onlyUnrated, onlyNoCover]);
+  };
 
   const hasFilters = !!(onlyUnrated || onlyNoCover || sortBy !== DEFAULT_PERFORMERS_SORT_BY || sortDesc !== DEFAULT_PERFORMERS_SORT_DESC);
 
@@ -55,15 +67,6 @@ export default function PerformersPage() {
     setOnlyUnrated(false);
     setOnlyNoCover(false);
     localStorage.removeItem(PERFORMERS_STORAGE_KEY);
-  };
-
-  const create = async () => {
-    if (!name.trim()) return;
-    const p = await api.performers.create({ name, furigana: furigana || undefined });
-    setOpen(false);
-    setName("");
-    setFurigana("");
-    navigate(`/performers/${p.id}`);
   };
 
   const sortedPerformers = useMemo(() => {
@@ -112,7 +115,7 @@ export default function PerformersPage() {
             <div className="space-y-3">
               <div><Label>名前 *</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="名前" /></div>
               <div><Label>ふりがな</Label><Input value={furigana} onChange={(e) => setFurigana(e.target.value)} placeholder="ふりがな" /></div>
-              <Button onClick={create} disabled={!name.trim()} className="w-full">登録する</Button>
+              <Button onClick={() => createMutation.mutate({ name, furigana: furigana || undefined })} disabled={!name.trim()} className="w-full">登録する</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -124,14 +127,14 @@ export default function PerformersPage() {
           <Badge
             variant={onlyUnrated ? "default" : "outline"}
             className="cursor-pointer py-1.5"
-            onClick={() => setOnlyUnrated((v) => !v)}
+            onClick={() => { const v = !onlyUnrated; setOnlyUnrated(v); saveSortState(sortBy, sortDesc, v, onlyNoCover); }}
           >
             未評価のみ
           </Badge>
           <Badge
             variant={onlyNoCover ? "default" : "outline"}
             className="cursor-pointer py-1.5"
-            onClick={() => setOnlyNoCover((v) => !v)}
+            onClick={() => { const v = !onlyNoCover; setOnlyNoCover(v); saveSortState(sortBy, sortDesc, onlyUnrated, v); }}
           >
             カバー画像なし
           </Badge>
@@ -146,8 +149,11 @@ export default function PerformersPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (sortBy === "name") setSortDesc((d) => !d);
-              else { setSortBy("name"); setSortDesc(false); }
+              const newDesc = sortBy === "name" ? !sortDesc : false;
+              const newBy = "name";
+              setSortBy(newBy);
+              setSortDesc(newDesc);
+              saveSortState(newBy, newDesc, onlyUnrated, onlyNoCover);
             }}
             className={sortBy === "name" ? "text-primary" : ""}
           >
@@ -157,8 +163,11 @@ export default function PerformersPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (sortBy === "work_count") setSortDesc((d) => !d);
-              else { setSortBy("work_count"); setSortDesc(true); }
+              const newDesc = sortBy === "work_count" ? !sortDesc : true;
+              const newBy = "work_count";
+              setSortBy(newBy);
+              setSortDesc(newDesc);
+              saveSortState(newBy, newDesc, onlyUnrated, onlyNoCover);
             }}
             className={sortBy === "work_count" ? "text-primary" : ""}
           >
@@ -168,8 +177,11 @@ export default function PerformersPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (sortBy === "avg_work_score") setSortDesc((d) => !d);
-              else { setSortBy("avg_work_score"); setSortDesc(true); }
+              const newDesc = sortBy === "avg_work_score" ? !sortDesc : true;
+              const newBy = "avg_work_score";
+              setSortBy(newBy);
+              setSortDesc(newDesc);
+              saveSortState(newBy, newDesc, onlyUnrated, onlyNoCover);
             }}
             className={sortBy === "avg_work_score" ? "text-primary" : ""}
           >

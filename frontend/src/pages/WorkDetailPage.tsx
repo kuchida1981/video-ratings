@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Trash2, Plus, Star, UserCheck, Search, Play, X, ImagePlus, Pencil, Check } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { api } from "@/api/client";
-import type { Work, TagCategory, Performer, CustomFieldDefinition, WorkFile } from "@/types";
+import type { TagCategory, WorkFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,14 +46,9 @@ export default function WorkDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const workId = Number(id);
+  const queryClient = useQueryClient();
 
-  const [work, setWork] = useState<Work | null>(null);
-  const [categories, setCategories] = useState<TagCategory[]>([]);
-  const [performerCategories, setPerformerCategories] = useState<TagCategory[]>([]);
-  const [allPerformers, setAllPerformers] = useState<Performer[]>([]);
-  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
-  const [performerCFDefs, setPerformerCFDefs] = useState<CustomFieldDefinition[]>([]);
   const [performerCFValues, setPerformerCFValues] = useState<Record<number, Record<string, string | boolean>>>({});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: "", maker: "", series: "" });
@@ -70,16 +66,40 @@ export default function WorkDetailPage() {
 
   const isSmbUrl = (path: string) => path.startsWith("smb://");
 
-  const reload = () => api.works.get(workId).then(setWork);
+  const invalidateWork = () => {
+    queryClient.invalidateQueries({ queryKey: ["works", workId] });
+    queryClient.invalidateQueries({ queryKey: ["works"] });
+  };
 
-  useEffect(() => {
-    reload();
-    api.tagCategories.list("work").then(setCategories);
-    api.tagCategories.list("performer").then(setPerformerCategories);
-    api.performers.list().then(setAllPerformers);
-    api.customFields.list("work").then(setCustomFields);
-    api.customFields.list("performer").then(setPerformerCFDefs);
-  }, [workId]);
+  const { data: work } = useQuery({
+    queryKey: ["works", workId],
+    queryFn: () => api.works.get(workId),
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["tagCategories", "work"],
+    queryFn: () => api.tagCategories.list("work"),
+  });
+
+  const { data: performerCategories = [] } = useQuery({
+    queryKey: ["tagCategories", "performer"],
+    queryFn: () => api.tagCategories.list("performer"),
+  });
+
+  const { data: allPerformers = [] } = useQuery({
+    queryKey: ["performers"],
+    queryFn: () => api.performers.list(),
+  });
+
+  const { data: customFields = [] } = useQuery({
+    queryKey: ["customFields", "work"],
+    queryFn: () => api.customFields.list("work"),
+  });
+
+  const { data: performerCFDefs = [] } = useQuery({
+    queryKey: ["customFields", "performer"],
+    queryFn: () => api.customFields.list("performer"),
+  });
 
   useEffect(() => {
     if (work && editing) setForm({ title: work.title, maker: work.maker ?? "", series: work.series ?? "" });
@@ -143,13 +163,117 @@ export default function WorkDetailPage() {
       const imageItem = items.find((item) => item.type.startsWith("image/"));
       if (imageItem) {
         const file = imageItem.getAsFile();
-        if (file) processImageFile(file, uploadCover);
+        if (file) processImageFile(file, uploadCoverMutation.mutate);
       }
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coverFocused]);
+
+  const updateWorkMutation = useMutation({
+    mutationFn: (data: { title: string; maker?: string; series?: string }) =>
+      api.works.update(workId, data),
+    onSuccess: () => {
+      setEditing(false);
+      invalidateWork();
+    },
+  });
+
+  const deleteWorkMutation = useMutation({
+    mutationFn: () => api.works.delete(workId),
+    onSuccess: () => navigate("/works"),
+  });
+
+  const addFileMutation = useMutation({
+    mutationFn: (data: { path: string; display_name?: string }) =>
+      api.works.addFile(workId, data),
+    onSuccess: () => {
+      setNewFilePath("");
+      setNewFileDisplayName("");
+      invalidateWork();
+    },
+  });
+
+  const updateFileMutation = useMutation({
+    mutationFn: ({ fileId, data }: { fileId: number; data: { path: string; display_name: string | null } }) =>
+      api.works.updateFile(workId, fileId, data),
+    onSuccess: () => {
+      setEditingFileId(null);
+      invalidateWork();
+    },
+  });
+
+  const removeFileMutation = useMutation({
+    mutationFn: (fileId: number) => api.works.removeFile(workId, fileId),
+    onSuccess: () => invalidateWork(),
+  });
+
+  const addPerformerMutation = useMutation({
+    mutationFn: (performerId: number) => api.works.addPerformer(workId, { performer_id: performerId }),
+    onSuccess: () => {
+      setAddPerformerId("");
+      invalidateWork();
+    },
+  });
+
+  const removePerformerMutation = useMutation({
+    mutationFn: (performerId: number) => api.works.removePerformer(workId, performerId),
+    onSuccess: () => invalidateWork(),
+  });
+
+  const setMainPerformerMutation = useMutation({
+    mutationFn: (performerId: number) => api.works.setMainPerformer(workId, performerId, true),
+    onSuccess: () => invalidateWork(),
+  });
+
+  const toggleTagMutation = useMutation({
+    mutationFn: async (tagId: number) => {
+      if (!work) return;
+      const has = work.tags.some((t) => t.id === tagId);
+      if (has) await api.works.removeTag(workId, tagId);
+      else await api.works.addTag(workId, tagId);
+    },
+    onSuccess: () => invalidateWork(),
+  });
+
+  const togglePerformerTagMutation = useMutation({
+    mutationFn: async ({ performer, tagId, cat }: { performer: NonNullable<typeof work>["performers"][number]; tagId: number; cat: TagCategory }) => {
+      const has = performer.tags.some((t) => t.id === tagId);
+      if (has) {
+        await api.performers.removeTag(performer.id, tagId);
+      } else {
+        if (!cat.is_multi_select) {
+          const existing = performer.tags.find((t) => t.category_id === cat.id);
+          if (existing) await api.performers.removeTag(performer.id, existing.id);
+        }
+        await api.performers.addTag(performer.id, tagId);
+      }
+    },
+    onSuccess: () => invalidateWork(),
+  });
+
+  const updatePerformerCFMutation = useMutation({
+    mutationFn: ({ performerId, name, value }: { performerId: number; name: string; value: string | boolean }) =>
+      api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value }),
+    onSuccess: () => invalidateWork(),
+  });
+
+  const updateCustomFieldMutation = useMutation({
+    mutationFn: ({ name, value }: { name: string; value: string | boolean }) =>
+      api.works.updateCustomFields(workId, { [name]: value === "" ? null : value }),
+    onSuccess: () => invalidateWork(),
+  });
+
+  const uploadCoverMutation = useMutation({
+    mutationFn: (file: File) => api.works.uploadCover(workId, file),
+    onSuccess: () => invalidateWork(),
+  });
+
+  const deleteCoverMutation = useMutation({
+    mutationFn: () => api.works.deleteCover(workId),
+    onSuccess: () => invalidateWork(),
+  });
 
   if (!work) return <div className="text-muted-foreground">読み込み中…</div>;
 
@@ -169,79 +293,6 @@ export default function WorkDetailPage() {
         video.requestFullscreen?.();
       }
     }).catch(() => {});
-  };
-
-  const saveEdit = async () => {
-    await api.works.update(workId, { title: form.title, maker: form.maker || undefined, series: form.series || undefined });
-    setEditing(false);
-    reload();
-  };
-
-  const deleteWork = async () => {
-    if (!confirm("この作品を削除しますか？")) return;
-    await api.works.delete(workId);
-    navigate("/works");
-  };
-
-  const addFile = async () => {
-    if (!newFilePath.trim()) return;
-    await api.works.addFile(workId, { path: newFilePath, display_name: newFileDisplayName || undefined });
-    setNewFilePath("");
-    setNewFileDisplayName("");
-    reload();
-  };
-
-  const addPerformer = async () => {
-    if (!addPerformerId) return;
-    await api.works.addPerformer(workId, { performer_id: Number(addPerformerId) });
-    setAddPerformerId("");
-    reload();
-  };
-
-  const toggleTag = async (tagId: number) => {
-    const has = work.tags.some((t) => t.id === tagId);
-    if (has) await api.works.removeTag(workId, tagId);
-    else await api.works.addTag(workId, tagId);
-    reload();
-  };
-
-  const togglePerformerTag = async (performer: Work["performers"][number], tagId: number, cat: TagCategory) => {
-    const has = performer.tags.some((t) => t.id === tagId);
-    if (has) {
-      await api.performers.removeTag(performer.id, tagId);
-    } else {
-      if (!cat.is_multi_select) {
-        const existing = performer.tags.find((t) => t.category_id === cat.id);
-        if (existing) await api.performers.removeTag(performer.id, existing.id);
-      }
-      await api.performers.addTag(performer.id, tagId);
-    }
-    reload();
-  };
-
-  const updatePerformerCustomField = async (performerId: number, name: string, value: string | boolean) => {
-    setPerformerCFValues((prev) => ({
-      ...prev,
-      [performerId]: { ...prev[performerId], [name]: value },
-    }));
-    await api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value });
-    reload();
-  };
-
-  const updateCustomField = async (name: string, value: string | boolean) => {
-    setCustomFieldValues((prev) => ({ ...prev, [name]: value }));
-    await api.works.updateCustomFields(workId, { [name]: value === "" ? null : value });
-    reload();
-  };
-
-  const uploadCover = async (file: File) => {
-    await api.works.uploadCover(workId, file);
-    reload();
-  };
-
-  const deleteCover = async () => {
-    await api.works.deleteCover(workId);
-    reload();
   };
 
   const availablePerformers = allPerformers.filter(
@@ -264,7 +315,7 @@ export default function WorkDetailPage() {
               e.preventDefault();
               setCoverDragOver(false);
               const file = e.dataTransfer.files[0];
-              if (file) processImageFile(file, uploadCover);
+              if (file) processImageFile(file, uploadCoverMutation.mutate);
             } : undefined}
           >
             {work.cover_image_url && (
@@ -272,7 +323,7 @@ export default function WorkDetailPage() {
             )}
             {work.cover_image_url ? (
               <button
-                onClick={deleteCover}
+                onClick={() => deleteCoverMutation.mutate()}
                 className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
               >
                 <X size={14} />
@@ -293,7 +344,7 @@ export default function WorkDetailPage() {
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) processImageFile(file, uploadCover);
+                    if (file) processImageFile(file, uploadCoverMutation.mutate);
                     e.target.value = "";
                   }}
                 />
@@ -318,7 +369,7 @@ export default function WorkDetailPage() {
           </div>
         )}
         {!work.cover_image_url && smbFiles.length === 0 && (
-          <CoverUploadZone onUpload={uploadCover} />
+          <CoverUploadZone onUpload={uploadCoverMutation.mutate} />
         )}
         <video
           ref={videoRef}
@@ -337,7 +388,7 @@ export default function WorkDetailPage() {
                 <Input placeholder="シリーズ" value={form.series} onChange={(e) => setForm({ ...form, series: e.target.value })} />
               </div>
               <div className="flex gap-2">
-                <Button onClick={saveEdit}>保存</Button>
+                <Button onClick={() => updateWorkMutation.mutate({ title: form.title, maker: form.maker || undefined, series: form.series || undefined })}>保存</Button>
                 <Button variant="outline" onClick={() => setEditing(false)}>キャンセル</Button>
               </div>
             </div>
@@ -366,7 +417,7 @@ export default function WorkDetailPage() {
         <div className="flex gap-2 items-center">
           <div className="text-2xl font-bold text-primary">{work.total_score}点</div>
           {!editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
-          <Button variant="destructive" size="sm" onClick={deleteWork}><Trash2 size={14} /></Button>
+          <Button variant="destructive" size="sm" onClick={() => { if (confirm("この作品を削除しますか？")) deleteWorkMutation.mutate(); }}><Trash2 size={14} /></Button>
         </div>
       </div>
 
@@ -390,7 +441,7 @@ export default function WorkDetailPage() {
                 {!p.is_main && (
                   <button
                     className="text-muted-foreground hover:text-yellow-500"
-                    onClick={() => api.works.setMainPerformer(workId, p.id, true).then(reload)}
+                    onClick={() => setMainPerformerMutation.mutate(p.id)}
                     title="主演に設定"
                   >
                     <UserCheck size={14} />
@@ -398,7 +449,7 @@ export default function WorkDetailPage() {
                 )}
                 <button
                   className="text-muted-foreground hover:text-destructive"
-                  onClick={() => api.works.removePerformer(workId, p.id).then(reload)}
+                  onClick={() => removePerformerMutation.mutate(p.id)}
                 >
                   <X size={14} />
                 </button>
@@ -416,7 +467,7 @@ export default function WorkDetailPage() {
                       <Badge
                         variant={p.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
                         className="cursor-pointer"
-                        onClick={() => togglePerformerTag(p, tag.id, cat)}
+                        onClick={() => togglePerformerTagMutation.mutate({ performer: p, tagId: tag.id, cat })}
                       >
                         {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
                       </Badge>
@@ -441,7 +492,13 @@ export default function WorkDetailPage() {
                           type="checkbox"
                           className="h-4 w-4"
                           checked={Boolean(performerCFValues[p.id]?.[cf.name])}
-                          onChange={(e) => updatePerformerCustomField(p.id, cf.name, e.target.checked)}
+                          onChange={(e) => {
+                            setPerformerCFValues((prev) => ({
+                              ...prev,
+                              [p.id]: { ...prev[p.id], [cf.name]: e.target.checked },
+                            }));
+                            updatePerformerCFMutation.mutate({ performerId: p.id, name: cf.name, value: e.target.checked });
+                          }}
                         />
                       </div>
                     ) : (
@@ -454,7 +511,7 @@ export default function WorkDetailPage() {
                             [p.id]: { ...prev[p.id], [cf.name]: e.target.value },
                           }))
                         }
-                        onBlur={(e) => updatePerformerCustomField(p.id, cf.name, e.target.value)}
+                        onBlur={(e) => updatePerformerCFMutation.mutate({ performerId: p.id, name: cf.name, value: e.target.value })}
                       />
                     )}
                   </div>
@@ -475,7 +532,7 @@ export default function WorkDetailPage() {
                 <option key={p.id} value={p.id}>{p.name}{p.furigana ? ` (${p.furigana})` : ""}</option>
               ))}
             </select>
-            <Button size="sm" onClick={addPerformer} disabled={!addPerformerId}>追加</Button>
+            <Button size="sm" onClick={() => addPerformerMutation.mutate(Number(addPerformerId))} disabled={!addPerformerId}>追加</Button>
           </div>
         )}
       </section>
@@ -495,7 +552,7 @@ export default function WorkDetailPage() {
                   <Badge
                     variant={work.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
                     className="cursor-pointer"
-                    onClick={() => toggleTag(tag.id)}
+                    onClick={() => toggleTagMutation.mutate(tag.id)}
                   >
                     {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
                   </Badge>
@@ -524,8 +581,7 @@ export default function WorkDetailPage() {
                   className="flex-1 h-7 text-xs font-mono"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      api.works.updateFile(workId, f.id, { path: editFileForm.path, display_name: editFileForm.display_name || null }).then(reload);
-                      setEditingFileId(null);
+                      updateFileMutation.mutate({ fileId: f.id, data: { path: editFileForm.path, display_name: editFileForm.display_name || null } });
                     } else if (e.key === "Escape") {
                       setEditingFileId(null);
                     }
@@ -538,8 +594,7 @@ export default function WorkDetailPage() {
                   className="w-32 h-7 text-xs"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      api.works.updateFile(workId, f.id, { path: editFileForm.path, display_name: editFileForm.display_name || null }).then(reload);
-                      setEditingFileId(null);
+                      updateFileMutation.mutate({ fileId: f.id, data: { path: editFileForm.path, display_name: editFileForm.display_name || null } });
                     } else if (e.key === "Escape") {
                       setEditingFileId(null);
                     }
@@ -547,10 +602,7 @@ export default function WorkDetailPage() {
                 />
                 <button
                   className="text-muted-foreground hover:text-primary"
-                  onClick={() => {
-                    api.works.updateFile(workId, f.id, { path: editFileForm.path, display_name: editFileForm.display_name || null }).then(reload);
-                    setEditingFileId(null);
-                  }}
+                  onClick={() => updateFileMutation.mutate({ fileId: f.id, data: { path: editFileForm.path, display_name: editFileForm.display_name || null } })}
                 >
                   <Check size={14} />
                 </button>
@@ -582,7 +634,7 @@ export default function WorkDetailPage() {
                   className="text-muted-foreground hover:text-destructive"
                   onClick={() => {
                     if (playingFileId === f.id) setPlayingFileId(null);
-                    api.works.removeFile(workId, f.id).then(reload);
+                    removeFileMutation.mutate(f.id);
                   }}
                 >
                   <Trash2 size={14} />
@@ -613,7 +665,7 @@ export default function WorkDetailPage() {
             onChange={(e) => setNewFileDisplayName(e.target.value)}
             className="w-32"
           />
-          <Button size="sm" onClick={addFile} disabled={!newFilePath.trim()}><Plus size={14} /></Button>
+          <Button size="sm" onClick={() => addFileMutation.mutate({ path: newFilePath, display_name: newFileDisplayName || undefined })} disabled={!newFilePath.trim()}><Plus size={14} /></Button>
         </div>
       </section>
 
@@ -631,7 +683,10 @@ export default function WorkDetailPage() {
                       type="checkbox"
                       className="h-4 w-4"
                       checked={Boolean(customFieldValues[cf.name])}
-                      onChange={(e) => updateCustomField(cf.name, e.target.checked)}
+                      onChange={(e) => {
+                        setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.checked }));
+                        updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.checked });
+                      }}
                     />
                   </div>
                 ) : (
@@ -639,7 +694,7 @@ export default function WorkDetailPage() {
                     type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
                     value={String(customFieldValues[cf.name] ?? "")}
                     onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
-                    onBlur={(e) => updateCustomField(cf.name, e.target.value)}
+                    onBlur={(e) => updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.value })}
                   />
                 )}
               </div>

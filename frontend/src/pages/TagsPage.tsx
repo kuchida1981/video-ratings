@@ -17,6 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { TagCategory } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ function SortableItem({ id, children, className, handle = false }: { id: number;
 }
 
 export default function TagsPage() {
-  const [categories, setCategories] = useState<TagCategory[]>([]);
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [catOpen, setCatOpen] = useState(false);
   const [catName, setCatName] = useState("");
@@ -76,89 +77,83 @@ export default function TagsPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const reload = () => api.tagCategories.list().then(setCategories);
+  const { data: categories = [] } = useQuery<TagCategory[]>({
+    queryKey: ["tagCategories"],
+    queryFn: () => api.tagCategories.list(),
+  });
+
   useEffect(() => {
-    api.tagCategories.list().then((data) => {
-      setCategories(data);
-      setExpanded(new Set(data.map((c) => c.id)));
-    });
-  }, []);
-
-  const createCategory = async () => {
-    if (!catName.trim()) return;
-    await api.tagCategories.create({
-      name: catName,
-      entity_type: catEntityType,
-      is_multi_select: catMulti,
-      description: catDescription.trim() || null,
-    });
-    setCatOpen(false);
-    setCatName("");
-    setCatDescription("");
-    reload();
-  };
-
-  const deleteCategory = async (id: number) => {
-    if (!confirm("このカテゴリとタグを全て削除しますか？")) return;
-    await api.tagCategories.delete(id);
-    reload();
-  };
-
-  const createTag = async (categoryId: number) => {
-    if (!tagName.trim()) return;
-    const score = tagScore !== "" ? Number(tagScore) : null;
-    await api.tags.create({
-      name: tagName,
-      category_id: categoryId,
-      score,
-      description: tagDescription.trim() || null,
-    });
-    setTagOpen(null);
-    setTagName("");
-    setTagScore("");
-    setTagDescription("");
-    reload();
-  };
-
-  const deleteTag = async (tagId: number) => {
-    if (!confirm("このタグを削除しますか？")) return;
-    await api.tags.delete(tagId);
-    reload();
-  };
-
-  const handleDragEndCategories = async (event: DragEndEvent, entityType: string) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setCategories((prev) => {
-        const etCats = prev.filter((c) => c.entity_type === entityType);
-        const others = prev.filter((c) => c.entity_type !== entityType);
-        const oldIndex = etCats.findIndex((c) => c.id === active.id);
-        const newIndex = etCats.findIndex((c) => c.id === over.id);
-        const moved = arrayMove(etCats, oldIndex, newIndex);
-        
-        const result = entityType === "work" ? [...moved, ...others] : [...others, ...moved];
-        
-        api.tagCategories.reorder(moved.map((c) => c.id)).catch(() => reload());
-        return result;
-      });
+    if (categories.length > 0 && expanded.size === 0) {
+      setExpanded(new Set(categories.map((c) => c.id)));
     }
+  }, [categories, expanded.size]);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["tagCategories"] });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: (data: Parameters<typeof api.tagCategories.create>[0]) => api.tagCategories.create(data),
+    onSuccess: () => { setCatOpen(false); setCatName(""); setCatDescription(""); invalidate(); },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id: number) => api.tagCategories.delete(id),
+    onSuccess: () => invalidate(),
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ catId, data }: { catId: number; data: Parameters<typeof api.tagCategories.update>[1] }) =>
+      api.tagCategories.update(catId, data),
+    onSuccess: () => { setEditingCatId(null); invalidate(); },
+  });
+
+  const createTagMutation = useMutation({
+    mutationFn: (data: Parameters<typeof api.tags.create>[0]) => api.tags.create(data),
+    onSuccess: () => { setTagOpen(null); setTagName(""); setTagScore(""); setTagDescription(""); invalidate(); },
+  });
+
+  const deleteTagMutation = useMutation({
+    mutationFn: (tagId: number) => api.tags.delete(tagId),
+    onSuccess: () => invalidate(),
+  });
+
+  const updateTagMutation = useMutation({
+    mutationFn: ({ tagId, data }: { tagId: number; data: Parameters<typeof api.tags.update>[1] }) =>
+      api.tags.update(tagId, data),
+    onSuccess: () => { setEditingTagId(null); invalidate(); },
+  });
+
+  const handleDragEndCategories = (event: DragEndEvent, entityType: string) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const prev = queryClient.getQueryData<TagCategory[]>(["tagCategories"]) ?? [];
+    const etCats = prev.filter((c) => c.entity_type === entityType);
+    const others = prev.filter((c) => c.entity_type !== entityType);
+    const oldIndex = etCats.findIndex((c) => c.id === active.id);
+    const newIndex = etCats.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const moved = arrayMove(etCats, oldIndex, newIndex);
+    queryClient.setQueryData<TagCategory[]>(
+      ["tagCategories"],
+      entityType === "work" ? [...moved, ...others] : [...others, ...moved]
+    );
+    api.tagCategories.reorder(moved.map((c) => c.id)).catch(() => invalidate());
   };
 
-  const handleDragEndTags = async (event: DragEndEvent, categoryId: number) => {
+  const handleDragEndTags = (event: DragEndEvent, categoryId: number) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setCategories((prev) => {
-        return prev.map((cat) => {
-          if (cat.id !== categoryId) return cat;
-          const oldIndex = cat.tags.findIndex((t) => t.id === active.id);
-          const newIndex = cat.tags.findIndex((t) => t.id === over.id);
-          const moved = arrayMove(cat.tags, oldIndex, newIndex);
-          
-          api.tags.reorder(moved.map((t) => t.id)).catch(() => reload());
-          return { ...cat, tags: moved };
-        });
-      });
-    }
+    if (!over || active.id === over.id) return;
+    const prev = queryClient.getQueryData<TagCategory[]>(["tagCategories"]) ?? [];
+    const cat = prev.find((c) => c.id === categoryId);
+    if (!cat) return;
+    const oldIndex = cat.tags.findIndex((t) => t.id === active.id);
+    const newIndex = cat.tags.findIndex((t) => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const moved = arrayMove(cat.tags, oldIndex, newIndex);
+    queryClient.setQueryData<TagCategory[]>(
+      ["tagCategories"],
+      prev.map((c) => (c.id === categoryId ? { ...c, tags: moved } : c))
+    );
+    api.tags.reorder(moved.map((t) => t.id)).catch(() => invalidate());
   };
 
   const openEdit = (tag: { id: number; name: string; score: number | null; description: string | null }) => {
@@ -169,38 +164,11 @@ export default function TagsPage() {
     setEditDescription(tag.description || "");
   };
 
-  const closeEdit = () => setEditingTagId(null);
-
-  const updateTag = async (tagId: number) => {
-    if (!editName.trim()) return;
-    const score = editScore !== "" ? Number(editScore) : null;
-    await api.tags.update(tagId, {
-      name: editName,
-      score,
-      description: editDescription.trim() || null,
-    });
-    closeEdit();
-    reload();
-  };
-
   const openEditCat = (cat: TagCategory) => {
     setEditingCatId(cat.id);
     setEditCatName(cat.name);
     setEditCatMulti(cat.is_multi_select);
     setEditCatDescription(cat.description || "");
-  };
-
-  const closeEditCat = () => setEditingCatId(null);
-
-  const updateCategory = async (catId: number) => {
-    if (!editCatName.trim()) return;
-    await api.tagCategories.update(catId, {
-      name: editCatName,
-      is_multi_select: editCatMulti,
-      description: editCatDescription.trim() || null,
-    });
-    closeEditCat();
-    reload();
   };
 
   const toggle = (id: number) =>
@@ -238,7 +206,11 @@ export default function TagsPage() {
                 <input type="checkbox" id="multi" checked={catMulti} onChange={(e) => setCatMulti(e.target.checked)} />
                 <Label htmlFor="multi">複数選択可</Label>
               </div>
-              <Button onClick={createCategory} disabled={!catName.trim()} className="w-full">作成</Button>
+              <Button
+                onClick={() => createCategoryMutation.mutate({ name: catName, entity_type: catEntityType, is_multi_select: catMulti, description: catDescription.trim() || null })}
+                disabled={!catName.trim()}
+                className="w-full"
+              >作成</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -279,8 +251,8 @@ export default function TagsPage() {
                             />
                             <label htmlFor={`cat-multi-${cat.id}`}>複数可</label>
                           </div>
-                          <Button size="sm" onClick={() => updateCategory(cat.id)} disabled={!editCatName.trim()}>保存</Button>
-                          <Button size="sm" variant="outline" onClick={closeEditCat}>×</Button>
+                          <Button size="sm" onClick={() => updateCategoryMutation.mutate({ catId: cat.id, data: { name: editCatName, is_multi_select: editCatMulti, description: editCatDescription.trim() || null } })} disabled={!editCatName.trim()}>保存</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingCatId(null)}>×</Button>
                         </div>
                       ) : (
                         <div
@@ -298,7 +270,7 @@ export default function TagsPage() {
                           </button>
                           <button
                             className="text-muted-foreground hover:text-destructive"
-                            onClick={(e) => { e.stopPropagation(); deleteCategory(cat.id); }}
+                            onClick={(e) => { e.stopPropagation(); if (confirm("このカテゴリとタグを全て削除しますか？")) deleteCategoryMutation.mutate(cat.id); }}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -316,8 +288,8 @@ export default function TagsPage() {
                                         <div className="flex-[2]"><Label className="text-xs">タグ名</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
                                         <div className="flex-[3]"><Label className="text-xs">説明</Label><Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="説明（任意）" /></div>
                                         <div className="w-20"><Label className="text-xs">点数</Label><Input type="number" value={editScore} onChange={(e) => setEditScore(e.target.value)} placeholder="なし" /></div>
-                                        <Button size="sm" onClick={() => updateTag(tag.id)} disabled={!editName.trim()}>保存</Button>
-                                        <Button size="sm" variant="outline" onClick={closeEdit}>×</Button>
+                                        <Button size="sm" onClick={() => updateTagMutation.mutate({ tagId: tag.id, data: { name: editName, score: editScore !== "" ? Number(editScore) : null, description: editDescription.trim() || null } })} disabled={!editName.trim()}>保存</Button>
+                                        <Button size="sm" variant="outline" onClick={() => setEditingTagId(null)}>×</Button>
                                       </div>
                                     ) : (
                                       <div className="flex items-center gap-2 py-1 px-2 hover:bg-muted/50 rounded transition-colors">
@@ -333,7 +305,7 @@ export default function TagsPage() {
                                           ><Pencil size={14} /></button>
                                           <button
                                             className="text-muted-foreground hover:text-destructive p-1"
-                                            onClick={() => deleteTag(tag.id)}
+                                            onClick={() => { if (confirm("このタグを削除しますか？")) deleteTagMutation.mutate(tag.id); }}
                                           ><Trash2 size={14} /></button>
                                         </div>
                                       </div>
@@ -343,13 +315,13 @@ export default function TagsPage() {
                               </div>
                             </SortableContext>
                           </DndContext>
-                          
+
                           {tagOpen === cat.id ? (
                             <div className="flex gap-2 items-end border-t pt-3 mt-1">
                               <div className="flex-[2]"><Label className="text-xs">タグ名</Label><Input value={tagName} onChange={(e) => setTagName(e.target.value)} /></div>
                               <div className="flex-[3]"><Label className="text-xs">説明</Label><Input value={tagDescription} onChange={(e) => setTagDescription(e.target.value)} placeholder="（任意）" /></div>
                               <div className="w-20"><Label className="text-xs">点数</Label><Input type="number" value={tagScore} onChange={(e) => setTagScore(e.target.value)} placeholder="なし" /></div>
-                              <Button size="sm" onClick={() => createTag(cat.id)}>追加</Button>
+                              <Button size="sm" onClick={() => { if (!tagName.trim()) return; createTagMutation.mutate({ name: tagName, category_id: cat.id, score: tagScore !== "" ? Number(tagScore) : null, description: tagDescription.trim() || null }); }}>追加</Button>
                               <Button size="sm" variant="outline" onClick={() => { setTagOpen(null); setTagName(""); setTagScore(""); setTagDescription(""); }}>×</Button>
                             </div>
                           ) : (
