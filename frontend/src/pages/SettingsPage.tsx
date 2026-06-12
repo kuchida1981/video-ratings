@@ -87,6 +87,7 @@ export default function SettingsPage() {
   const [fieldType, setFieldType] = useState<FieldType>("text");
   const [entityType, setEntityType] = useState<"work" | "performer">("work");
 
+  const [exportLoading, setExportLoading] = useState(false);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -186,10 +187,13 @@ export default function SettingsPage() {
   );
 
   const handleExport = async () => {
+    setExportLoading(true);
     try {
       await api.data.exportAndDownload();
     } catch (e) {
       alert(`エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -292,10 +296,13 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground">
           全登録データのエクスポート・インポートを行います。インポートは既存データを完全に置き換えます。
         </p>
+        <p className="text-xs text-muted-foreground">
+          エクスポートは画像を含む全データをZIPに圧縮するため、データ量によって数秒かかる場合があります。
+        </p>
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={handleExport}>
-            <Download size={16} />エクスポート
+          <Button variant="outline" onClick={handleExport} disabled={exportLoading}>
+            <Download size={16} />{exportLoading ? "エクスポート中…" : "エクスポート"}
           </Button>
           <label className="cursor-pointer">
             <input
