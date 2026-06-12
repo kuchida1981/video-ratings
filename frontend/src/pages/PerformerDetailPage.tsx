@@ -174,8 +174,8 @@ export default function PerformerDetailPage() {
   });
 
   const updateCustomFieldMutation = useMutation({
-    mutationFn: ({ name, value }: { name: string; value: string | boolean }) =>
-      api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value }),
+    mutationFn: ({ name, value }: { name: string; value: string | number | boolean | null }) =>
+      api.performers.updateCustomFields(performerId, { [name]: value }),
     onSuccess: () => invalidatePerformer(),
   });
 
