@@ -5,7 +5,16 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.database import get_db
-from app.models.models import Performer, PerformerAlias, PerformerTag, Tag, Work, WorkPerformer, WorkTag
+from app.models.models import (
+    CustomFieldDefinition,
+    Performer,
+    PerformerAlias,
+    PerformerTag,
+    Tag,
+    Work,
+    WorkPerformer,
+    WorkTag,
+)
 from app.schemas.performer import (
     AliasCreate,
     AliasUpdate,
@@ -191,8 +200,20 @@ def update_custom_fields(performer_id: int, fields: dict[str, Any], db: Session 
     p = db.query(Performer).filter(Performer.id == performer_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Performer not found")
+    field_defs = {
+        d.name: d.field_type
+        for d in db.query(CustomFieldDefinition).filter(CustomFieldDefinition.entity_type == "performer").all()
+    }
+    coerced = {}
+    for k, v in fields.items():
+        if v is not None and field_defs.get(k) == "number":
+            try:
+                v = float(v)
+            except (ValueError, TypeError):
+                pass
+        coerced[k] = v
     current = dict(p.custom_fields or {})
-    current.update(fields)
+    current.update(coerced)
     p.custom_fields = {k: v for k, v in current.items() if v is not None}
     flag_modified(p, "custom_fields")
     db.commit()

@@ -538,7 +538,11 @@ export default function WorkDetailPage() {
                             [p.id]: { ...prev[p.id], [cf.name]: e.target.value },
                           }))
                         }
-                        onBlur={(e) => updatePerformerCFMutation.mutate({ performerId: p.id, name: cf.name, value: e.target.value })}
+                        onBlur={(e) => {
+                          const raw = e.target.value;
+                          const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
+                          updatePerformerCFMutation.mutate({ performerId: p.id, name: cf.name, value: value as string | number | null });
+                        }}
                       />
                     )}
                   </div>
@@ -721,7 +725,11 @@ export default function WorkDetailPage() {
                     type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
                     value={String(customFieldValues[cf.name] ?? "")}
                     onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
-                    onBlur={(e) => updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.value })}
+                    onBlur={(e) => {
+                      const raw = e.target.value;
+                      const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
+                      updateCustomFieldMutation.mutate({ name: cf.name, value: value as string | number | null });
+                    }}
                   />
                 )}
               </div>
