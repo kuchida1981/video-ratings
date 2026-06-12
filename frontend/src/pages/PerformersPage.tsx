@@ -14,6 +14,7 @@ import { PerformerTable } from "@/components/PerformerTable";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 const PERFORMERS_STORAGE_KEY = "video-ratings:performers-filters";
 const PERFORMERS_TABLE_COLUMNS_KEY = "video-ratings:performers-table-columns";
@@ -56,6 +57,7 @@ export default function PerformersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   useDocumentTitle("出演者一覧");
+  useScrollRestoration("video-ratings:performers-scroll-y");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [furigana, setFurigana] = useState("");
