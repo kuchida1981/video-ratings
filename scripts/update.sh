@@ -65,6 +65,13 @@ else
     echo "  → 完了"
 
     chown -R "$APP_USER:$APP_USER" "$RELEASE_DIR"
+
+    # ---- 自己更新 ----
+    if [ -f "$EXTRACTED_DIR/scripts/update.sh" ]; then
+        cp "$EXTRACTED_DIR/scripts/update.sh" "$TMP_DIR/update.sh.tmp"
+        chmod +x "$TMP_DIR/update.sh.tmp"
+        mv "$TMP_DIR/update.sh.tmp" /usr/local/bin/video-ratings-update
+    fi
 fi
 
 # ---- alembic マイグレーション ----
@@ -86,13 +93,6 @@ systemctl reload nginx
 ln -sfn "$RELEASE_DIR" "$BASE_DIR/current"
 systemctl restart video-ratings
 echo "  → 完了"
-
-# ---- 自己更新 ----
-if [ -f "$TMP_DIR/video-ratings-${VERSION}/scripts/update.sh" ]; then
-    cp "$TMP_DIR/video-ratings-${VERSION}/scripts/update.sh" "$TMP_DIR/update.sh.tmp"
-    chmod +x "$TMP_DIR/update.sh.tmp"
-    mv "$TMP_DIR/update.sh.tmp" /usr/local/bin/video-ratings-update
-fi
 
 echo ""
 echo "=== アップデート完了 ==="
