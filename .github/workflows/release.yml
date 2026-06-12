@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- フロントエンドビルド ----
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      # ---- requirements.txt 生成 ----
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Export requirements.txt
+        working-directory: backend
+        run: uv export --frozen --no-dev -o ../requirements.txt
+
+      # ---- アーカイブ作成 ----
+      - name: Create release archive
+        run: |
+          VERSION="${{ github.ref_name }}"
+          ARCHIVE_DIR="video-ratings-${VERSION}"
+
+          mkdir -p "${ARCHIVE_DIR}/backend"
+          mkdir -p "${ARCHIVE_DIR}/frontend/dist"
+          mkdir -p "${ARCHIVE_DIR}/etc"
+          mkdir -p "${ARCHIVE_DIR}/scripts"
+
+          # バックエンドコード（app/ + alembic/ + alembic.ini）
+          cp -r backend/app "${ARCHIVE_DIR}/backend/"
+          cp -r backend/alembic "${ARCHIVE_DIR}/backend/"
+          cp backend/alembic.ini "${ARCHIVE_DIR}/backend/"
+
+          # ビルド済みフロントエンド
+          cp -r frontend/dist/. "${ARCHIVE_DIR}/frontend/dist/"
+
+          # Python 依存関係
+          cp requirements.txt "${ARCHIVE_DIR}/"
+
+          # サーバー設定テンプレート
+          cp etc/video-ratings.service "${ARCHIVE_DIR}/etc/"
+          cp etc/nginx.conf "${ARCHIVE_DIR}/etc/"
+          cp etc/env.example "${ARCHIVE_DIR}/etc/"
+
+          # スクリプト
+          cp scripts/install.sh scripts/update.sh "${ARCHIVE_DIR}/scripts/"
+          chmod +x "${ARCHIVE_DIR}/scripts/install.sh" "${ARCHIVE_DIR}/scripts/update.sh"
+
+          tar -czf "video-ratings-${VERSION}.tar.gz" "${ARCHIVE_DIR}"
+
+      # ---- GitHub Release 作成・アーカイブアタッチ ----
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: video-ratings-${{ github.ref_name }}.tar.gz
+          generate_release_notes: true
