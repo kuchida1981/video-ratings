@@ -208,7 +208,8 @@ def update_custom_fields(performer_id: int, fields: dict[str, Any], db: Session 
     for k, v in fields.items():
         if v is not None and field_defs.get(k) == "number":
             try:
-                v = float(v)
+                f = float(v)
+                v = int(f) if f.is_integer() else f
             except (ValueError, TypeError):
                 pass
         coerced[k] = v

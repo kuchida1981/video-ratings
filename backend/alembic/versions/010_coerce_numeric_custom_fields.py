@@ -12,8 +12,6 @@ down_revision = "009"
 branch_labels = None
 depends_on = None
 
-_TABLES = ("works", "performers")
-
 _UPGRADE_SQL = r"""
 DO $$
 DECLARE
@@ -21,25 +19,24 @@ DECLARE
     tbl TEXT;
 BEGIN
     FOR r IN
-        SELECT name FROM custom_field_definitions WHERE field_type = 'number'
+        SELECT name, entity_type FROM custom_field_definitions WHERE field_type = 'number'
     LOOP
-        FOREACH tbl IN ARRAY ARRAY['works', 'performers'] LOOP
-            EXECUTE format(
-                $q$
-                UPDATE %I
-                SET custom_fields = custom_fields || jsonb_build_object(
-                    %L,
-                    (custom_fields->>%L)::numeric
-                )
-                WHERE custom_fields ? %L
-                  AND jsonb_typeof(custom_fields->%L) = 'string'
-                  AND custom_fields->>%L ~ %L
-                $q$,
-                tbl,
-                r.name, r.name, r.name, r.name, r.name, r.name,
-                '^-?[0-9]+(\.[0-9]+)?$'
-            );
-        END LOOP;
+        tbl := r.entity_type || 's';
+        EXECUTE format(
+            $q$
+            UPDATE %I
+            SET custom_fields = custom_fields || jsonb_build_object(
+                %L,
+                (custom_fields->>%L)::numeric
+            )
+            WHERE custom_fields ? %L
+              AND jsonb_typeof(custom_fields->%L) = 'string'
+              AND custom_fields->>%L ~ %L
+            $q$,
+            tbl,
+            r.name, r.name, r.name, r.name, r.name, r.name,
+            '^-?[0-9]+(\.[0-9]+)?$'
+        );
     END LOOP;
 END
 $$;
@@ -52,23 +49,22 @@ DECLARE
     tbl TEXT;
 BEGIN
     FOR r IN
-        SELECT name FROM custom_field_definitions WHERE field_type = 'number'
+        SELECT name, entity_type FROM custom_field_definitions WHERE field_type = 'number'
     LOOP
-        FOREACH tbl IN ARRAY ARRAY['works', 'performers'] LOOP
-            EXECUTE format(
-                $q$
-                UPDATE %I
-                SET custom_fields = custom_fields || jsonb_build_object(
-                    %L,
-                    (custom_fields->>%L)::text
-                )
-                WHERE custom_fields ? %L
-                  AND jsonb_typeof(custom_fields->%L) = 'number'
-                $q$,
-                tbl,
-                r.name, r.name, r.name, r.name
-            );
-        END LOOP;
+        tbl := r.entity_type || 's';
+        EXECUTE format(
+            $q$
+            UPDATE %I
+            SET custom_fields = custom_fields || jsonb_build_object(
+                %L,
+                (custom_fields->>%L)::text
+            )
+            WHERE custom_fields ? %L
+              AND jsonb_typeof(custom_fields->%L) = 'number'
+            $q$,
+            tbl,
+            r.name, r.name, r.name, r.name
+        );
     END LOOP;
 END
 $$;
