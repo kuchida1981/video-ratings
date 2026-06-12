@@ -39,9 +39,13 @@ function loadWorksFilters() {
 }
 
 function loadWorksViewMode(): "tile" | "table" {
-  const saved = localStorage.getItem(WORKS_VIEW_MODE_KEY);
-  if (saved === "tile" || saved === "table") {
-    return saved;
+  try {
+    const saved = localStorage.getItem(WORKS_VIEW_MODE_KEY);
+    if (saved === "tile" || saved === "table") {
+      return saved;
+    }
+  } catch {
+    // Ignore storage errors and fallback to default
   }
   return "tile";
 }
@@ -102,7 +106,11 @@ export default function WorksPage() {
   }, [keyword, selectedTagIds, maker, series, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles]);
 
   useEffect(() => {
-    localStorage.setItem(WORKS_VIEW_MODE_KEY, viewMode);
+    try {
+      localStorage.setItem(WORKS_VIEW_MODE_KEY, viewMode);
+    } catch (e) {
+      console.error("Failed to save viewMode to localStorage", e);
+    }
   }, [viewMode]);
 
   const { data: categories = [] } = useQuery({

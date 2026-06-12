@@ -41,9 +41,13 @@ function loadPerformersFilters() {
 }
 
 function loadPerformersViewMode(): "tile" | "table" {
-  const saved = localStorage.getItem(PERFORMERS_VIEW_MODE_KEY);
-  if (saved === "tile" || saved === "table") {
-    return saved;
+  try {
+    const saved = localStorage.getItem(PERFORMERS_VIEW_MODE_KEY);
+    if (saved === "tile" || saved === "table") {
+      return saved;
+    }
+  } catch {
+    // Ignore storage errors and fallback to default
   }
   return "tile";
 }
@@ -97,7 +101,11 @@ export default function PerformersPage() {
   };
 
   useEffect(() => {
-    localStorage.setItem(PERFORMERS_VIEW_MODE_KEY, viewMode);
+    try {
+      localStorage.setItem(PERFORMERS_VIEW_MODE_KEY, viewMode);
+    } catch (e) {
+      console.error("Failed to save viewMode to localStorage", e);
+    }
   }, [viewMode]);
 
   const hasFilters = !!(onlyUnrated || onlyNoCover || sortBy !== DEFAULT_PERFORMERS_SORT_BY || sortDesc !== DEFAULT_PERFORMERS_SORT_DESC);
