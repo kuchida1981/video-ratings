@@ -7,7 +7,16 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from app.config import settings
 from app.database import get_db
-from app.models.models import Performer, PerformerTag, Tag, Work, WorkFile, WorkPerformer, WorkTag
+from app.models.models import (
+    CustomFieldDefinition,
+    Performer,
+    PerformerTag,
+    Tag,
+    Work,
+    WorkFile,
+    WorkPerformer,
+    WorkTag,
+)
 from app.schemas.work import (
     AddPerformerToWork,
     SetMainPerformer,
@@ -298,8 +307,21 @@ def update_custom_fields(work_id: int, fields: dict[str, Any], db: Session = Dep
     work = db.query(Work).filter(Work.id == work_id).first()
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
+    field_defs = {
+        d.name: d.field_type
+        for d in db.query(CustomFieldDefinition).filter(CustomFieldDefinition.entity_type == "work").all()
+    }
+    coerced = {}
+    for k, v in fields.items():
+        if v is not None and field_defs.get(k) == "number":
+            try:
+                f = float(v)
+                v = int(f) if f.is_integer() else f
+            except (ValueError, TypeError):
+                pass
+        coerced[k] = v
     current = dict(work.custom_fields or {})
-    current.update(fields)
+    current.update(coerced)
     work.custom_fields = {k: v for k, v in current.items() if v is not None}
     flag_modified(work, "custom_fields")
     db.commit()
