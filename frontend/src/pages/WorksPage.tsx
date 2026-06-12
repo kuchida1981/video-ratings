@@ -6,6 +6,7 @@ import { api } from "@/api/client";
 import type { CustomFieldDefinition, ImportRow, WorkColumnKey } from "@/types";
 import { useImportFlow } from "@/hooks/useImportFlow";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ export default function WorksPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   useDocumentTitle("作品一覧");
+  useScrollRestoration("video-ratings:works-scroll-y");
 
   const stored = loadWorksFilters();
   const [keyword, setKeyword] = useState<string>(stored.keyword ?? "");
