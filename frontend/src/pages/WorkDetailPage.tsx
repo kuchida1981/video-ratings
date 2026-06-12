@@ -281,14 +281,14 @@ export default function WorkDetailPage() {
   });
 
   const updatePerformerCFMutation = useMutation({
-    mutationFn: ({ performerId, name, value }: { performerId: number; name: string; value: string | boolean }) =>
-      api.performers.updateCustomFields(performerId, { [name]: value === "" ? null : value }),
+    mutationFn: ({ performerId, name, value }: { performerId: number; name: string; value: string | number | boolean | null }) =>
+      api.performers.updateCustomFields(performerId, { [name]: value }),
     onSuccess: () => invalidateWork(),
   });
 
   const updateCustomFieldMutation = useMutation({
-    mutationFn: ({ name, value }: { name: string; value: string | boolean }) =>
-      api.works.updateCustomFields(workId, { [name]: value === "" ? null : value }),
+    mutationFn: ({ name, value }: { name: string; value: string | number | boolean | null }) =>
+      api.works.updateCustomFields(workId, { [name]: value }),
     onSuccess: () => invalidateWork(),
   });
 
