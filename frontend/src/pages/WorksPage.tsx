@@ -19,6 +19,7 @@ import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 
 const WORKS_STORAGE_KEY = "video-ratings:works-filters";
 const WORKS_TABLE_COLUMNS_KEY = "video-ratings:works-table-columns";
+const WORKS_VIEW_MODE_KEY = "video-ratings:works-view-mode";
 const DEFAULT_WORKS_TABLE_COLUMNS: WorkColumnKey[] = ["maker", "total_score"];
 
 function loadWorksTableColumns(): WorkColumnKey[] {
@@ -35,6 +36,14 @@ const DEFAULT_WORKS_SORT_DESC = true;
 function loadWorksFilters() {
   try { return JSON.parse(localStorage.getItem(WORKS_STORAGE_KEY) ?? "{}"); }
   catch { return {}; }
+}
+
+function loadWorksViewMode(): "tile" | "table" {
+  const saved = localStorage.getItem(WORKS_VIEW_MODE_KEY);
+  if (saved === "tile" || saved === "table") {
+    return saved;
+  }
+  return "tile";
 }
 
 function defaultSortDescForFieldType(fieldType: CustomFieldDefinition["field_type"]): boolean {
@@ -56,7 +65,7 @@ export default function WorksPage() {
   const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
   const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
   const [onlyNoFiles, setOnlyNoFiles] = useState<boolean>(stored.onlyNoFiles ?? false);
-  const [viewMode, setViewMode] = useState<"tile" | "table">("tile");
+  const [viewMode, setViewMode] = useState<"tile" | "table">(loadWorksViewMode);
   const [visibleWorkColumns, setVisibleWorkColumns] = useState<WorkColumnKey[]>(loadWorksTableColumns);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -91,6 +100,10 @@ export default function WorksPage() {
       onlyUnrated, onlyNoCover, onlyNoFiles,
     }));
   }, [keyword, selectedTagIds, maker, series, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles]);
+
+  useEffect(() => {
+    localStorage.setItem(WORKS_VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["tagCategories", "work"],

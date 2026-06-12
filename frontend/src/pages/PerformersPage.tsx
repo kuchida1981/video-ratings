@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ArrowUpDown, X, LayoutGrid, List } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const PERFORMERS_STORAGE_KEY = "video-ratings:performers-filters";
 const PERFORMERS_TABLE_COLUMNS_KEY = "video-ratings:performers-table-columns";
+const PERFORMERS_VIEW_MODE_KEY = "video-ratings:performers-view-mode";
 const DEFAULT_PERFORMERS_TABLE_COLUMNS: PerformerColumnKey[] = ["work_count", "avg_work_score"];
 
 function loadPerformersTableColumns(): PerformerColumnKey[] {
@@ -39,6 +40,14 @@ function loadPerformersFilters() {
   catch { return {}; }
 }
 
+function loadPerformersViewMode(): "tile" | "table" {
+  const saved = localStorage.getItem(PERFORMERS_VIEW_MODE_KEY);
+  if (saved === "tile" || saved === "table") {
+    return saved;
+  }
+  return "tile";
+}
+
 export default function PerformersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -52,7 +61,7 @@ export default function PerformersPage() {
   const [sortDesc, setSortDesc] = useState<boolean>(stored.sortDesc ?? DEFAULT_PERFORMERS_SORT_DESC);
   const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
   const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
-  const [viewMode, setViewMode] = useState<"tile" | "table">("tile");
+  const [viewMode, setViewMode] = useState<"tile" | "table">(loadPerformersViewMode);
   const [visiblePerformerColumns, setVisiblePerformerColumns] = useState<PerformerColumnKey[]>(loadPerformersTableColumns);
 
   const { maxCols } = useTileMaxColumns();
@@ -86,6 +95,10 @@ export default function PerformersPage() {
       sortBy: newSortBy, sortDesc: newSortDesc, onlyUnrated: newOnlyUnrated, onlyNoCover: newOnlyNoCover,
     }));
   };
+
+  useEffect(() => {
+    localStorage.setItem(PERFORMERS_VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
 
   const hasFilters = !!(onlyUnrated || onlyNoCover || sortBy !== DEFAULT_PERFORMERS_SORT_BY || sortDesc !== DEFAULT_PERFORMERS_SORT_DESC);
 
