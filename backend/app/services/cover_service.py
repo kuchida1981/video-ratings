@@ -30,7 +30,10 @@ async def save_cover(
 
     if old_path and old_path != rel_path:
         try:
-            (Path(settings.upload_dir) / "covers" / old_path).unlink(missing_ok=True)
+            base_dir = (Path(settings.upload_dir) / "covers").resolve()
+            target_path = (base_dir / old_path).resolve()
+            if target_path.is_relative_to(base_dir):
+                target_path.unlink(missing_ok=True)
         except Exception:
             pass
 
@@ -40,6 +43,9 @@ async def save_cover(
 def delete_cover(cover_path: str | None) -> None:
     if cover_path:
         try:
-            (Path(settings.upload_dir) / "covers" / cover_path).unlink(missing_ok=True)
+            base_dir = (Path(settings.upload_dir) / "covers").resolve()
+            target_path = (base_dir / cover_path).resolve()
+            if target_path.is_relative_to(base_dir):
+                target_path.unlink(missing_ok=True)
         except Exception:
             pass
