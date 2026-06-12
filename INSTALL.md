@@ -27,7 +27,7 @@ sudo apt install python3 python3-pip python3-venv postgresql nginx openssl
 [GitHub Releases](https://github.com/kuchida1981/video-ratings/releases) からアーカイブを取得します。
 
 ```bash
-VERSION=v1.0.0
+VERSION=1.0.0
 curl -L "https://github.com/kuchida1981/video-ratings/releases/download/${VERSION}/video-ratings-${VERSION}.tar.gz" \
     -o "video-ratings-${VERSION}.tar.gz"
 tar xzf "video-ratings-${VERSION}.tar.gz"
@@ -86,7 +86,7 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo video-ratings-update
 
 # バージョンを指定して更新
-sudo video-ratings-update v1.2.0
+sudo video-ratings-update 1.2.0
 ```
 
 更新スクリプトは以下を自動実行します:
@@ -109,13 +109,13 @@ sudo video-ratings-update v1.2.0
 
 ```bash
 ls /opt/video-ratings/releases/
-# 例: v1.0.0  v1.1.0  v1.2.0
+# 例: 1.0.0  1.1.0  1.2.0
 ```
 
 ### 2. シンボリックリンクを戻す
 
 ```bash
-sudo ln -sfn /opt/video-ratings/releases/v1.1.0 /opt/video-ratings/current
+sudo ln -sfn /opt/video-ratings/releases/1.1.0 /opt/video-ratings/current
 ```
 
 ### 3. サービスを再起動
@@ -136,8 +136,8 @@ systemctl status video-ratings
 >
 > ```bash
 > sudo -u video-ratings bash -c "set -a; source /var/lib/video-ratings/.env; \
->   /opt/video-ratings/releases/v1.1.0/.venv/bin/alembic \
->   -c /opt/video-ratings/releases/v1.1.0/backend/alembic.ini downgrade -1"
+>   /opt/video-ratings/releases/1.1.0/.venv/bin/alembic \
+>   -c /opt/video-ratings/releases/1.1.0/backend/alembic.ini downgrade -1"
 > ```
 
 ---
@@ -159,13 +159,13 @@ sudo journalctl -u video-ratings -f   # ログ確認
 ```
 /opt/video-ratings/
 ├── releases/
-│   ├── v1.0.0/
+│   ├── 1.0.0/
 │   │   ├── backend/
 │   │   ├── frontend/dist/
 │   │   ├── requirements.txt
 │   │   └── .venv/
-│   └── v1.1.0/
-└── current -> releases/v1.1.0/
+│   └── 1.1.0/
+└── current -> releases/1.1.0/
 
 /var/lib/video-ratings/
 ├── .env          ← 設定ファイル（バージョン横断）
