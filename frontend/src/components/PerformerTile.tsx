@@ -1,14 +1,16 @@
 import { User } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { Performer } from "@/types";
 
 interface PerformerTileProps {
   performer: Performer;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 export function PerformerTile({ performer, onClick }: PerformerTileProps) {
   return (
-    <div
+    <Link
+      to={`/performers/${performer.id}`}
       onClick={onClick}
       className="rounded-lg border bg-card hover:bg-accent/30 cursor-pointer transition-colors overflow-hidden flex flex-col"
     >
@@ -33,6 +35,6 @@ export function PerformerTile({ performer, onClick }: PerformerTileProps) {
           <span className="text-xs font-mono text-primary">{performer.total_score}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

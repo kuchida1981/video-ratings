@@ -334,12 +334,11 @@ export default function PerformersPage() {
           sortBy={sortBy}
           sortDesc={sortDesc}
           onSort={handlePerformerTableSort}
-          onRowClick={(id) => navigate(`/performers/${id}`)}
         />
       ) : (
         <div className="grid gap-3" style={gridStyle}>
           {filteredPerformers.map((p) => (
-            <PerformerTile key={p.id} performer={p} onClick={() => navigate(`/performers/${p.id}`)} />
+            <PerformerTile key={p.id} performer={p} />
           ))}
         </div>
       )}

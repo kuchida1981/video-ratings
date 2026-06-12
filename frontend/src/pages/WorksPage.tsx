@@ -588,12 +588,11 @@ export default function WorksPage() {
           sortBy={sortBy}
           sortDesc={sortDesc}
           onSort={handleWorkTableSort}
-          onRowClick={(id) => navigate(`/works/${id}`)}
         />
       ) : (
         <div className="grid gap-3" style={gridStyle}>
           {filteredWorks.map((w) => (
-            <WorkTile key={w.id} work={w} onClick={() => navigate(`/works/${w.id}`)} />
+            <WorkTile key={w.id} work={w} />
           ))}
         </div>
       )}

@@ -1,4 +1,5 @@
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { Performer, PerformerColumnKey, CustomFieldDefinition } from "@/types";
 
@@ -9,7 +10,6 @@ interface PerformerTableProps {
   sortBy: string;
   sortDesc: boolean;
   onSort: (key: string) => void;
-  onRowClick: (id: number) => void;
 }
 
 const SORTABLE_KEYS = new Set(["name", "work_count", "avg_work_score", "total_score"]);
@@ -21,7 +21,7 @@ function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["fie
   return String(value);
 }
 
-export function PerformerTable({ performers, visibleColumns, customFieldDefs, sortBy, sortDesc, onSort, onRowClick }: PerformerTableProps) {
+export function PerformerTable({ performers, visibleColumns, customFieldDefs, sortBy, sortDesc, onSort }: PerformerTableProps) {
   const customColDefs = customFieldDefs.filter((d) =>
     visibleColumns.includes(`custom:${d.name}` as PerformerColumnKey)
   );
@@ -71,10 +71,13 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, so
             {performers.map((p) => (
               <tr
                 key={p.id}
-                className="border-t hover:bg-accent/30 cursor-pointer transition-colors"
-                onClick={() => onRowClick(p.id)}
+                className="border-t transition-colors"
               >
-                <td className="px-3 py-2 font-medium whitespace-nowrap">{p.name}</td>
+                <td className="font-medium whitespace-nowrap p-0">
+                  <Link to={`/performers/${p.id}`} className="block px-3 py-2 hover:underline text-primary hover:text-primary/80">
+                    {p.name}
+                  </Link>
+                </td>
                 <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{p.furigana ?? "—"}</td>
                 {visibleColumns.includes("work_count") && (
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{p.work_count}</td>
