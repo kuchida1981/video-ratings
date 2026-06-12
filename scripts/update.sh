@@ -55,6 +55,7 @@ else
     cp -r "$EXTRACTED_DIR/backend" "$RELEASE_DIR/"
     cp -r "$EXTRACTED_DIR/frontend" "$RELEASE_DIR/"
     cp "$EXTRACTED_DIR/requirements.txt" "$RELEASE_DIR/"
+    cp -r "$EXTRACTED_DIR/etc" "$RELEASE_DIR/"
 
     # ---- Python 仮想環境 ----
     echo "[3/5] Python 仮想環境の構築..."
@@ -79,6 +80,9 @@ echo "  → 完了"
 
 # ---- symlink 更新・サービス再起動 ----
 echo "[5/5] サービスを更新して再起動..."
+cp "$RELEASE_DIR/etc/nginx.conf" /etc/nginx/sites-available/video-ratings
+nginx -t
+systemctl reload nginx
 ln -sfn "$RELEASE_DIR" "$BASE_DIR/current"
 systemctl restart video-ratings
 echo "  → 完了"
