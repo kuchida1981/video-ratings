@@ -135,8 +135,9 @@ systemctl status video-ratings
 > 必要に応じて `alembic downgrade` を手動実行してください:
 >
 > ```bash
-> cd /opt/video-ratings/releases/v1.1.0/backend
-> /opt/video-ratings/releases/v1.1.0/.venv/bin/alembic downgrade -1
+> sudo -u video-ratings bash -c "set -a; source /var/lib/video-ratings/.env; \
+>   /opt/video-ratings/releases/v1.1.0/.venv/bin/alembic \
+>   -c /opt/video-ratings/releases/v1.1.0/backend/alembic.ini downgrade -1"
 > ```
 
 ---

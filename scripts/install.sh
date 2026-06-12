@@ -10,6 +10,9 @@ ENV_FILE="$DATA_DIR/.env"
 # このスクリプトの親ディレクトリ（アーカイブ展開後のルート）
 INSTALL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="$(basename "$INSTALL_DIR" | sed 's/^video-ratings-//')"
+if [ "$VERSION" = "video-ratings" ] || [ -z "$VERSION" ]; then
+    VERSION="dev"
+fi
 RELEASE_DIR="$BASE_DIR/releases/$VERSION"
 
 echo "=== video-ratings インストーラー ==="
@@ -36,7 +39,6 @@ fi
 echo "[2/9] ディレクトリ構造の作成..."
 mkdir -p "$BASE_DIR/releases"
 mkdir -p "$DATA_DIR/uploads"
-chown "$APP_USER:$APP_USER" "$DATA_DIR/uploads"
 
 # ---- 3. ファイルをリリースディレクトリへコピー ----
 echo "[3/9] ファイルを $RELEASE_DIR にコピー..."
@@ -49,6 +51,7 @@ cp "$INSTALL_DIR/requirements.txt" "$RELEASE_DIR/"
 echo "[4/9] 設定ファイルの準備..."
 if [ ! -f "$ENV_FILE" ]; then
     cp "$INSTALL_DIR/etc/env.example" "$ENV_FILE"
+    chown "$APP_USER:$APP_USER" "$ENV_FILE"
     chmod 600 "$ENV_FILE"
     echo ""
     echo "============================================================"
@@ -136,9 +139,8 @@ systemctl daemon-reload
 echo "  → systemd unit をインストールしました"
 
 cp "$INSTALL_DIR/etc/nginx.conf" /etc/nginx/sites-available/video-ratings
-if [ ! -L /etc/nginx/sites-enabled/video-ratings ]; then
-    ln -s /etc/nginx/sites-available/video-ratings /etc/nginx/sites-enabled/video-ratings
-fi
+rm -f /etc/nginx/sites-enabled/default
+ln -sfn /etc/nginx/sites-available/video-ratings /etc/nginx/sites-enabled/video-ratings
 nginx -t
 systemctl reload nginx
 echo "  → nginx 設定をインストールしました"
@@ -146,6 +148,7 @@ echo "  → nginx 設定をインストールしました"
 # ---- 9. symlink・サービス起動 ----
 echo "[9/9] シンボリックリンクの作成とサービス起動..."
 chown -R "$APP_USER:$APP_USER" "$RELEASE_DIR"
+chown -R "$APP_USER:$APP_USER" "$DATA_DIR"
 ln -sfn "$RELEASE_DIR" "$BASE_DIR/current"
 
 systemctl enable video-ratings

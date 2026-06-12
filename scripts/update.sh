@@ -19,8 +19,8 @@ VERSION="${1:-latest}"
 
 if [ "$VERSION" = "latest" ]; then
     echo "GitHub API で最新バージョンを確認中..."
-    VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-               | grep '"tag_name"' | head -1 | cut -d'"' -f4)"
+    VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
+               | grep '"tag_name"' | head -1 | cut -d'"' -f4 || true)"
     if [ -z "$VERSION" ]; then
         echo "エラー: 最新バージョンの取得に失敗しました" >&2
         exit 1
@@ -85,8 +85,9 @@ echo "  → 完了"
 
 # ---- 自己更新 ----
 if [ -f "$TMP_DIR/video-ratings-${VERSION}/scripts/update.sh" ]; then
-    cp "$TMP_DIR/video-ratings-${VERSION}/scripts/update.sh" /usr/local/bin/video-ratings-update
-    chmod +x /usr/local/bin/video-ratings-update
+    cp "$TMP_DIR/video-ratings-${VERSION}/scripts/update.sh" "$TMP_DIR/update.sh.tmp"
+    chmod +x "$TMP_DIR/update.sh.tmp"
+    mv "$TMP_DIR/update.sh.tmp" /usr/local/bin/video-ratings-update
 fi
 
 echo ""
