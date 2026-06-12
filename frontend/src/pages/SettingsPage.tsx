@@ -301,7 +301,7 @@ export default function SettingsPage() {
         </p>
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={handleExport} disabled={exportLoading}>
+          <Button variant="outline" onClick={handleExport} disabled={exportLoading || importLoading}>
             <Download size={16} />{exportLoading ? "エクスポート中…" : "エクスポート"}
           </Button>
           <label className="cursor-pointer">
