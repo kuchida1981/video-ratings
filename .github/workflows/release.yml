@@ -35,7 +35,9 @@ jobs:
 
       - name: Export requirements.txt
         working-directory: backend
-        run: uv export --frozen --no-dev --no-editable -o ../requirements.txt
+        run: |
+          uv export --frozen --no-dev --no-editable -o ../requirements.txt
+          sed -i '/^\./d' ../requirements.txt
 
       # ---- アーカイブ作成 ----
       - name: Create release archive
