@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models.models import (
     CustomFieldDefinition,
@@ -26,7 +27,7 @@ from app.models.models import (
 
 router = APIRouter(prefix="", tags=["data"])
 
-COVERS_DIR = Path("uploads/covers")
+COVERS_DIR = Path(settings.upload_dir) / "covers"
 
 
 def _get_schema_version(db: Session) -> str:

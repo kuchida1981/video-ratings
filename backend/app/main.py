@@ -4,9 +4,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.config import settings
 from app.routers import custom_fields, data, imports, performers, search, tags, works
 
-COVERS_DIR = Path("uploads/covers")
+COVERS_DIR = Path(settings.upload_dir) / "covers"
 COVERS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Video Ratings API", version="0.1.0")
