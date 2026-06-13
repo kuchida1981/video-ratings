@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2, Plus, Star, UserCheck, Search, Play, X, ImagePlus, Pencil, Check } from "lucide-react";
+import { Trash2, Plus, Star, UserCheck, Search, Play, X, Pencil, Check, Monitor } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { api } from "@/api/client";
@@ -12,37 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
-function processImageFile(file: File, onUpload: (file: File) => void) {
-  if (!file.type.startsWith("image/")) return;
-  const img = new Image();
-  const objectUrl = URL.createObjectURL(file);
-  img.onerror = () => { URL.revokeObjectURL(objectUrl); onUpload(file); };
-  img.onload = () => {
-    URL.revokeObjectURL(objectUrl);
-    const MAX_WIDTH = 1200;
-    let width = img.width;
-    let height = img.height;
-    if (width > MAX_WIDTH) {
-      height = Math.round((height * MAX_WIDTH) / width);
-      width = MAX_WIDTH;
-    }
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => onUpload(blob ? new File([blob], "image.jpg", { type: "image/jpeg" }) : file),
-        "image/jpeg",
-        0.85
-      );
-    } else {
-      onUpload(file);
-    }
-  };
-  img.src = objectUrl;
-}
 
 export default function WorkDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,13 +29,13 @@ export default function WorkDetailPage() {
   const [newFileDisplayName, setNewFileDisplayName] = useState("");
   const [addPerformerId, setAddPerformerId] = useState("");
   const [playingFileId, setPlayingFileId] = useState<number | null>(null);
-  const [playingFile, setPlayingFile] = useState<WorkFile | null>(null);
+  const [theaterFile, setTheaterFile] = useState<WorkFile | null>(null);
+  const [theaterStartTime, setTheaterStartTime] = useState(0);
+  const [theaterVolume, setTheaterVolume] = useState(1);
+  const [theaterMuted, setTheaterMuted] = useState(false);
+  const inlineVideoRef = useRef<HTMLVideoElement>(null);
   const [editingFileId, setEditingFileId] = useState<number | null>(null);
   const [editFileForm, setEditFileForm] = useState({ path: "", display_name: "" });
-  const [coverDragOver, setCoverDragOver] = useState(false);
-  const [coverFocused, setCoverFocused] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const isSmbUrl = (path: string) => path.startsWith("smb://");
 
@@ -129,30 +98,17 @@ export default function WorkDetailPage() {
   }, [work, initializedId]);
 
   useEffect(() => {
-    if (!playingFile && videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.src = "";
-      videoRef.current.load();
-    }
-  }, [playingFile]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const onEnd = () => setPlayingFile(null);
-    const onDocChange = () => {
-      const isFullscreen = document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement;
-      if (!isFullscreen) setPlayingFile(null);
+    if (!theaterFile) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTheaterFile(null);
     };
-    video.addEventListener("webkitendfullscreen", onEnd);
-    document.addEventListener("fullscreenchange", onDocChange);
-    document.addEventListener("webkitfullscreenchange", onDocChange);
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      video.removeEventListener("webkitendfullscreen", onEnd);
-      document.removeEventListener("fullscreenchange", onDocChange);
-      document.removeEventListener("webkitfullscreenchange", onDocChange);
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [theaterFile]);
 
   useEffect(() => {
     if (work && performerCFDefs.length > 0) {
@@ -167,21 +123,6 @@ export default function WorkDetailPage() {
       setPerformerCFValues(values);
     }
   }, [work, performerCFDefs]);
-
-  useEffect(() => {
-    if (!coverFocused) return;
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = Array.from(e.clipboardData?.items ?? []);
-      const imageItem = items.find((item) => item.type.startsWith("image/"));
-      if (imageItem) {
-        const file = imageItem.getAsFile();
-        if (file) processImageFile(file, uploadCoverMutation.mutate);
-      }
-    };
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coverFocused]);
 
   const updateWorkMutation = useMutation({
     mutationFn: (data: { title: string; maker?: string; series?: string }) =>
@@ -304,104 +245,28 @@ export default function WorkDetailPage() {
 
   if (!work) return <div className="text-muted-foreground">読み込み中…</div>;
 
-  const smbFiles = work.files.filter((f) => isSmbUrl(f.path));
-
-  const handlePlay = (file: WorkFile) => {
-    setPlayingFile(file);
-    const video = videoRef.current;
-    if (!video) return;
-    video.src = `/api/works/${workId}/files/${file.id}/stream`;
-    video.load();
-    video.play().then(() => {
-      const v = video as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
-      if (v.webkitEnterFullscreen) {
-        v.webkitEnterFullscreen();
-      } else {
-        video.requestFullscreen?.();
-      }
-    }).catch(() => {});
-  };
-
   const availablePerformers = allPerformers.filter(
     (p) => !work.performers.some((wp) => wp.id === p.id)
   );
 
   return (
+    <>
     <div className="space-y-6 max-w-3xl">
       {/* カバー画像 */}
       <section className="space-y-2">
-        {(work.cover_image_url || smbFiles.length > 0) && (
-          <div
-            className={`relative aspect-video rounded-lg overflow-hidden border bg-black${!work.cover_image_url && coverDragOver ? " border-primary" : ""}`}
-            tabIndex={!work.cover_image_url ? 0 : undefined}
-            onFocus={!work.cover_image_url ? () => setCoverFocused(true) : undefined}
-            onBlur={!work.cover_image_url ? () => setCoverFocused(false) : undefined}
-            onDragOver={!work.cover_image_url ? (e) => { e.preventDefault(); setCoverDragOver(true); } : undefined}
-            onDragLeave={!work.cover_image_url ? () => setCoverDragOver(false) : undefined}
-            onDrop={!work.cover_image_url ? (e) => {
-              e.preventDefault();
-              setCoverDragOver(false);
-              const file = e.dataTransfer.files[0];
-              if (file) processImageFile(file, uploadCoverMutation.mutate);
-            } : undefined}
-          >
-            {work.cover_image_url && (
-              <img src={work.cover_image_url} alt={work.title} className="w-full h-full object-cover" />
-            )}
-            {work.cover_image_url ? (
-              <button
-                onClick={() => deleteCoverMutation.mutate()}
-                className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
-              >
-                <X size={14} />
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={() => coverInputRef.current?.click()}
-                  className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
-                  title="カバー画像を設定（D&D・Ctrl+Vも使用可）"
-                >
-                  <ImagePlus size={14} />
-                </button>
-                <input
-                  ref={coverInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) processImageFile(file, uploadCoverMutation.mutate);
-                    e.target.value = "";
-                  }}
-                />
-              </>
-            )}
-            {smbFiles.length > 0 && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50">
-                {smbFiles.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => handlePlay(f)}
-                    className="flex items-center gap-3 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white rounded-xl px-6 py-3 text-sm font-medium transition-colors"
-                  >
-                    <Play size={20} className="fill-white shrink-0" />
-                    <span className="truncate max-w-xs">
-                      {f.display_name ?? f.path.split("/").pop()}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
+        {work.cover_image_url ? (
+          <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+            <img src={work.cover_image_url} alt={work.title} className="w-full h-full object-cover" />
+            <button
+              onClick={() => deleteCoverMutation.mutate()}
+              className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+            >
+              <X size={14} />
+            </button>
           </div>
-        )}
-        {!work.cover_image_url && smbFiles.length === 0 && (
+        ) : (
           <CoverUploadZone onUpload={uploadCoverMutation.mutate} />
         )}
-        <video
-          ref={videoRef}
-          className="sr-only"
-        />
       </section>
 
       {/* Header */}
@@ -673,13 +538,30 @@ export default function WorkDetailPage() {
               </div>
             )}
             {playingFileId === f.id && (
-              <video
-                key={f.id}
-                controls
-                autoPlay
-                className="w-full mt-2 rounded"
-                src={`/api/works/${workId}/files/${f.id}/stream`}
-              />
+              <div className="relative group mt-2">
+                <video
+                  ref={inlineVideoRef}
+                  key={f.id}
+                  controls
+                  autoPlay
+                  className="w-full rounded"
+                  src={`/api/works/${workId}/files/${f.id}/stream`}
+                />
+                <button
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-black/60 hover:bg-black/80 text-white rounded p-1 transition-opacity"
+                  onClick={() => {
+                    const v = inlineVideoRef.current;
+                    setTheaterStartTime(v?.currentTime ?? 0);
+                    setTheaterVolume(v?.volume ?? 1);
+                    setTheaterMuted(v?.muted ?? false);
+                    v?.pause();
+                    setTheaterFile(f);
+                  }}
+                  title="シアターモード"
+                >
+                  <Monitor size={14} />
+                </button>
+              </div>
             )}
           </div>
         ))}
@@ -750,5 +632,30 @@ export default function WorkDetailPage() {
         />
       </section>
     </div>
+    {theaterFile && (
+      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+        <video
+          key={theaterFile.id}
+          controls
+          autoPlay
+          className="w-full max-h-screen object-contain"
+          src={`/api/works/${workId}/files/${theaterFile.id}/stream`}
+          onLoadedMetadata={(e) => {
+            const v = e.target as HTMLVideoElement;
+            v.volume = theaterVolume;
+            v.muted = theaterMuted;
+            if (theaterStartTime > 0) v.currentTime = theaterStartTime;
+          }}
+        />
+        <button
+          onClick={() => setTheaterFile(null)}
+          className="absolute top-4 right-4 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+          title="閉じる"
+        >
+          <X size={20} />
+        </button>
+      </div>
+    )}
+    </>
   );
 }
