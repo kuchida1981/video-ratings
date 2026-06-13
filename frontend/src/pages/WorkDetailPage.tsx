@@ -31,9 +31,52 @@ export default function WorkDetailPage() {
   const [playingFileId, setPlayingFileId] = useState<number | null>(null);
   const [theaterFile, setTheaterFile] = useState<WorkFile | null>(null);
   const [theaterStartTime, setTheaterStartTime] = useState(0);
-  const [theaterVolume, setTheaterVolume] = useState(1);
-  const [theaterMuted, setTheaterMuted] = useState(false);
+  const [theaterVolume, setTheaterVolume] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("video-player-volume");
+      if (saved !== null) {
+        const val = parseFloat(saved);
+        if (!isNaN(val) && val >= 0 && val <= 1) {
+          return val;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load volume from localStorage:", e);
+    }
+    return 1;
+  });
+  const [theaterMuted, setTheaterMuted] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("video-player-muted");
+      if (saved !== null) {
+        return saved === "true";
+      }
+    } catch (e) {
+      console.error("Failed to load muted state from localStorage:", e);
+    }
+    return false;
+  });
+
+  const handleVolumeChange = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const v = e.currentTarget;
+    setTheaterVolume(v.volume);
+    setTheaterMuted(v.muted);
+    try {
+      localStorage.setItem("video-player-volume", String(v.volume));
+      localStorage.setItem("video-player-muted", String(v.muted));
+    } catch (err) {
+      console.error("Failed to save volume settings to localStorage:", err);
+    }
+  };
   const inlineVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = inlineVideoRef.current;
+    if (v) {
+      v.volume = theaterVolume;
+      v.muted = theaterMuted;
+    }
+  }, [theaterVolume, theaterMuted]);
   const [editingFileId, setEditingFileId] = useState<number | null>(null);
   const [editFileForm, setEditFileForm] = useState({ path: "", display_name: "" });
 
@@ -546,6 +589,12 @@ export default function WorkDetailPage() {
                   autoPlay
                   className="w-full rounded"
                   src={`/api/works/${workId}/files/${f.id}/stream`}
+                  onLoadedMetadata={(e) => {
+                    const v = e.currentTarget;
+                    v.volume = theaterVolume;
+                    v.muted = theaterMuted;
+                  }}
+                  onVolumeChange={handleVolumeChange}
                 />
                 <button
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-black/60 hover:bg-black/80 text-white rounded p-1 transition-opacity"
@@ -641,11 +690,12 @@ export default function WorkDetailPage() {
           className="w-full max-h-screen object-contain"
           src={`/api/works/${workId}/files/${theaterFile.id}/stream`}
           onLoadedMetadata={(e) => {
-            const v = e.target as HTMLVideoElement;
+            const v = e.currentTarget;
             v.volume = theaterVolume;
             v.muted = theaterMuted;
             if (theaterStartTime > 0) v.currentTime = theaterStartTime;
           }}
+          onVolumeChange={handleVolumeChange}
         />
         <button
           onClick={() => setTheaterFile(null)}
