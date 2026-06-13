@@ -69,6 +69,14 @@ export default function WorkDetailPage() {
     }
   };
   const inlineVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = inlineVideoRef.current;
+    if (v) {
+      v.volume = theaterVolume;
+      v.muted = theaterMuted;
+    }
+  }, [theaterVolume, theaterMuted]);
   const [editingFileId, setEditingFileId] = useState<number | null>(null);
   const [editFileForm, setEditFileForm] = useState({ path: "", display_name: "" });
 
