@@ -1,9 +1,22 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { execSync } from "child_process";
+
+function getAppVersion(): string {
+  if (process.env.VITE_APP_VERSION) return process.env.VITE_APP_VERSION;
+  try {
+    return execSync("git describe --tags --always").toString().trim();
+  } catch {
+    return "development";
+  }
+}
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(getAppVersion()),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
