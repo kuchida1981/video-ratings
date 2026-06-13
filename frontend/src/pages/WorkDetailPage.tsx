@@ -98,6 +98,19 @@ export default function WorkDetailPage() {
   }, [work, initializedId]);
 
   useEffect(() => {
+    if (!theaterFile) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTheaterFile(null);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [theaterFile]);
+
+  useEffect(() => {
     if (work && performerCFDefs.length > 0) {
       const values: Record<number, Record<string, string | boolean>> = {};
       work.performers.forEach((p) => {
@@ -636,7 +649,7 @@ export default function WorkDetailPage() {
         />
         <button
           onClick={() => setTheaterFile(null)}
-          className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+          className="absolute top-4 right-4 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
           title="閉じる"
         >
           <X size={20} />
