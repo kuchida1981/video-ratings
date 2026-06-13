@@ -1,12 +1,12 @@
 ## 1. 状態の初期化と保存ロジックの追加
 
-- [ ] 1.1 `localStorage` から音量とミュート設定を安全に取得する初期化ロジック（エラー時のフォールバック処理含む）を `useState` 内に実装する
-- [ ] 1.2 `onVolumeChange` で呼び出す、ステート更新および `localStorage` への保存処理を行う共通のイベントハンドラ `handleVolumeChange` を作成する
+- [x] 1.1 `localStorage` から音量とミュート設定を安全に取得する初期化ロジック（エラー時のフォールバック処理含む）を `useState` 内に実装する
+- [x] 1.2 `onVolumeChange` で呼び出す、ステート更新および `localStorage` への保存処理を行う共通のイベントハンドラ `handleVolumeChange` を作成する
 
 ## 2. ビデオ要素へのイベント適用
 
-- [ ] 2.1 インラインビデオプレイヤー（`WorkDetailPage.tsx` 内の `<video>` 要素）に `onVolumeChange` イベントをバインドし、`onLoadedMetadata` にて初期表示時に音量とミュート状態を適用する
-- [ ] 2.2 シアターモードプレイヤー（`WorkDetailPage.tsx` 内の `<video>` 要素）に `onVolumeChange` イベントをバインドし、初期表示時の音量・ミュート適用が正しく動作することを確認する
+- [x] 2.1 インラインビデオプレイヤー（`WorkDetailPage.tsx` 内の `<video>` 要素）に `onVolumeChange` イベントをバインドし、`onLoadedMetadata` にて初期表示時に音量とミュート状態を適用する
+- [x] 2.2 シアターモードプレイヤー（`WorkDetailPage.tsx` 内の `<video>` 要素）に `onVolumeChange` イベントをバインドし、初期表示時の音量・ミュート適用が正しく動作することを確認する
 
 ## 3. 動作確認
 
