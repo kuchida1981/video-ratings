@@ -33,6 +33,9 @@ export default function App() {
           <NavItem to="/performers" icon={Users} label="出演者" />
           <NavItem to="/tags" icon={Tag} label="タグ管理" />
           <NavItem to="/settings" icon={Settings} label="設定" />
+          <div className="mt-auto px-3 py-2 text-xs text-muted-foreground">
+            {import.meta.env.VITE_APP_VERSION}
+          </div>
         </aside>
         <main className="flex-1 overflow-auto p-6">
           <Routes>

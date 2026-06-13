@@ -33,9 +33,14 @@ services:
     build: ./frontend
     ports:
       - "5173:5173"
+    environment:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - ./.git:/app/.git:ro
     depends_on:
       - backend
 

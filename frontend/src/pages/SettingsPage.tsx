@@ -325,6 +325,15 @@ export default function SettingsPage() {
         )}
       </section>
 
+      {/* アプリケーション情報セクション */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold border-b pb-2">アプリケーション情報</h2>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground">バージョン</span>
+          <span className="text-sm font-mono">{import.meta.env.VITE_APP_VERSION}</span>
+        </div>
+      </section>
+
       {/* インポート確認ダイアログ */}
       <Dialog open={importConfirmOpen} onOpenChange={setImportConfirmOpen}>
         <DialogContent>
