@@ -14,6 +14,13 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# envsubst 確認
+if ! command -v envsubst &>/dev/null; then
+    echo "エラー: envsubst が見つかりません。gettext-base をインストールしてください:" >&2
+    echo "  sudo apt install gettext-base" >&2
+    exit 1
+fi
+
 # ---- バージョン解決 ----
 VERSION="${1:-latest}"
 
@@ -97,9 +104,11 @@ NGINX_PORT="${NGINX_PORT:-80}"
 BASIC_AUTH_ENABLED="${BASIC_AUTH_ENABLED:-false}"
 
 # Basic認証のバリデーション
-if [ "$BASIC_AUTH_ENABLED" = "true" ] && [ -z "${BASIC_AUTH_PASSWORD:-}" ]; then
-    echo "エラー: BASIC_AUTH_ENABLED=true のとき BASIC_AUTH_PASSWORD を設定してください" >&2
-    exit 1
+if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
+    if [ -z "${BASIC_AUTH_USER:-}" ] || [ -z "${BASIC_AUTH_PASSWORD:-}" ]; then
+        echo "エラー: BASIC_AUTH_ENABLED=true のとき BASIC_AUTH_USER と BASIC_AUTH_PASSWORD を設定してください" >&2
+        exit 1
+    fi
 fi
 
 # nginx 設定：テンプレート変数を展開してインストール
@@ -111,7 +120,7 @@ envsubst '$NGINX_PORT $BACKEND_PORT' < "$RELEASE_DIR/etc/nginx.conf" \
 # Basic認証スニペットの生成
 if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
     HTPASSWD_FILE="/etc/nginx/.video-ratings.htpasswd"
-    echo "${BASIC_AUTH_USER}:$(openssl passwd -apr1 "${BASIC_AUTH_PASSWORD}")" \
+    echo "${BASIC_AUTH_USER}:$(openssl passwd -apr1 -stdin <<< "${BASIC_AUTH_PASSWORD}")" \
         > "$HTPASSWD_FILE"
     chmod 640 "$HTPASSWD_FILE"
     chown root:www-data "$HTPASSWD_FILE"

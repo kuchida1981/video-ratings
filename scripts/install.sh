@@ -87,9 +87,11 @@ NGINX_PORT="${NGINX_PORT:-80}"
 BASIC_AUTH_ENABLED="${BASIC_AUTH_ENABLED:-false}"
 
 # Basic認証のバリデーション
-if [ "$BASIC_AUTH_ENABLED" = "true" ] && [ -z "${BASIC_AUTH_PASSWORD:-}" ]; then
-    echo "エラー: BASIC_AUTH_ENABLED=true のとき BASIC_AUTH_PASSWORD を設定してください" >&2
-    exit 1
+if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
+    if [ -z "${BASIC_AUTH_USER:-}" ] || [ -z "${BASIC_AUTH_PASSWORD:-}" ]; then
+        echo "エラー: BASIC_AUTH_ENABLED=true のとき BASIC_AUTH_USER と BASIC_AUTH_PASSWORD を設定してください" >&2
+        exit 1
+    fi
 fi
 
 # ---- 5. PostgreSQL のセットアップ ----
@@ -163,7 +165,7 @@ envsubst '$NGINX_PORT $BACKEND_PORT' < "$INSTALL_DIR/etc/nginx.conf" \
 # Basic認証スニペットの生成
 if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
     HTPASSWD_FILE="/etc/nginx/.video-ratings.htpasswd"
-    echo "${BASIC_AUTH_USER}:$(openssl passwd -apr1 "${BASIC_AUTH_PASSWORD}")" \
+    echo "${BASIC_AUTH_USER}:$(openssl passwd -apr1 -stdin <<< "${BASIC_AUTH_PASSWORD}")" \
         > "$HTPASSWD_FILE"
     chmod 640 "$HTPASSWD_FILE"
     chown root:www-data "$HTPASSWD_FILE"
