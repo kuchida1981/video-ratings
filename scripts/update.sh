@@ -14,6 +14,13 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# envsubst 確認
+if ! command -v envsubst &>/dev/null; then
+    echo "エラー: envsubst が見つかりません。gettext-base をインストールしてください:" >&2
+    echo "  sudo apt install gettext-base" >&2
+    exit 1
+fi
+
 # ---- バージョン解決 ----
 VERSION="${1:-latest}"
 
@@ -87,7 +94,43 @@ echo "  → 完了"
 
 # ---- symlink 更新・サービス再起動 ----
 echo "[5/5] サービスを更新して再起動..."
-cp "$RELEASE_DIR/etc/nginx.conf" /etc/nginx/sites-available/video-ratings
+
+# .env を読み込んでデフォルト値を設定
+set -a
+source "$ENV_FILE"
+set +a
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+NGINX_PORT="${NGINX_PORT:-80}"
+BASIC_AUTH_ENABLED="${BASIC_AUTH_ENABLED:-false}"
+
+# Basic認証のバリデーション
+if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
+    if [ -z "${BASIC_AUTH_USER:-}" ] || [ -z "${BASIC_AUTH_PASSWORD:-}" ]; then
+        echo "エラー: BASIC_AUTH_ENABLED=true のとき BASIC_AUTH_USER と BASIC_AUTH_PASSWORD を設定してください" >&2
+        exit 1
+    fi
+fi
+
+# nginx 設定：テンプレート変数を展開してインストール
+mkdir -p /etc/nginx/snippets
+export NGINX_PORT BACKEND_PORT
+envsubst '$NGINX_PORT $BACKEND_PORT' < "$RELEASE_DIR/etc/nginx.conf" \
+    > /etc/nginx/sites-available/video-ratings
+
+# Basic認証スニペットの生成
+if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
+    HTPASSWD_FILE="/etc/nginx/.video-ratings.htpasswd"
+    echo "${BASIC_AUTH_USER}:$(openssl passwd -apr1 -stdin <<< "${BASIC_AUTH_PASSWORD}")" \
+        > "$HTPASSWD_FILE"
+    chmod 640 "$HTPASSWD_FILE"
+    chown root:www-data "$HTPASSWD_FILE"
+    printf 'auth_basic "Restricted";\nauth_basic_user_file %s;\n' \
+        "$HTPASSWD_FILE" > /etc/nginx/snippets/video-ratings-auth.conf
+    echo "  → Basic認証を有効化しました"
+else
+    echo "# Basic auth disabled" > /etc/nginx/snippets/video-ratings-auth.conf
+fi
+
 nginx -t
 systemctl reload nginx
 ln -sfn "$RELEASE_DIR" "$BASE_DIR/current"

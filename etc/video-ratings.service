@@ -8,12 +8,13 @@ User=video-ratings
 Group=video-ratings
 
 WorkingDirectory=/opt/video-ratings/current/backend
+Environment=BACKEND_PORT=8000
 EnvironmentFile=/var/lib/video-ratings/.env
 Environment=PYTHONPATH=/opt/video-ratings/current/backend
 
 ExecStart=/opt/video-ratings/current/.venv/bin/uvicorn app.main:app \
     --host 127.0.0.1 \
-    --port 8000
+    --port ${BACKEND_PORT}
 
 Restart=on-failure
 RestartSec=5
