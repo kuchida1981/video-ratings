@@ -1,10 +1,4 @@
-# Spec: deploy-basic-auth
-
-## Purpose
-
-デプロイ時に HTTP Basic認証を環境変数で設定できるようにする機能。nginx レイヤーで Basic認証の有効化・無効化を `.env` ファイルの設定値で制御する。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Basic認証を環境変数で有効化できる
 `.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_USER`、`BASIC_AUTH_PASSWORD` を設定することで、nginx レイヤーおよびバックエンド（FastAPI）の両方で HTTP Basic認証を有効化しなければならない（SHALL）。`BASIC_AUTH_ENABLED=false`（デフォルト）の場合は nginx・バックエンドともに認証なしで動作しなければならない（SHALL）。
@@ -33,23 +27,7 @@
 - **WHEN** Basic認証が有効な状態で、正しい認証情報を含む Authorization ヘッダーを付けてバックエンド API へリクエストを送る
 - **THEN** API が正常なレスポンスを返す
 
-### Requirement: BASIC_AUTH_PASSWORD が未設定の場合はエラーで停止する
-`BASIC_AUTH_ENABLED=true` のとき、`BASIC_AUTH_PASSWORD` が空の場合は install.sh / update.sh がエラーメッセージを表示して終了しなければならない（SHALL）。
-
-#### Scenario: パスワード未設定で有効化しようとする
-- **WHEN** `.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_PASSWORD=`（空）の状態でインストール/更新を実行する
-- **THEN** スクリプトがエラーメッセージを表示して終了し、nginx 設定は変更されない
-
-### Requirement: Basic認証設定が install と update の両方で反映される
-install.sh と update.sh のどちらを実行しても、`.env` の Basic認証設定が nginx に反映されなければならない（SHALL）。更新時に認証設定が変更されていれば（有効化・無効化・パスワード変更）、新しい設定で上書きしなければならない（SHALL）。
-
-#### Scenario: 更新時に Basic認証を有効化する
-- **WHEN** 以前は `BASIC_AUTH_ENABLED=false` だった `.env` を `BASIC_AUTH_ENABLED=true` に変更して `video-ratings-update` を実行する
-- **THEN** 更新後は Basic認証が有効になる
-
-#### Scenario: 更新時に Basic認証を無効化する
-- **WHEN** 以前は `BASIC_AUTH_ENABLED=true` だった `.env` を `BASIC_AUTH_ENABLED=false` に変更して `video-ratings-update` を実行する
-- **THEN** 更新後は認証なしでアクセスできる
+## ADDED Requirements
 
 ### Requirement: ヘルスチェックエンドポイントは認証対象外とする
 `BASIC_AUTH_ENABLED=true` のとき、バックエンドの `/health` エンドポイントは認証なしでアクセスできなければならない（SHALL）。これにより systemd や Docker の healthcheck が認証情報なしで動作する。
