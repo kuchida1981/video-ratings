@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
+import { useState } from "react";
+import { Plus, Trash2, Pencil, GripVertical } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -14,6 +14,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -28,7 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
-function SortableItem({ id, children, className, handle = false }: { id: number; children: React.ReactNode; className?: string; handle?: boolean }) {
+function SortableItem({ id, children, className, handle = false, gripTop = false }: { id: number; children: React.ReactNode; className?: string; handle?: boolean; gripTop?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -39,11 +40,11 @@ function SortableItem({ id, children, className, handle = false }: { id: number;
   return (
     <div ref={setNodeRef} style={style} className={className}>
       {handle ? (
-        <div className="flex items-center gap-2">
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+        <div className={`flex gap-2 ${gripTop ? "items-start" : "items-center"}`}>
+          <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground${gripTop ? " mt-2" : ""}`}>
             <GripVertical size={16} />
           </div>
-          <div className="flex-1">{children}</div>
+          <div className="flex-1 min-w-0">{children}</div>
         </div>
       ) : (
         <div {...attributes} {...listeners}>{children}</div>
@@ -55,7 +56,6 @@ function SortableItem({ id, children, className, handle = false }: { id: number;
 export default function TagsPage() {
   const queryClient = useQueryClient();
   useDocumentTitle("タグ管理");
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [catOpen, setCatOpen] = useState(false);
   const [catName, setCatName] = useState("");
   const [catDescription, setCatDescription] = useState("");
@@ -83,12 +83,6 @@ export default function TagsPage() {
     queryKey: ["tagCategories"],
     queryFn: () => api.tagCategories.list(),
   });
-
-  useEffect(() => {
-    if (categories.length > 0 && expanded.size === 0) {
-      setExpanded(new Set(categories.map((c) => c.id)));
-    }
-  }, [categories, expanded.size]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["tagCategories"] });
 
@@ -173,14 +167,6 @@ export default function TagsPage() {
     setEditCatDescription(cat.description || "");
   };
 
-  const toggle = (id: number) =>
-    setExpanded((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -226,10 +212,10 @@ export default function TagsPage() {
               {et === "work" ? "作品用カテゴリ" : "出演者用カテゴリ"}
             </h2>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEndCategories(e, et)}>
-              <SortableContext items={cats.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
+              <SortableContext items={cats.map((c) => c.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 gap-4 items-start">
                   {cats.map((cat) => (
-                    <SortableItem key={cat.id} id={cat.id} handle className="border rounded-lg overflow-hidden bg-card">
+                    <SortableItem key={cat.id} id={cat.id} handle gripTop className="border rounded-lg overflow-hidden bg-card">
                       {editingCatId === cat.id ? (
                         <div className="flex items-center gap-2 px-4 py-2 bg-muted/30">
                           <input
@@ -257,29 +243,24 @@ export default function TagsPage() {
                           <Button size="sm" variant="outline" onClick={() => setEditingCatId(null)}>×</Button>
                         </div>
                       ) : (
-                        <div
-                          className="flex items-center gap-2 px-4 py-2 bg-muted/30 cursor-pointer"
-                          onClick={() => toggle(cat.id)}
-                        >
-                          {expanded.has(cat.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        <div className="flex items-center gap-2 px-4 py-2 bg-muted/30">
                           <span className="font-medium flex-1">{cat.name}</span>
                           <Badge variant="outline" className="text-xs">{cat.is_multi_select ? "複数可" : "単一選択"}</Badge>
                           <button
                             className="text-muted-foreground hover:text-primary"
-                            onClick={(e) => { e.stopPropagation(); openEditCat(cat); }}
+                            onClick={() => openEditCat(cat)}
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             className="text-muted-foreground hover:text-destructive"
-                            onClick={(e) => { e.stopPropagation(); if (confirm("このカテゴリとタグを全て削除しますか？")) deleteCategoryMutation.mutate(cat.id); }}
+                            onClick={() => { if (confirm("このカテゴリとタグを全て削除しますか？")) deleteCategoryMutation.mutate(cat.id); }}
                           >
                             <Trash2 size={14} />
                           </button>
                         </div>
                       )}
-                      {expanded.has(cat.id) && (
-                        <div className="p-3 space-y-3 bg-background">
+                      <div className="p-3 space-y-3 bg-background">
                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEndTags(e, cat.id)}>
                             <SortableContext items={cat.tags.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                               <div className="space-y-1">
@@ -332,7 +313,6 @@ export default function TagsPage() {
                             </Button>
                           )}
                         </div>
-                      )}
                     </SortableItem>
                   ))}
                 </div>
