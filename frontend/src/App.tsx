@@ -54,24 +54,35 @@ function NavItem({
 
 export default function App() {
   const [collapsed, setCollapsed] = useState(() => {
-    return localStorage.getItem("sidebar-collapsed") === "true";
+    try {
+      return localStorage.getItem("sidebar-collapsed") === "true";
+    } catch (e) {
+      console.error("Failed to read sidebar-collapsed from localStorage:", e);
+      return false;
+    }
   });
 
   const toggleSidebar = () => {
     const nextValue = !collapsed;
     setCollapsed(nextValue);
-    localStorage.setItem("sidebar-collapsed", String(nextValue));
+    try {
+      localStorage.setItem("sidebar-collapsed", String(nextValue));
+    } catch (e) {
+      console.error("Failed to write sidebar-collapsed to localStorage:", e);
+    }
   };
 
   return (
     <TooltipProvider>
       <BrowserRouter>
         <div className="flex h-screen overflow-hidden">
-          <aside className={`relative border-r bg-card flex flex-col gap-1 p-3 shrink-0 transition-all duration-200 ${collapsed ? "w-12 px-2" : "w-48"}`}>
+          <aside className={`relative border-r bg-card flex flex-col gap-1 shrink-0 transition-all duration-200 ${collapsed ? "w-12 px-2 py-3" : "w-48 p-3"}`}>
             <button
               onClick={toggleSidebar}
               className="absolute -right-3 top-16 z-10 flex h-6 w-6 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-md hover:bg-accent hover:text-foreground transition-colors"
               title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!collapsed}
             >
               {collapsed ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}
             </button>
