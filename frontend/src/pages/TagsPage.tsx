@@ -29,7 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
-function SortableItem({ id, children, className, handle = false }: { id: number; children: React.ReactNode; className?: string; handle?: boolean }) {
+function SortableItem({ id, children, className, handle = false, gripTop = false }: { id: number; children: React.ReactNode; className?: string; handle?: boolean; gripTop?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -40,8 +40,8 @@ function SortableItem({ id, children, className, handle = false }: { id: number;
   return (
     <div ref={setNodeRef} style={style} className={className}>
       {handle ? (
-        <div className="flex items-start gap-2">
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-2">
+        <div className={`flex gap-2 ${gripTop ? "items-start" : "items-center"}`}>
+          <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground${gripTop ? " mt-2" : ""}`}>
             <GripVertical size={16} />
           </div>
           <div className="flex-1 min-w-0">{children}</div>
@@ -215,7 +215,7 @@ export default function TagsPage() {
               <SortableContext items={cats.map((c) => c.id)} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-2 gap-4 items-start">
                   {cats.map((cat) => (
-                    <SortableItem key={cat.id} id={cat.id} handle className="border rounded-lg overflow-hidden bg-card">
+                    <SortableItem key={cat.id} id={cat.id} handle gripTop className="border rounded-lg overflow-hidden bg-card">
                       {editingCatId === cat.id ? (
                         <div className="flex items-center gap-2 px-4 py-2 bg-muted/30">
                           <input
