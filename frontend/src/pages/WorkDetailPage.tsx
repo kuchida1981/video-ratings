@@ -76,7 +76,7 @@ export default function WorkDetailPage() {
     const iv = inlineVideoRef.current;
     if (tv && iv) {
       iv.currentTime = tv.currentTime;
-      if (!tv.paused) iv.play();
+      if (!tv.paused) iv.play().catch(() => {});
     }
     setTheaterFile(null);
   };
