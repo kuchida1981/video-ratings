@@ -83,6 +83,39 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ---
 
+## Basic認証のユーザー名・パスワード変更
+
+インストール後に認証情報を変更する場合は、以下の手順で行います。
+
+### 1. .env を編集
+
+```bash
+sudo nano /var/lib/video-ratings/.env
+```
+
+`BASIC_AUTH_USER` および `BASIC_AUTH_PASSWORD` を新しい値に変更してください。
+
+### 2. htpasswd ファイルを再生成して nginx を再読み込み
+
+`.env` の変更は nginx に自動反映されません。以下のコマンドで htpasswd ファイルを更新してください。
+
+```bash
+# .env を読み込んで htpasswd を再生成
+sudo sh -c '
+  set -a
+  source /var/lib/video-ratings/.env
+  set +a
+  echo "${BASIC_AUTH_USER}:$(openssl passwd -apr1 "${BASIC_AUTH_PASSWORD}")" \
+    > /etc/nginx/.video-ratings.htpasswd
+'
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+> **補足**: `video-ratings-update` を実行してもこの再生成は行われます。
+> バージョン更新と同時に認証情報を変更したい場合は、.env を編集後に `sudo video-ratings-update` を実行してください。
+
+---
+
 ## バージョン更新
 
 インストール完了後は `video-ratings-update` コマンドで更新できます。
