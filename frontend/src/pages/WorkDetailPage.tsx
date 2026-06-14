@@ -69,6 +69,17 @@ export default function WorkDetailPage() {
     }
   };
   const inlineVideoRef = useRef<HTMLVideoElement>(null);
+  const theaterVideoRef = useRef<HTMLVideoElement>(null);
+
+  const closeTheater = () => {
+    const tv = theaterVideoRef.current;
+    const iv = inlineVideoRef.current;
+    if (tv && iv) {
+      iv.currentTime = tv.currentTime;
+      if (!tv.paused) iv.play().catch(() => {});
+    }
+    setTheaterFile(null);
+  };
 
   useEffect(() => {
     const v = inlineVideoRef.current;
@@ -143,7 +154,7 @@ export default function WorkDetailPage() {
   useEffect(() => {
     if (!theaterFile) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setTheaterFile(null);
+      if (e.key === "Escape") closeTheater();
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
@@ -685,6 +696,7 @@ export default function WorkDetailPage() {
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <video
           key={theaterFile.id}
+          ref={theaterVideoRef}
           controls
           autoPlay
           className="w-full max-h-screen object-contain"
@@ -698,7 +710,7 @@ export default function WorkDetailPage() {
           onVolumeChange={handleVolumeChange}
         />
         <button
-          onClick={() => setTheaterFile(null)}
+          onClick={closeTheater}
           className="absolute top-4 right-4 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
           title="閉じる"
         >
