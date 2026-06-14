@@ -7,7 +7,7 @@
 ## Requirements
 
 ### Requirement: Basic認証を環境変数で有効化できる
-`.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_USER`、`BASIC_AUTH_PASSWORD` を設定することで、nginx レイヤーで HTTP Basic認証を有効化しなければならない（SHALL）。`BASIC_AUTH_ENABLED=false`（デフォルト）の場合は認証なしで動作しなければならない（SHALL）。
+`.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_USER`、`BASIC_AUTH_PASSWORD` を設定することで、nginx レイヤーおよびバックエンド（FastAPI）の両方で HTTP Basic認証を有効化しなければならない（SHALL）。`BASIC_AUTH_ENABLED=false`（デフォルト）の場合は nginx・バックエンドともに認証なしで動作しなければならない（SHALL）。
 
 #### Scenario: Basic認証を有効にした状態でインストールする
 - **WHEN** `.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_USER=admin`、`BASIC_AUTH_PASSWORD=secret` を設定して install.sh を実行する
@@ -24,6 +24,14 @@
 #### Scenario: Basic認証を無効にした状態で動作する
 - **WHEN** `.env` に `BASIC_AUTH_ENABLED=false`（または未設定）でインストール/更新を実行する
 - **THEN** 認証なしでアプリケーションにアクセスできる
+
+#### Scenario: バックエンドAPIに直接アクセスしたとき認証が要求される
+- **WHEN** Basic認証が有効な状態で、Authorization ヘッダーなしにバックエンド API（例: `/api/works`）へリクエストを送る
+- **THEN** HTTP 401 が返り、`WWW-Authenticate: Basic realm="Restricted"` ヘッダーが含まれる
+
+#### Scenario: バックエンドAPIに正しい認証情報でアクセスする
+- **WHEN** Basic認証が有効な状態で、正しい認証情報を含む Authorization ヘッダーを付けてバックエンド API へリクエストを送る
+- **THEN** API が正常なレスポンスを返す
 
 ### Requirement: BASIC_AUTH_PASSWORD が未設定の場合はエラーで停止する
 `BASIC_AUTH_ENABLED=true` のとき、`BASIC_AUTH_PASSWORD` が空の場合は install.sh / update.sh がエラーメッセージを表示して終了しなければならない（SHALL）。
@@ -42,3 +50,10 @@ install.sh と update.sh のどちらを実行しても、`.env` の Basic認証
 #### Scenario: 更新時に Basic認証を無効化する
 - **WHEN** 以前は `BASIC_AUTH_ENABLED=true` だった `.env` を `BASIC_AUTH_ENABLED=false` に変更して `video-ratings-update` を実行する
 - **THEN** 更新後は認証なしでアクセスできる
+
+### Requirement: ヘルスチェックエンドポイントは認証対象外とする
+`BASIC_AUTH_ENABLED=true` のとき、バックエンドの `/health` エンドポイントは認証なしでアクセスできなければならない（SHALL）。これにより systemd や Docker の healthcheck が認証情報なしで動作する。
+
+#### Scenario: 認証が有効な状態でヘルスチェックを実行する
+- **WHEN** `BASIC_AUTH_ENABLED=true` の状態で、Authorization ヘッダーなしに `/health` へリクエストを送る
+- **THEN** HTTP 200 が返る
