@@ -27,7 +27,7 @@ async def basic_auth_middleware(request: Request, call_next):
     if not settings.basic_auth_enabled:
         return await call_next(request)
 
-    if request.url.path == "/health":
+    if request.url.path.rstrip("/") == "/health":
         return await call_next(request)
 
     auth_header = request.headers.get("Authorization")

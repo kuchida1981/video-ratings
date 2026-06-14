@@ -105,7 +105,7 @@ sudo sh -c '
   set -a
   source /var/lib/video-ratings/.env
   set +a
-  echo "${BASIC_AUTH_USER}:$(openssl passwd -apr1 "${BASIC_AUTH_PASSWORD}")" \
+  echo "${BASIC_AUTH_USER}:$(printf "%s" "${BASIC_AUTH_PASSWORD}" | openssl passwd -apr1 -stdin)" \
     > /etc/nginx/.video-ratings.htpasswd
 '
 sudo nginx -t && sudo systemctl reload nginx
