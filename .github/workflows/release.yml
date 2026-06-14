@@ -80,3 +80,4 @@ jobs:
         with:
           files: video-ratings-${{ github.ref_name }}.tar.gz
           generate_release_notes: true
+          body: ""
