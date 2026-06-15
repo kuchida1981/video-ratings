@@ -58,8 +58,7 @@ export function WorkTable({ works, visibleColumns, customFieldDefs, sortBy, sort
             <tr>
               <th className="text-left px-3 py-2 whitespace-nowrap">タイトル</th>
               <th className="text-left px-3 py-2 whitespace-nowrap">出演者</th>
-              {visibleColumns.includes("maker") && <th className="text-left px-3 py-2 whitespace-nowrap">メーカー</th>}
-              {visibleColumns.includes("series") && <th className="text-left px-3 py-2 whitespace-nowrap">シリーズ</th>}
+
               {visibleColumns.includes("total_score") && <SortableHeader colKey="total_score" label="スコア" />}
               {visibleColumns.includes("tags") && <th className="text-left px-3 py-2 whitespace-nowrap">タグ</th>}
               {visibleColumns.includes("file_count") && <th className="text-left px-3 py-2 whitespace-nowrap">ファイル数</th>}
@@ -85,12 +84,7 @@ export function WorkTable({ works, visibleColumns, customFieldDefs, sortBy, sort
                   <td className="px-3 py-2 text-muted-foreground max-w-xs">
                     <span className="line-clamp-1">{performers}</span>
                   </td>
-                  {visibleColumns.includes("maker") && (
-                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{w.maker ?? "—"}</td>
-                  )}
-                  {visibleColumns.includes("series") && (
-                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{w.series ?? "—"}</td>
-                  )}
+
                   {visibleColumns.includes("total_score") && (
                     <td className="px-3 py-2 font-mono text-primary whitespace-nowrap">{w.total_score}</td>
                   )}

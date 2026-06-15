@@ -46,10 +46,10 @@ describe("api.works", () => {
 
   it("search skips empty string values", async () => {
     const { fetchMock } = mockFetch(200, []);
-    await api.works.search({ title: "", maker: "ACME" });
+    await api.works.search({ title: "", keyword: "test" });
     const url = (fetchMock.mock.calls[0] as [string])[0];
     expect(url).not.toContain("title=");
-    expect(url).toContain("maker=ACME");
+    expect(url).toContain("keyword=test");
   });
 
   it("create sends POST", async () => {

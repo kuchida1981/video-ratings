@@ -11,7 +11,7 @@ interface WorkTileProps {
 
 export function WorkTile({ work, onClick, variant = "compact" }: WorkTileProps) {
   const performers = work.performers.map((p) => p.name).join(", ") || "—";
-  const meta = [work.maker, work.series].filter(Boolean).join(" / ");
+
 
   return (
     <Link
@@ -38,9 +38,7 @@ export function WorkTile({ work, onClick, variant = "compact" }: WorkTileProps) 
         <p className="text-xs text-muted-foreground truncate" title={performers}>
           {performers}
         </p>
-        {variant === "default" && (
-          <p className="text-xs text-muted-foreground truncate min-h-[1rem]">{meta}</p>
-        )}
+
         {variant === "default" && (
           <div className="flex gap-1 overflow-hidden mt-0.5 min-h-[1.25rem]">
             {work.tags.map((tag) => (

@@ -60,8 +60,6 @@ def build_work_response(work: Work) -> dict[str, Any]:
     return {
         "id": work.id,
         "title": work.title,
-        "maker": work.maker,
-        "series": work.series,
         "custom_fields": work.custom_fields,
         "memo": work.memo,
         "created_at": work.created_at,

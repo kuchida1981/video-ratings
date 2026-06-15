@@ -14,8 +14,6 @@ router = APIRouter(prefix="/works/search", tags=["search"])
 def search_works(
     keyword: str | None = Query(None),
     tag_ids: list[int] | None = Query(None),
-    maker: str | None = Query(None),
-    series: str | None = Query(None),
     performer_id: int | None = Query(None),
     sort_by: str = Query("created_at"),
     sort_desc: bool = Query(True),
@@ -42,20 +40,12 @@ def search_works(
             .filter(
                 or_(
                     Work.title.ilike(like),
-                    Work.maker.ilike(like),
-                    Work.series.ilike(like),
                     Performer.name.ilike(like),
                     Performer.furigana.ilike(like),
                 )
             )
             .distinct()
         )
-
-    if maker:
-        q = q.filter(Work.maker.ilike(f"%{maker}%"))
-
-    if series:
-        q = q.filter(Work.series.ilike(f"%{series}%"))
 
     if tag_ids:
         for tid in tag_ids:
@@ -70,8 +60,6 @@ def search_works(
         {
             "id": w.id,
             "title": w.title,
-            "maker": w.maker,
-            "series": w.series,
             "created_at": w.created_at,
             "total_score": score_calculator.calculate_work_total_score(w),
             "performers": [{"id": wp.performer.id, "name": wp.performer.name} for wp in w.work_performers],

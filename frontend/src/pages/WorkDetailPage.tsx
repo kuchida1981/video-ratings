@@ -22,7 +22,7 @@ export default function WorkDetailPage() {
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [performerCFValues, setPerformerCFValues] = useState<Record<number, Record<string, string | boolean>>>({});
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ title: "", maker: "", series: "" });
+  const [form, setForm] = useState({ title: "" });
   const [newFilePath, setNewFilePath] = useState("");
   const [memo, setMemo] = useState("");
   const [initializedId, setInitializedId] = useState<number | null>(null);
@@ -130,7 +130,7 @@ export default function WorkDetailPage() {
   });
 
   useEffect(() => {
-    if (work && editing) setForm({ title: work.title, maker: work.maker ?? "", series: work.series ?? "" });
+    if (work && editing) setForm({ title: work.title });
   }, [editing, work]);
 
   useEffect(() => {
@@ -179,7 +179,7 @@ export default function WorkDetailPage() {
   }, [work, performerCFDefs]);
 
   const updateWorkMutation = useMutation({
-    mutationFn: (data: { title: string; maker?: string; series?: string }) =>
+    mutationFn: (data: { title: string }) =>
       api.works.update(workId, data),
     onSuccess: () => {
       setEditing(false);
@@ -330,11 +330,7 @@ export default function WorkDetailPage() {
             <div className="space-y-2">
               <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-xl font-bold h-auto text-xl" />
               <div className="flex gap-2">
-                <Input placeholder="メーカー" value={form.maker} onChange={(e) => setForm({ ...form, maker: e.target.value })} />
-                <Input placeholder="シリーズ" value={form.series} onChange={(e) => setForm({ ...form, series: e.target.value })} />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={() => updateWorkMutation.mutate({ title: form.title, maker: form.maker || undefined, series: form.series || undefined })}>保存</Button>
+                <Button onClick={() => updateWorkMutation.mutate({ title: form.title })}>保存</Button>
                 <Button variant="outline" onClick={() => setEditing(false)}>キャンセル</Button>
               </div>
             </div>
@@ -353,10 +349,7 @@ export default function WorkDetailPage() {
                   <Search size={16} />
                 </a>
               </div>
-              <div className="text-sm text-muted-foreground mt-1 space-x-3">
-                {work.maker && <span>{work.maker}</span>}
-                {work.series && <span>{work.series}</span>}
-              </div>
+
             </>
           )}
         </div>

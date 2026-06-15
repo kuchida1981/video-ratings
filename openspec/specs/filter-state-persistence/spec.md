@@ -3,14 +3,12 @@
 ## Purpose
 
 作品一覧および出演者一覧のフィルタ・ソート条件を localStorage に永続化し、ページリロードや画面遷移後も条件を復元する機能の仕様。
-
 ## Requirements
-
 ### Requirement: フィルタ・ソート条件をlocalStorageに保存する
 作品一覧および出演者一覧のフィルタ・ソート条件は、変更されるたびに localStorage に保存されなければならない（SHALL）。ストレージキーは `video-ratings:works-filters`（作品一覧）および `video-ratings:performers-filters`（出演者一覧）とする。
 
 保存対象:
-- 作品一覧: keyword, selectedTagIds, maker, series, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles
+- 作品一覧: keyword, selectedTagIds, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles
 - 出演者一覧: sortBy, sortDesc, onlyUnrated, onlyNoCover
 
 #### Scenario: フィルタを変更すると自動保存される
@@ -33,7 +31,7 @@
 作品一覧および出演者一覧で、フィルタ・ソート条件のいずれかがデフォルト値から変更されている場合、「フィルタ全解除」ボタンを表示しなければならない（SHALL）。
 
 デフォルト値:
-- 作品一覧: keyword="", selectedTagIds=[], maker="", series="", sortBy="created_at", sortDesc=true, onlyUnrated=false, onlyNoCover=false, onlyNoFiles=false
+- 作品一覧: keyword="", selectedTagIds=[], sortBy="created_at", sortDesc=true, onlyUnrated=false, onlyNoCover=false, onlyNoFiles=false
 - 出演者一覧: sortBy="name", sortDesc=false, onlyUnrated=false, onlyNoCover=false
 
 #### Scenario: デフォルト値から変更されている場合にボタンが表示される
@@ -47,3 +45,4 @@
 #### Scenario: フィルタ全解除ボタンをクリックすると全条件がリセットされる
 - **WHEN** ユーザーがフィルタ全解除ボタンをクリックする
 - **THEN** 全てのフィルタ・ソート条件がデフォルト値に戻り、localStorage の保存内容も削除される
+
