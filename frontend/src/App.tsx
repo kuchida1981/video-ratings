@@ -13,7 +13,7 @@ function RouteChangeHandler({ mainRef }: { mainRef: React.RefObject<HTMLElement 
   const location = useLocation();
   useEffect(() => {
     mainRef.current?.focus({ preventScroll: true });
-  }, [location.pathname]);
+  }, [location.pathname, mainRef]);
   return null;
 }
 
