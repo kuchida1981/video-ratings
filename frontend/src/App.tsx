@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { Film, Users, Tag, Settings, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import WorksPage from "@/pages/WorksPage";
@@ -8,6 +8,14 @@ import PerformersPage from "@/pages/PerformersPage";
 import PerformerDetailPage from "@/pages/PerformerDetailPage";
 import TagsPage from "@/pages/TagsPage";
 import SettingsPage from "@/pages/SettingsPage";
+
+function RouteChangeHandler({ mainRef }: { mainRef: React.RefObject<HTMLElement | null> }) {
+  const location = useLocation();
+  useEffect(() => {
+    mainRef.current?.focus({ preventScroll: true });
+  }, [location.pathname]);
+  return null;
+}
 
 function NavItem({
   to,
@@ -53,6 +61,7 @@ function NavItem({
 }
 
 export default function App() {
+  const mainRef = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem("sidebar-collapsed") === "true";
@@ -100,7 +109,8 @@ export default function App() {
               </div>
             )}
           </aside>
-          <main className="flex-1 overflow-auto p-6">
+          <main ref={mainRef} tabIndex={-1} className="flex-1 overflow-auto p-6 outline-none">
+            <RouteChangeHandler mainRef={mainRef} />
             <Routes>
               <Route path="/" element={<WorksPage />} />
               <Route path="/works" element={<WorksPage />} />
