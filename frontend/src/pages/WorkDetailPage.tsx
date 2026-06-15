@@ -330,7 +330,7 @@ export default function WorkDetailPage() {
             <div className="space-y-2">
               <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-xl font-bold h-auto text-xl" />
               <div className="flex gap-2">
-                <Button onClick={() => updateWorkMutation.mutate({ title: form.title })}>保存</Button>
+                <Button onClick={() => updateWorkMutation.mutate({ title: form.title.trim() })} disabled={!form.title.trim()}>保存</Button>
                 <Button variant="outline" onClick={() => setEditing(false)}>キャンセル</Button>
               </div>
             </div>

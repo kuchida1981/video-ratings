@@ -304,7 +304,7 @@ export default function WorksPage() {
               <div className="space-y-3">
                 <div><Label>作品名 *</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="作品名" /></div>
                 <Button
-                  onClick={() => createWorkMutation.mutate({ title: newTitle })}
+                  onClick={() => createWorkMutation.mutate({ title: newTitle.trim() })}
                   disabled={!newTitle.trim()}
                   className="w-full"
                 >登録する</Button>
