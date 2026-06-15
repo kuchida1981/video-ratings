@@ -31,14 +31,13 @@ class TestTagSchemas:
 @pytest.mark.unit
 class TestWorkSchemas:
     def test_work_create_valid(self):
-        obj = WorkCreate(title="Test Work", maker="ACME")
+        obj = WorkCreate(title="Test Work")
         assert obj.title == "Test Work"
-        assert obj.maker == "ACME"
 
     def test_work_create_optional_fields(self):
         obj = WorkCreate(title="Minimal")
-        assert obj.maker is None
-        assert obj.series is None
+        assert obj.custom_fields is None
+        assert obj.memo is None
 
     def test_work_update_all_optional(self):
         obj = WorkUpdate()

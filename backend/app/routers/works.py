@@ -62,8 +62,6 @@ def list_works(db: Session = Depends(get_db)):
             {
                 "id": w.id,
                 "title": w.title,
-                "maker": w.maker,
-                "series": w.series,
                 "created_at": w.created_at,
                 "total_score": score_calculator.calculate_work_total_score(w),
                 "performers": [{"id": wp.performer.id, "name": wp.performer.name} for wp in w.work_performers],

@@ -22,8 +22,6 @@ class Work(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False, index=True)
-    maker = Column(String, nullable=True, index=True)
-    series = Column(String, nullable=True, index=True)
     cover_image_path = Column(String, nullable=True)
     custom_fields = Column(JSONB, nullable=True, default=dict)
     memo = Column(Text, nullable=True)

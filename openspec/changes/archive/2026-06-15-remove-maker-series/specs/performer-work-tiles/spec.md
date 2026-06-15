@@ -1,9 +1,5 @@
-# performer-work-tiles Specification
+## MODIFIED Requirements
 
-## Purpose
-
-出演者詳細ページの出演作品タイルにおけるリッチ表示（maker/series・タグバッジ）の仕様を定義する。
-## Requirements
 ### Requirement: 出演者詳細ページの出演作品はリッチタイルで表示する
 システムは出演者詳細ページの出演作品セクションで、作品タイルにタグ（スコア付き）を表示しなければならない（SHALL）。
 
@@ -18,4 +14,3 @@
 #### Scenario: スコアが null のタグのバッジ
 - **WHEN** score が null のタグのバッジを表示する
 - **THEN** タグ名のみ表示される（スコアサフィックスなし）
-

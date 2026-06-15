@@ -49,8 +49,6 @@ class PerformerInWork(BaseModel):
 
 class WorkBase(BaseModel):
     title: str
-    maker: str | None = None
-    series: str | None = None
     custom_fields: dict[str, Any] | None = None
     memo: str | None = None
 
@@ -61,8 +59,6 @@ class WorkCreate(WorkBase):
 
 class WorkUpdate(BaseModel):
     title: str | None = None
-    maker: str | None = None
-    series: str | None = None
     custom_fields: dict[str, Any] | None = None
     memo: str | None = None
 
@@ -97,8 +93,6 @@ class TagInWorkList(BaseModel):
 class WorkListResponse(BaseModel):
     id: int
     title: str
-    maker: str | None
-    series: str | None
     created_at: datetime
     total_score: int = 0
     performers: list[PerformerNameOnly] = []

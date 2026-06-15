@@ -1,9 +1,5 @@
-# filter-state-persistence Specification
+## MODIFIED Requirements
 
-## Purpose
-
-作品一覧および出演者一覧のフィルタ・ソート条件を localStorage に永続化し、ページリロードや画面遷移後も条件を復元する機能の仕様。
-## Requirements
 ### Requirement: フィルタ・ソート条件をlocalStorageに保存する
 作品一覧および出演者一覧のフィルタ・ソート条件は、変更されるたびに localStorage に保存されなければならない（SHALL）。ストレージキーは `video-ratings:works-filters`（作品一覧）および `video-ratings:performers-filters`（出演者一覧）とする。
 
@@ -45,4 +41,3 @@
 #### Scenario: フィルタ全解除ボタンをクリックすると全条件がリセットされる
 - **WHEN** ユーザーがフィルタ全解除ボタンをクリックする
 - **THEN** 全てのフィルタ・ソート条件がデフォルト値に戻り、localStorage の保存内容も削除される
-

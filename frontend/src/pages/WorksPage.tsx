@@ -21,7 +21,7 @@ import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 const WORKS_STORAGE_KEY = "video-ratings:works-filters";
 const WORKS_TABLE_COLUMNS_KEY = "video-ratings:works-table-columns";
 const WORKS_VIEW_MODE_KEY = "video-ratings:works-view-mode";
-const DEFAULT_WORKS_TABLE_COLUMNS: WorkColumnKey[] = ["maker", "total_score"];
+const DEFAULT_WORKS_TABLE_COLUMNS: WorkColumnKey[] = ["total_score"];
 
 function loadWorksTableColumns(): WorkColumnKey[] {
   try {
@@ -64,8 +64,6 @@ export default function WorksPage() {
   const stored = loadWorksFilters();
   const [keyword, setKeyword] = useState<string>(stored.keyword ?? "");
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>(stored.selectedTagIds ?? []);
-  const [maker, setMaker] = useState<string>(stored.maker ?? "");
-  const [series, setSeries] = useState<string>(stored.series ?? "");
   const [sortBy, setSortBy] = useState<string>(stored.sortBy ?? DEFAULT_WORKS_SORT_BY);
   const [sortDesc, setSortDesc] = useState<boolean>(stored.sortDesc ?? DEFAULT_WORKS_SORT_DESC);
   const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
@@ -76,14 +74,12 @@ export default function WorksPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newMaker, setNewMaker] = useState("");
-  const [newSeries, setNewSeries] = useState("");
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   const { maxCols } = useTileMaxColumns();
   const gridStyle = useTileGridStyle(maxCols);
 
-  const filterParams = { keyword, maker, series, selectedTagIds, sortBy, sortDesc };
+  const filterParams = { keyword, selectedTagIds, sortBy, sortDesc };
 
   const { data: works = [] } = useQuery({
     queryKey: ["works", filterParams],
@@ -93,8 +89,6 @@ export default function WorksPage() {
         sort_desc: sortDesc,
       };
       if (keyword) params.keyword = keyword;
-      if (maker) params.maker = maker;
-      if (series) params.series = series;
       if (selectedTagIds.length) params.tag_ids = selectedTagIds.map(String);
       return api.works.search(params);
     },
@@ -102,10 +96,10 @@ export default function WorksPage() {
 
   useEffect(() => {
     localStorage.setItem(WORKS_STORAGE_KEY, JSON.stringify({
-      keyword, selectedTagIds, maker, series, sortBy, sortDesc,
+      keyword, selectedTagIds, sortBy, sortDesc,
       onlyUnrated, onlyNoCover, onlyNoFiles,
     }));
-  }, [keyword, selectedTagIds, maker, series, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles]);
+  }, [keyword, selectedTagIds, sortBy, sortDesc, onlyUnrated, onlyNoCover, onlyNoFiles]);
 
   useEffect(() => {
     try {
@@ -128,14 +122,12 @@ export default function WorksPage() {
   const sortableCustomFields = customFieldDefs.filter((d) => d.is_sortable);
 
   const createWorkMutation = useMutation({
-    mutationFn: (data: { title: string; maker?: string; series?: string }) =>
+    mutationFn: (data: { title: string }) =>
       api.works.create(data),
     onSuccess: (work) => {
       queryClient.invalidateQueries({ queryKey: ["works"] });
       setCreateOpen(false);
       setNewTitle("");
-      setNewMaker("");
-      setNewSeries("");
       navigate(`/works/${work.id}`);
     },
   });
@@ -173,8 +165,6 @@ export default function WorksPage() {
 
   const resetFilters = () => {
     setKeyword("");
-    setMaker("");
-    setSeries("");
     setSelectedTagIds([]);
     setOnlyUnrated(false);
     setOnlyNoCover(false);
@@ -209,7 +199,7 @@ export default function WorksPage() {
     return result;
   }, [works, onlyUnrated, onlyNoCover, onlyNoFiles]);
 
-  const hasFilters = !!(keyword || maker || series || selectedTagIds.length > 0 || onlyUnrated || onlyNoCover || onlyNoFiles || sortBy !== DEFAULT_WORKS_SORT_BY || sortDesc !== DEFAULT_WORKS_SORT_DESC);
+  const hasFilters = !!(keyword || selectedTagIds.length > 0 || onlyUnrated || onlyNoCover || onlyNoFiles || sortBy !== DEFAULT_WORKS_SORT_BY || sortDesc !== DEFAULT_WORKS_SORT_DESC);
 
   const renderImportRows = (rows: ImportRow[]) =>
     rows.map((row) => {
@@ -313,10 +303,8 @@ export default function WorksPage() {
               <DialogHeader><DialogTitle>作品を登録</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div><Label>作品名 *</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="作品名" /></div>
-                <div><Label>メーカー</Label><Input value={newMaker} onChange={(e) => setNewMaker(e.target.value)} placeholder="メーカー" /></div>
-                <div><Label>シリーズ</Label><Input value={newSeries} onChange={(e) => setNewSeries(e.target.value)} placeholder="シリーズ" /></div>
                 <Button
-                  onClick={() => createWorkMutation.mutate({ title: newTitle, maker: newMaker || undefined, series: newSeries || undefined })}
+                  onClick={() => createWorkMutation.mutate({ title: newTitle.trim() })}
                   disabled={!newTitle.trim()}
                   className="w-full"
                 >登録する</Button>
@@ -462,13 +450,11 @@ export default function WorksPage() {
             <Search size={16} className="absolute left-3 top-3 text-muted-foreground" />
             <Input
               className="pl-9 h-11"
-              placeholder="作品名・出演者・メーカー・シリーズで検索"
+              placeholder="作品名・出演者で検索"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
           </div>
-          <Input className="w-40 h-11" placeholder="メーカー" value={maker} onChange={(e) => setMaker(e.target.value)} />
-          <Input className="w-40 h-11" placeholder="シリーズ" value={series} onChange={(e) => setSeries(e.target.value)} />
           {hasFilters && (
             <Button variant="outline" onClick={resetFilters}><X size={16} />フィルタ全解除</Button>
           )}
@@ -565,8 +551,6 @@ export default function WorksPage() {
             <div className="flex flex-wrap gap-1">
               {(
                 [
-                  { key: "maker" as WorkColumnKey, label: "メーカー" },
-                  { key: "series" as WorkColumnKey, label: "シリーズ" },
                   { key: "total_score" as WorkColumnKey, label: "スコア" },
                   { key: "tags" as WorkColumnKey, label: "タグ" },
                   { key: "file_count" as WorkColumnKey, label: "ファイル数" },

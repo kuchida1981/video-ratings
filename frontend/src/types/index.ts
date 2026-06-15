@@ -26,8 +26,6 @@ export interface TagInWork {
 export interface Work {
   id: number;
   title: string;
-  maker: string | null;
-  series: string | null;
   custom_fields: Record<string, unknown> | null;
   memo: string | null;
   created_at: string;
@@ -42,8 +40,6 @@ export interface Work {
 export interface WorkListItem {
   id: number;
   title: string;
-  maker: string | null;
-  series: string | null;
   created_at: string;
   total_score: number;
   performers: { id: number; name: string }[];
@@ -101,8 +97,6 @@ export interface TagCategory {
 }
 
 export type WorkColumnKey =
-  | "maker"
-  | "series"
   | "total_score"
   | "tags"
   | "file_count"
