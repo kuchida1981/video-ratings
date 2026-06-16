@@ -40,11 +40,16 @@
 
 このfixtureを使い、`delete_performer(performer_id, db)` と `execute_import(request, db)` をHTTPレイヤーを介さず直接呼び出してテストする。`TestClient`/`httpx` は導入しない。
 
+### 4. 新規DB結合テストは `@pytest.mark.integration` を付与し、CIには組み込まない
+
+`.github/workflows/ci.yml` の `lint-test-backend` ジョブは `pytest -m unit --cov` のみを実行しており、Postgresサービスのセットアップがない。新規のDB結合テストを `@pytest.mark.unit` にすると、Postgres未起動のCI上で失敗する。そのため新規テストには既存の `integration` マーカー（`pyproject.toml` の `markers` に定義済み）を付与し、CIの対象からは除外する。確認は `docker compose exec backend pytest -m integration` などローカル実行に限定する。CI構成（Postgresサービス追加）は今回のスコープ外とする。
+
 ## Risks / Trade-offs
 
 - [同名・別人のケースが誤って統合される] → ユーザーの判断により許容範囲内とする（Non-Goals参照）。発生時は出演者詳細ページで別名/分離の手動修正で対応可能
 - [テストがPostgres到達可能性に依存する] → 既存の開発フロー（docker-compose経由でbackendを動かす）と一致させ、`docker compose exec backend pytest` を実行手順とする
 - [router関数を直接呼ぶテストはHTTP層（実際に204/500が返るか等）を検証しない] → 今回はORM/DBレベルの挙動（WorkPerformer削除・Work生存・Performer重複なし）を担保することが目的であり、HTTPステータスの検証は対象外と判断
+- [新規の結合テストはCIで自動実行されない] → `integration` マーカーを付与しローカル確認に限定する方針を採用（CIへのPostgres追加はスコープ外）。リグレッションの検知はコードレビューとローカル実行に依存する
 
 ## Migration Plan
 

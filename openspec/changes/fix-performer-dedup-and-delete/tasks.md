@@ -1,6 +1,7 @@
 ## 1. テスト基盤
 
 - [ ] 1.1 `backend/tests/conftest.py` を新設し、`app.database.engine` にバインドした SQLAlchemy `Session` を返す fixture を追加する（テスト後に必ず `rollback()` する）
+- [ ] 1.2 新設するDB結合テストには `@pytest.mark.integration` を付与する（既存CIの `pytest -m unit` には含めない）
 
 ## 2. Performer削除のカスケード修正
 
@@ -16,5 +17,5 @@
 
 ## 4. 確認
 
-- [ ] 4.1 `docker compose exec backend pytest` を実行し、全テストが通過することを確認する
+- [ ] 4.1 `docker compose exec backend pytest` を実行し、全テスト（unit + integration）が通過することを確認する
 - [ ] 4.2 `docker compose exec backend ruff check` で lint エラーがないことを確認する
