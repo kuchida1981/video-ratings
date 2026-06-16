@@ -74,10 +74,24 @@ jobs:
 
           tar -czf "video-ratings-${VERSION}.tar.gz" "${ARCHIVE_DIR}"
 
+      # ---- リリースノート生成 ----
+      # action本体の generate_release_notes は、422 already_exists のレース時に
+      # create→updateへフォールバックする際 generate_release_notes フラグを
+      # 引き継いだまま再度ノート生成してしまい、既存bodyに連結されて
+      # "What's Changed" が重複する不具合がある（softprops/action-gh-release）。
+      # ここで一度だけ生成してファイルに固定することで回避する。
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases/generate-notes" \
+            -f tag_name="${{ github.ref_name }}" \
+            --jq .body > release-notes.md
+
       # ---- GitHub Release 作成・アーカイブアタッチ ----
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: video-ratings-${{ github.ref_name }}.tar.gz
-          generate_release_notes: true
-          body: ""
+          generate_release_notes: false
+          body_path: release-notes.md
