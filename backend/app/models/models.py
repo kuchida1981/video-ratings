@@ -45,7 +45,7 @@ class Performer(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
-    work_performers = relationship("WorkPerformer", back_populates="performer")
+    work_performers = relationship("WorkPerformer", back_populates="performer", cascade="all, delete-orphan")
     performer_tags = relationship("PerformerTag", back_populates="performer", cascade="all, delete-orphan")
     aliases = relationship("PerformerAlias", back_populates="performer", cascade="all, delete-orphan")
 
