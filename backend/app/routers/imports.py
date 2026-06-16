@@ -145,8 +145,10 @@ def execute_import(data: ImportExecuteRequest, db: Session = Depends(get_db)):
     created_count = 0
     skipped_count = 0
     errors = []
+    new_performers_by_name: dict[str, Performer] = {}
 
     for row in data.rows:
+        newly_cached_names = []
         try:
             work = Work(title=row.title, custom_fields={})
             db.add(work)
@@ -156,15 +158,24 @@ def execute_import(data: ImportExecuteRequest, db: Session = Depends(get_db)):
                 work_file = WorkFile(work_id=work.id, path=row.directory_path)
                 db.add(work_file)
 
+            linked_performer_ids = set()
             for idx, perf_info in enumerate(row.performers):
                 if perf_info.performer_id is not None:
                     performer = db.query(Performer).filter(Performer.id == perf_info.performer_id).first()
                     if not performer:
                         raise ValueError(f"Performer with ID {perf_info.performer_id} not found")
+                elif perf_info.name in new_performers_by_name:
+                    performer = new_performers_by_name[perf_info.name]
                 else:
                     performer = Performer(name=perf_info.name, furigana=perf_info.furigana)
                     db.add(performer)
                     db.flush()
+                    new_performers_by_name[perf_info.name] = performer
+                    newly_cached_names.append(perf_info.name)
+
+                if performer.id in linked_performer_ids:
+                    continue
+                linked_performer_ids.add(performer.id)
 
                 wp = WorkPerformer(work_id=work.id, performer_id=performer.id, is_main=(idx == 0))
                 db.add(wp)
@@ -174,6 +185,8 @@ def execute_import(data: ImportExecuteRequest, db: Session = Depends(get_db)):
         except Exception as e:
             errors.append(f"Row {row.row_number}: {str(e)}")
             db.rollback()
+            for name in newly_cached_names:
+                del new_performers_by_name[name]
             skipped_count += 1
             continue
 
