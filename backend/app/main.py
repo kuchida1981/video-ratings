@@ -78,4 +78,3 @@ if settings.frontend_dir:
     frontend_path = Path(settings.frontend_dir)
     if frontend_path.exists():
         app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="spa")
-
