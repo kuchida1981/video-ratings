@@ -112,7 +112,8 @@ export default function WorksPage() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "/") return;
+      if (createOpen || bulkImportOpen) return;
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
       const tag = document.activeElement?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       if ((document.activeElement as HTMLElement)?.isContentEditable) return;
@@ -121,7 +122,7 @@ export default function WorksPage() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [createOpen, bulkImportOpen]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["tagCategories", "work"],
