@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown, ArrowUpDown, Files } from "lucide-react";
+import { Files } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { WorkListItem, WorkColumnKey, CustomFieldDefinition } from "@/types";
@@ -7,12 +7,7 @@ interface WorkTableProps {
   works: WorkListItem[];
   visibleColumns: WorkColumnKey[];
   customFieldDefs: CustomFieldDefinition[];
-  sortBy: string;
-  sortDesc: boolean;
-  onSort: (key: string) => void;
 }
-
-const SORTABLE_KEYS = new Set(["total_score", "created_at"]);
 
 function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["field_type"]): string {
   if (value === null || value === undefined) return "—";
@@ -21,34 +16,10 @@ function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["fie
   return String(value);
 }
 
-export function WorkTable({ works, visibleColumns, customFieldDefs, sortBy, sortDesc, onSort }: WorkTableProps) {
+export function WorkTable({ works, visibleColumns, customFieldDefs }: WorkTableProps) {
   const customColDefs = customFieldDefs.filter((d) =>
     visibleColumns.includes(`custom:${d.name}` as WorkColumnKey)
   );
-
-  const isSortable = (key: string) =>
-    SORTABLE_KEYS.has(key) || (key.startsWith("custom:") && customFieldDefs.find((d) => `custom:${d.name}` === key)?.is_sortable);
-
-  const handleHeaderClick = (key: string) => {
-    if (isSortable(key)) onSort(key);
-  };
-
-  const SortableHeader = ({ colKey, label }: { colKey: string; label: string }) => {
-    const sortable = isSortable(colKey);
-    const active = sortBy === colKey;
-    const Icon = active ? (sortDesc ? ArrowDown : ArrowUp) : ArrowUpDown;
-    return (
-      <th
-        className={`text-left px-3 py-2 whitespace-nowrap select-none ${sortable ? "cursor-pointer hover:bg-muted/70" : ""} ${active ? "text-primary" : ""}`}
-        onClick={() => handleHeaderClick(colKey)}
-      >
-        <span className="inline-flex items-center gap-1">
-          {label}
-          {sortable && <Icon size={12} className={active ? "text-primary" : "text-muted-foreground"} />}
-        </span>
-      </th>
-    );
-  };
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -59,12 +30,12 @@ export function WorkTable({ works, visibleColumns, customFieldDefs, sortBy, sort
               <th className="text-left px-3 py-2 whitespace-nowrap">タイトル</th>
               <th className="text-left px-3 py-2 whitespace-nowrap">出演者</th>
 
-              {visibleColumns.includes("total_score") && <SortableHeader colKey="total_score" label="スコア" />}
+              {visibleColumns.includes("total_score") && <th className="text-left px-3 py-2 whitespace-nowrap">スコア</th>}
               {visibleColumns.includes("tags") && <th className="text-left px-3 py-2 whitespace-nowrap">タグ</th>}
               {visibleColumns.includes("file_count") && <th className="text-left px-3 py-2 whitespace-nowrap">ファイル数</th>}
-              {visibleColumns.includes("created_at") && <SortableHeader colKey="created_at" label="登録日" />}
+              {visibleColumns.includes("created_at") && <th className="text-left px-3 py-2 whitespace-nowrap">登録日</th>}
               {customColDefs.map((d) => (
-                <SortableHeader key={d.id} colKey={`custom:${d.name}`} label={d.name} />
+                <th key={d.id} className="text-left px-3 py-2 whitespace-nowrap">{d.name}</th>
               ))}
             </tr>
           </thead>
