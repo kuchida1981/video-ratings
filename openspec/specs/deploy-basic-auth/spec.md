@@ -2,12 +2,12 @@
 
 ## Purpose
 
-デプロイ時に HTTP Basic認証を環境変数で設定できるようにする機能。nginx レイヤーで Basic認証の有効化・無効化を `.env` ファイルの設定値で制御する。
+デプロイ時に HTTP Basic認証を環境変数で設定できるようにする機能。バックエンド（FastAPI）ミドルウェアで Basic認証の有効化・無効化を `.env` ファイルの設定値で制御する。
 
 ## Requirements
 
 ### Requirement: Basic認証を環境変数で有効化できる
-`.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_USER`、`BASIC_AUTH_PASSWORD` を設定することで、nginx レイヤーおよびバックエンド（FastAPI）の両方で HTTP Basic認証を有効化しなければならない（SHALL）。`BASIC_AUTH_ENABLED=false`（デフォルト）の場合は nginx・バックエンドともに認証なしで動作しなければならない（SHALL）。
+`.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_USER`、`BASIC_AUTH_PASSWORD` を設定することで、バックエンド（FastAPI）の HTTP Basic認証を有効化しなければならない（SHALL）。`BASIC_AUTH_ENABLED=false`（デフォルト）の場合はバックエンドの認証なしで動作しなければならない（SHALL）。nginx レイヤーでの認証は行わず、全リクエストをバックエンドに proxy する構成とする。
 
 #### Scenario: Basic認証を有効にした状態でインストールする
 - **WHEN** `.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_USER=admin`、`BASIC_AUTH_PASSWORD=secret` を設定して install.sh を実行する
@@ -33,15 +33,8 @@
 - **WHEN** Basic認証が有効な状態で、正しい認証情報を含む Authorization ヘッダーを付けてバックエンド API へリクエストを送る
 - **THEN** API が正常なレスポンスを返す
 
-### Requirement: BASIC_AUTH_PASSWORD が未設定の場合はエラーで停止する
-`BASIC_AUTH_ENABLED=true` のとき、`BASIC_AUTH_PASSWORD` が空の場合は install.sh / update.sh がエラーメッセージを表示して終了しなければならない（SHALL）。
-
-#### Scenario: パスワード未設定で有効化しようとする
-- **WHEN** `.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_PASSWORD=`（空）の状態でインストール/更新を実行する
-- **THEN** スクリプトがエラーメッセージを表示して終了し、nginx 設定は変更されない
-
 ### Requirement: Basic認証設定が install と update の両方で反映される
-install.sh と update.sh のどちらを実行しても、`.env` の Basic認証設定が nginx に反映されなければならない（SHALL）。更新時に認証設定が変更されていれば（有効化・無効化・パスワード変更）、新しい設定で上書きしなければならない（SHALL）。
+install.sh と update.sh のどちらを実行しても、`.env` の Basic認証設定がバックエンドに反映されなければならない（SHALL）。nginx の htpasswd 生成や auth snippet 生成は行わない。
 
 #### Scenario: 更新時に Basic認証を有効化する
 - **WHEN** 以前は `BASIC_AUTH_ENABLED=false` だった `.env` を `BASIC_AUTH_ENABLED=true` に変更して `video-ratings-update` を実行する
