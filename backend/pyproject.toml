@@ -56,3 +56,8 @@ omit = [
 
 [tool.coverage.report]
 fail_under = 80
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+]
