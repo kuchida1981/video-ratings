@@ -13,7 +13,13 @@ from app.routers import custom_fields, data, imports, performers, search, tags, 
 COVERS_DIR = Path(settings.upload_dir) / "covers"
 COVERS_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="Video Ratings API", version="0.1.0")
+app = FastAPI(
+    title="Video Ratings API",
+    version="0.1.0",
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
+)
 
 app.add_middleware(
     CORSMiddleware,

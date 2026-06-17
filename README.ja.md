@@ -99,7 +99,7 @@ docker compose up -d
 |---|---|
 | フロントエンド | http://localhost:5173 |
 | バックエンド API | http://localhost:8000 |
-| API ドキュメント | http://localhost:8000/docs |
+| API ドキュメント | http://localhost:8000/docs (`DEBUG=true` が必要) |
 | PostgreSQL | localhost:5433 |
 
 ### ディレクトリ構成
