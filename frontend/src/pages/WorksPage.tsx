@@ -526,6 +526,28 @@ export default function WorksPage() {
           >
             <ArrowUpDown size={14} />登録日順
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (sortBy === "title") setSortDesc((d) => !d);
+              else { setSortBy("title"); setSortDesc(false); }
+            }}
+            className={sortBy === "title" ? "text-primary" : ""}
+          >
+            <ArrowUpDown size={14} />タイトル順
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (sortBy === "performer_furigana") setSortDesc((d) => !d);
+              else { setSortBy("performer_furigana"); setSortDesc(false); }
+            }}
+            className={sortBy === "performer_furigana" ? "text-primary" : ""}
+          >
+            <ArrowUpDown size={14} />出演者順
+          </Button>
           {sortableCustomFields.map((cf) => {
             const key = `custom:${cf.name}`;
             return (
