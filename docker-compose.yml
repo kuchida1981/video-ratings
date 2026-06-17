@@ -23,7 +23,6 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SMB_USERNAME: ${SMB_USERNAME}
       SMB_PASSWORD: ${SMB_PASSWORD}
-      # 開発時は無効、Basic認証の動作確認時は以下のコメントを外してください
       BASIC_AUTH_ENABLED: "true"
       BASIC_AUTH_USER: "admin"
       BASIC_AUTH_PASSWORD: "secret"
