@@ -9,9 +9,9 @@ Group=video-ratings
 
 WorkingDirectory=/opt/video-ratings/current/backend
 Environment=BACKEND_PORT=8000
+Environment=FRONTEND_DIR=/opt/video-ratings/current/frontend/dist
 EnvironmentFile=/var/lib/video-ratings/.env
 Environment=PYTHONPATH=/opt/video-ratings/current/backend
-Environment=FRONTEND_DIR=/opt/video-ratings/current/frontend/dist
 
 ExecStart=/opt/video-ratings/current/.venv/bin/uvicorn app.main:app \
     --host 127.0.0.1 \

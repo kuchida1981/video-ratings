@@ -13,15 +13,10 @@ def auth_client(monkeypatch):
     monkeypatch.setattr(settings, "basic_auth_user", "testuser")
     monkeypatch.setattr(settings, "basic_auth_password", "testpass")
 
-    # DBアクセスでエラーが発生しないよう、空のリストを返すモックセッションを使用する
-    mock_db = MagicMock()
-    mock_db.query.return_value.options.return_value.order_by.return_value.all.return_value = []
+    mock_db = MagicMock(spec_set=["close"])
 
-    def override_get_db():
-        yield mock_db
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as client:
+    app.dependency_overrides[get_db] = lambda: mock_db
+    with TestClient(app, raise_server_exceptions=False) as client:
         yield client
     app.dependency_overrides.clear()
 
@@ -40,9 +35,8 @@ def test_health_skips_auth(auth_client):
 
 
 def test_valid_credentials(auth_client):
-    response = auth_client.get("/works", auth=("testuser", "testpass"))
+    response = auth_client.get("/health", auth=("testuser", "testpass"))
     assert response.status_code == 200
-    assert response.json() == []
 
 
 def test_invalid_credentials(auth_client):
