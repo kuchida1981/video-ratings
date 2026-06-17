@@ -62,7 +62,28 @@ agy --dangerously-skip-permissions --print "<実装プロンプト>" 2>&1
 
 6. PR 作成
    gh pr create
+
+7. CI 確認 (Claude Code)
+   gh pr checks --watch
+   → 失敗したら是正してプッシュし、再度 watch する
 ```
+
+### CI / pre-commit ルール
+
+**pre-commit のスキップ禁止**
+`--no-verify` や `SKIP=...` による pre-commit フックのスキップは一切行わない。
+フックが失敗した場合は、スキップせず根本原因を修正してから再コミットする。
+
+**GitHub Actions の失敗は必ず是正する**
+pre-commit が通っても GitHub Actions が失敗した場合は問題とみなす。
+PR 作成後は必ず次のコマンドで CI 結果を待ち、失敗があれば修正してプッシュすること:
+
+```bash
+gh pr checks --watch   # 成功: exit 0 / 失敗: exit 非0
+```
+
+失敗した場合は `gh pr checks` でどのジョブが落ちたかを確認し、修正 → コミット → プッシュ → 再度 watch のサイクルで是正する。
+CI がすべてグリーンになったことを確認してから作業完了を報告する。
 
 ### OpenSpec チートシート
 
