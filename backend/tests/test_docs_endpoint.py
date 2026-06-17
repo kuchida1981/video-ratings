@@ -35,4 +35,5 @@ def test_docs_enabled_when_debug_true(patch_debug):
     app = patch_debug(True)
     with TestClient(app, raise_server_exceptions=False) as client:
         assert client.get("/docs").status_code == 200
+        assert client.get("/redoc").status_code == 200
         assert client.get("/openapi.json").status_code == 200

@@ -98,7 +98,7 @@ Access URLs after startup:
 |---|---|
 | Frontend | http://localhost:5173 |
 | Backend API | http://localhost:8000 |
-| API Docs | http://localhost:8000/docs |
+| API Docs | http://localhost:8000/docs (`DEBUG=true` required) |
 | PostgreSQL | localhost:5433 |
 
 ### Directory Structure
