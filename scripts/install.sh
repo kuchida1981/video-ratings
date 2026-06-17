@@ -85,13 +85,6 @@ POSTGRES_DB="${POSTGRES_DB:-video_ratings}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 NGINX_PORT="${NGINX_PORT:-80}"
 BASIC_AUTH_ENABLED="${BASIC_AUTH_ENABLED:-false}"
-FRONTEND_DIR="${FRONTEND_DIR:-$RELEASE_DIR/frontend/dist}"
-
-# FRONTEND_DIR を .env に書き込む（未設定の場合）
-if ! grep -q "^FRONTEND_DIR=" "$ENV_FILE"; then
-    echo "FRONTEND_DIR=$FRONTEND_DIR" >> "$ENV_FILE"
-fi
-
 # Basic認証のバリデーション
 if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
     if [ -z "${BASIC_AUTH_USER:-}" ] || [ -z "${BASIC_AUTH_PASSWORD:-}" ]; then
