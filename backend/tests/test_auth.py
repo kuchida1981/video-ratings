@@ -1,10 +1,13 @@
 from unittest.mock import MagicMock
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.database import get_db
 from app.main import app
+
+pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
