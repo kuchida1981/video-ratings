@@ -1,10 +1,6 @@
-# Spec: deploy-basic-auth
+# Spec: deploy-basic-auth (delta)
 
-## Purpose
-
-デプロイ時に HTTP Basic認証を環境変数で設定できるようにする機能。バックエンド（FastAPI）ミドルウェアで Basic認証の有効化・無効化を `.env` ファイルの設定値で制御する。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Basic認証を環境変数で有効化できる
 `.env` に `BASIC_AUTH_ENABLED=true`、`BASIC_AUTH_USER`、`BASIC_AUTH_PASSWORD` を設定することで、バックエンド（FastAPI）の HTTP Basic認証を有効化しなければならない（SHALL）。`BASIC_AUTH_ENABLED=false`（デフォルト）の場合はバックエンドの認証なしで動作しなければならない（SHALL）。nginx レイヤーでの認証は行わず、全リクエストをバックエンドに proxy する構成とする。
@@ -50,3 +46,9 @@ install.sh と update.sh のどちらを実行しても、`.env` の Basic認証
 #### Scenario: 認証が有効な状態でヘルスチェックを実行する
 - **WHEN** `BASIC_AUTH_ENABLED=true` の状態で、Authorization ヘッダーなしに `/health` へリクエストを送る
 - **THEN** HTTP 200 が返る
+
+## REMOVED Requirements
+
+### Requirement: BASIC_AUTH_PASSWORD が未設定の場合はエラーで停止する
+**Reason**: バリデーションは引き続きデプロイスクリプトで行うが、nginx 固有の処理（htpasswd 生成、nginx 設定の変更保護）は不要になるため、スクリプトの停止条件から nginx 関連の記述を除去する。バリデーション自体は `install.sh` / `update.sh` に残す。
+**Migration**: デプロイスクリプトのバリデーションブロックから「nginx 設定は変更されない」の記述を除去するのみ。

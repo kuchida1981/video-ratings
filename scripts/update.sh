@@ -102,7 +102,6 @@ set +a
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 NGINX_PORT="${NGINX_PORT:-80}"
 BASIC_AUTH_ENABLED="${BASIC_AUTH_ENABLED:-false}"
-
 # Basic認証のバリデーション
 if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
     if [ -z "${BASIC_AUTH_USER:-}" ] || [ -z "${BASIC_AUTH_PASSWORD:-}" ]; then
@@ -112,24 +111,9 @@ if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
 fi
 
 # nginx 設定：テンプレート変数を展開してインストール
-mkdir -p /etc/nginx/snippets
 export NGINX_PORT BACKEND_PORT
 envsubst '$NGINX_PORT $BACKEND_PORT' < "$RELEASE_DIR/etc/nginx.conf" \
     > /etc/nginx/sites-available/video-ratings
-
-# Basic認証スニペットの生成
-if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
-    HTPASSWD_FILE="/etc/nginx/.video-ratings.htpasswd"
-    echo "${BASIC_AUTH_USER}:$(openssl passwd -apr1 -stdin <<< "${BASIC_AUTH_PASSWORD}")" \
-        > "$HTPASSWD_FILE"
-    chmod 640 "$HTPASSWD_FILE"
-    chown root:www-data "$HTPASSWD_FILE"
-    printf 'auth_basic "Restricted";\nauth_basic_user_file %s;\n' \
-        "$HTPASSWD_FILE" > /etc/nginx/snippets/video-ratings-auth.conf
-    echo "  → Basic認証を有効化しました"
-else
-    echo "# Basic auth disabled" > /etc/nginx/snippets/video-ratings-auth.conf
-fi
 
 nginx -t
 systemctl reload nginx

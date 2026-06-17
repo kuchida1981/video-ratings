@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     smb_username: str = ""
     smb_password: str = ""
     upload_dir: str = "uploads"
+    frontend_dir: str = ""
     basic_auth_enabled: bool = False
     basic_auth_user: str = ""
     basic_auth_password: str = ""
