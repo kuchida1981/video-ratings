@@ -9,6 +9,7 @@
 | 設計・調査・探索 | **Claude Code** | 設計能力・コードベース理解が高い |
 | 実装 | **Antigravity CLI** (`agy`) | Gemini クレジットを活用、Claude クレジットを節約 |
 | コードレビュー・PR作成 | **Claude Code** | `/code-review` スキルを使う |
+| レビュー指摘の修正 | **Antigravity CLI** (`agy`) | 実装担当が修正。Claude Code は修正内容を指示するのみ |
 
 ### 難易度の目安
 
@@ -89,13 +90,20 @@ agy 実行 (1回目)
 
 4. コードレビュー (Claude Code)
    /code-review
+   → 指摘があれば、修正内容を具体的にまとめる
 
-5. PR 作成 & OpenSpec アーカイブ (Claude Code)
+5. レビュー指摘の修正 (agy)
+   Claude Code がレビュー結果から修正プロンプトを作成し agy に委譲する
+   → 修正対象ファイル・行・具体的な変更内容を指示する
+   → agy が修正コードをコミットする（"fix: <修正内容>"）
+   → 指摘がなければこのステップはスキップ
+
+6. PR 作成 & OpenSpec アーカイブ (Claude Code)
    /opsx:archive  → change をアーカイブ（delta spec sync を含む）
    gh pr create
    → アーカイブと spec sync のコミットを PR に含める
 
-6. CI 確認 (Claude Code)
+7. CI 確認 (Claude Code)
    gh pr checks --watch
    → 失敗したら是正してプッシュし、再度 watch する
 ```
