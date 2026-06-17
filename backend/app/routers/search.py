@@ -56,11 +56,6 @@ def search_works(
 
     works = q.all()
 
-    furigana_map: dict[int, str | None] = {}
-    for w in works:
-        main_wp = next((wp for wp in w.work_performers if wp.is_main), None)
-        furigana_map[w.id] = main_wp.performer.furigana if (main_wp and main_wp.performer) else None
-
     result = [
         {
             "id": w.id,
@@ -98,8 +93,18 @@ def search_works(
     elif sort_by == "title":
         result.sort(key=lambda x: x["title"].lower(), reverse=sort_desc)
     elif sort_by == "performer_furigana":
-        has = [(r, furigana_map[r["id"]]) for r in result if furigana_map[r["id"]]]
-        nones = [r for r in result if not furigana_map[r["id"]]]
+        furigana_map: dict[int, str | None] = {}
+        for w in works:
+            main_wp = next((wp for wp in w.work_performers if wp.is_main), None)
+            furigana_map[w.id] = main_wp.performer.furigana if (main_wp and main_wp.performer) else None
+        has: list[tuple[dict, str]] = []
+        nones: list[dict] = []
+        for r in result:
+            f = furigana_map.get(r["id"])
+            if f:
+                has.append((r, f))
+            else:
+                nones.append(r)
         result = [r for r, _ in sorted(has, key=lambda t: t[1].lower(), reverse=sort_desc)] + nones
     else:
         result.sort(key=lambda x: x["created_at"], reverse=sort_desc)
