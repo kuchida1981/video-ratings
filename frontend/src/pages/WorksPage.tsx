@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle, LayoutGrid, List } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -59,6 +59,7 @@ export default function WorksPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   useDocumentTitle("作品一覧");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   useScrollRestoration("video-ratings:works-scroll-y");
 
   const stored = loadWorksFilters();
@@ -108,6 +109,19 @@ export default function WorksPage() {
       console.error("Failed to save viewMode to localStorage", e);
     }
   }, [viewMode]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "/") return;
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (document.activeElement?.getAttribute("contenteditable")) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["tagCategories", "work"],
@@ -440,6 +454,7 @@ export default function WorksPage() {
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-3 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               className="pl-9 h-11"
               placeholder="作品名・出演者で検索"
               value={keyword}
