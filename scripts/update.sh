@@ -110,6 +110,10 @@ if [ "$BASIC_AUTH_ENABLED" = "true" ]; then
     fi
 fi
 
+# systemd unit 更新
+cp "$RELEASE_DIR/etc/video-ratings.service" /etc/systemd/system/
+systemctl daemon-reload
+
 # nginx 設定：テンプレート変数を展開してインストール
 export NGINX_PORT BACKEND_PORT
 envsubst '$NGINX_PORT $BACKEND_PORT' < "$RELEASE_DIR/etc/nginx.conf" \
