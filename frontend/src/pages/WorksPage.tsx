@@ -115,7 +115,7 @@ export default function WorksPage() {
       if (e.key !== "/") return;
       const tag = document.activeElement?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (document.activeElement?.getAttribute("contenteditable")) return;
+      if ((document.activeElement as HTMLElement)?.isContentEditable) return;
       e.preventDefault();
       searchInputRef.current?.focus();
     };
