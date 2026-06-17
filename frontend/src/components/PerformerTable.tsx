@@ -1,4 +1,3 @@
-import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { Performer, PerformerColumnKey, CustomFieldDefinition } from "@/types";
@@ -7,12 +6,7 @@ interface PerformerTableProps {
   performers: Performer[];
   visibleColumns: PerformerColumnKey[];
   customFieldDefs: CustomFieldDefinition[];
-  sortBy: string;
-  sortDesc: boolean;
-  onSort: (key: string) => void;
 }
-
-const SORTABLE_KEYS = new Set(["name", "work_count", "avg_work_score", "total_score"]);
 
 function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["field_type"]): string {
   if (value === null || value === undefined) return "—";
@@ -21,34 +15,10 @@ function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["fie
   return String(value);
 }
 
-export function PerformerTable({ performers, visibleColumns, customFieldDefs, sortBy, sortDesc, onSort }: PerformerTableProps) {
+export function PerformerTable({ performers, visibleColumns, customFieldDefs }: PerformerTableProps) {
   const customColDefs = customFieldDefs.filter((d) =>
     visibleColumns.includes(`custom:${d.name}` as PerformerColumnKey)
   );
-
-  const isSortable = (key: string) =>
-    SORTABLE_KEYS.has(key) || (key.startsWith("custom:") && customFieldDefs.find((d) => `custom:${d.name}` === key)?.is_sortable);
-
-  const handleHeaderClick = (key: string) => {
-    if (isSortable(key)) onSort(key);
-  };
-
-  const SortableHeader = ({ colKey, label }: { colKey: string; label: string }) => {
-    const sortable = isSortable(colKey);
-    const active = sortBy === colKey;
-    const Icon = active ? (sortDesc ? ArrowDown : ArrowUp) : ArrowUpDown;
-    return (
-      <th
-        className={`text-left px-3 py-2 whitespace-nowrap select-none ${sortable ? "cursor-pointer hover:bg-muted/70" : ""} ${active ? "text-primary" : ""}`}
-        onClick={() => handleHeaderClick(colKey)}
-      >
-        <span className="inline-flex items-center gap-1">
-          {label}
-          {sortable && <Icon size={12} className={active ? "text-primary" : "text-muted-foreground"} />}
-        </span>
-      </th>
-    );
-  };
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -56,14 +26,14 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, so
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <SortableHeader colKey="name" label="出演者名" />
+              <th className="text-left px-3 py-2 whitespace-nowrap">出演者名</th>
               <th className="text-left px-3 py-2 whitespace-nowrap">ふりがな</th>
-              {visibleColumns.includes("work_count") && <SortableHeader colKey="work_count" label="作品数" />}
-              {visibleColumns.includes("avg_work_score") && <SortableHeader colKey="avg_work_score" label="平均スコア" />}
-              {visibleColumns.includes("total_score") && <SortableHeader colKey="total_score" label="合計スコア" />}
+              {visibleColumns.includes("work_count") && <th className="text-left px-3 py-2 whitespace-nowrap">作品数</th>}
+              {visibleColumns.includes("avg_work_score") && <th className="text-left px-3 py-2 whitespace-nowrap">平均スコア</th>}
+              {visibleColumns.includes("total_score") && <th className="text-left px-3 py-2 whitespace-nowrap">合計スコア</th>}
               {visibleColumns.includes("tags") && <th className="text-left px-3 py-2 whitespace-nowrap">タグ</th>}
               {customColDefs.map((d) => (
-                <SortableHeader key={d.id} colKey={`custom:${d.name}`} label={d.name} />
+                <th key={d.id} className="text-left px-3 py-2 whitespace-nowrap">{d.name}</th>
               ))}
             </tr>
           </thead>

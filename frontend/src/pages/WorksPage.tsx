@@ -182,15 +182,6 @@ export default function WorksPage() {
     localStorage.setItem(WORKS_TABLE_COLUMNS_KEY, JSON.stringify(next));
   };
 
-  const handleWorkTableSort = (key: string) => {
-    if (sortBy === key) {
-      setSortDesc((d) => !d);
-    } else {
-      setSortBy(key);
-      setSortDesc(key !== "created_at");
-    }
-  };
-
   const filteredWorks = useMemo(() => {
     let result = works;
     if (onlyUnrated) result = result.filter((w) => w.tags.length === 0);
@@ -614,9 +605,6 @@ export default function WorksPage() {
           works={filteredWorks}
           visibleColumns={visibleWorkColumns}
           customFieldDefs={customFieldDefs}
-          sortBy={sortBy}
-          sortDesc={sortDesc}
-          onSort={handleWorkTableSort}
         />
       ) : (
         <div className="grid gap-3" style={gridStyle}>

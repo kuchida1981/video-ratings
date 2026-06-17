@@ -128,15 +128,6 @@ export default function PerformersPage() {
     localStorage.setItem(PERFORMERS_TABLE_COLUMNS_KEY, JSON.stringify(next));
   };
 
-  const handlePerformerTableSort = (key: string) => {
-    if (sortBy === key) {
-      setSortDesc((d) => !d);
-    } else {
-      setSortBy(key);
-      setSortDesc(key !== "name");
-    }
-  };
-
   const sortedPerformers = useMemo(() => {
     const list = [...performers];
     list.sort((a, b) => {
@@ -149,6 +140,8 @@ export default function PerformersPage() {
         comparison = a.work_count - b.work_count;
       } else if (sortBy === "avg_work_score") {
         comparison = a.avg_work_score - b.avg_work_score;
+      } else if (sortBy === "total_score") {
+        comparison = a.total_score - b.total_score;
       } else if (sortBy.startsWith("custom:")) {
         const fieldName = sortBy.slice("custom:".length);
         const va = (a.custom_fields ?? {})[fieldName] ?? null;
@@ -287,6 +280,20 @@ export default function PerformersPage() {
           >
             <ArrowUpDown size={14} />作品平均点数順
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const newDesc = sortBy === "total_score" ? !sortDesc : true;
+              const newBy = "total_score";
+              setSortBy(newBy);
+              setSortDesc(newDesc);
+              saveSortState(newBy, newDesc, onlyUnrated, onlyNoCover);
+            }}
+            className={sortBy === "total_score" ? "text-primary" : ""}
+          >
+            <ArrowUpDown size={14} />合計スコア順
+          </Button>
           {sortableCustomFields.map((cf) => {
             const key = `custom:${cf.name}`;
             return (
@@ -354,9 +361,6 @@ export default function PerformersPage() {
           performers={filteredPerformers}
           visibleColumns={visiblePerformerColumns}
           customFieldDefs={customFieldDefs}
-          sortBy={sortBy}
-          sortDesc={sortDesc}
-          onSort={handlePerformerTableSort}
         />
       ) : (
         <div className="grid gap-3" style={gridStyle}>

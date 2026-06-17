@@ -4,8 +4,8 @@
 TBD - created by archiving change performer-list-sort. Update Purpose after archive.
 ## Requirements
 ### Requirement: 出演者一覧のソート
-The system MUST support sorting the performer list by name, work count, average work score, or any performer custom field with `is_sortable=true`.
-システムは出演者一覧ページで、表示順を「名前順 / 作品数順 / 作品平均点数順 / is_sortable=true の出演者用カスタム項目」× 昇順/降順に切り替えられなければならない。
+The system MUST support sorting the performer list by name, work count, average work score, total score, or any performer custom field with `is_sortable=true`.
+システムは出演者一覧ページで、表示順を「名前順 / 作品数順 / 作品平均点数順 / 合計スコア順 / is_sortable=true の出演者用カスタム項目」× 昇順/降順に切り替えられなければならない。
 
 #### Scenario: ソートキーと方向を変更できる
 - **WHEN** ユーザーがソートボタンを操作する
@@ -34,6 +34,14 @@ The system MUST support sorting the performer list by name, work count, average 
 #### Scenario: 作品平均点数順ソート（昇順）
 - **WHEN** ユーザーが「作品平均点数順」「昇順」を選択する
 - **THEN** 出演者タイルは avg_work_score の低い順に並ぶ
+
+#### Scenario: 合計スコア順ソート（降順）
+- **WHEN** ユーザーが「合計スコア順」ボタンをクリックする（初回またはアクティブでない状態）
+- **THEN** 出演者タイルは total_score の高い順に並ぶ
+
+#### Scenario: 合計スコア順ソート（昇順）
+- **WHEN** ユーザーが「合計スコア順」がアクティブな状態でボタンを再度クリックする
+- **THEN** 出演者タイルは total_score の低い順に並ぶ
 
 #### Scenario: カスタム項目ソート（降順）
 - **WHEN** ユーザーが is_sortable=true の出演者用カスタム項目のソートボタンをクリックする（初回またはアクティブでない状態）
