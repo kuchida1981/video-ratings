@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     basic_auth_enabled: bool = False
     basic_auth_user: str = ""
     basic_auth_password: str = ""
+    debug: bool = False
 
     model_config = {"env_file": ".env"}
 
