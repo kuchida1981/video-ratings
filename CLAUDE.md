@@ -32,8 +32,39 @@ agy --dangerously-skip-permissions --print "<実装プロンプト>" 2>&1
 - スコープ外の制約（「この2ファイルだけ触れ」など）
 - OpenSpec の change ディレクトリへの参照（`openspec/changes/<name>/` 以下）
 - **実装完了後に `git add <実装ファイル> && git commit -m "feat: <変更内容>"` でコミットすること**
+- **不明点・判断に迷う点がある場合は実装せず、`[QUESTION] ...` の形式で質問を出力すること**
 
 実装完了後は Claude Code で `git diff HEAD` または `git log` を確認してからレビューに進む。
+
+### agy との対話ループ
+
+agy の出力に `[QUESTION]` が含まれる場合、以下のループで対応する:
+
+```
+agy 実行 (1回目)
+  ↓ 出力を解析
+  ├─ [QUESTION] なし → 実装完了、レビューへ
+  └─ [QUESTION] あり → 質問ごとに判定:
+       ├─ Claude Code が回答できる → 回答をまとめる
+       └─ 判断つかない / センシティブ → ユーザーに確認
+       ↓
+     agy 実行 (2回目: 回答を追加コンテキストとして渡す)
+       ↓ 再度出力を解析（同じループ）
+```
+
+**ループの上限は 3 回**。3 回で解決しない場合は Claude Code が直接実装に切り替える。
+
+**Claude Code がユーザーに確認すべきケース:**
+- ビジネスロジックの仕様判断（「この場合どう振る舞うべきか」）
+- 破壊的変更や後方互換性に関わる判断
+- セキュリティ・認証に関わる設計判断
+- 複数の妥当な選択肢がありトレードオフが明確でない場合
+
+**Claude Code が自分で回答してよいケース:**
+- 既存コードのパターンやコンベンションに関する質問
+- API の型やインターフェースの確認
+- ファイル構成やインポートパスの確認
+- OpenSpec の design.md / specs から読み取れる仕様
 
 ---
 
@@ -51,8 +82,9 @@ agy --dangerously-skip-permissions --print "<実装プロンプト>" 2>&1
    git add openspec/changes/<change-name>/
    git commit -m "docs(openspec): propose <change-name>"
 
-3. 実装 (agy)
+3. 実装 (agy + 対話ループ)
    agy --dangerously-skip-permissions --print "..." で委譲
+   → [QUESTION] があれば Claude Code が回答 or ユーザーに確認し再実行
    → agy が実装コードをコミットする（"feat: <変更内容>"）
 
 4. コードレビュー (Claude Code)
