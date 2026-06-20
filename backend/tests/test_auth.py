@@ -25,27 +25,27 @@ def auth_client(monkeypatch):
 
 
 def test_unauthenticated_returns_401(auth_client):
-    response = auth_client.get("/works")
+    response = auth_client.get("/api/works")
     assert response.status_code == 401
     assert "WWW-Authenticate" in response.headers
     assert response.headers["WWW-Authenticate"] == 'Basic realm="Restricted"'
 
 
 def test_health_skips_auth(auth_client):
-    response = auth_client.get("/health")
+    response = auth_client.get("/api/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
 def test_valid_credentials(auth_client):
-    response = auth_client.get("/health", auth=("testuser", "testpass"))
+    response = auth_client.get("/api/health", auth=("testuser", "testpass"))
     assert response.status_code == 200
 
 
 def test_invalid_credentials(auth_client):
-    response = auth_client.get("/works", auth=("testuser", "wrongpass"))
+    response = auth_client.get("/api/works", auth=("testuser", "wrongpass"))
     assert response.status_code == 401
     assert response.headers["WWW-Authenticate"] == 'Basic realm="Restricted"'
 
-    response = auth_client.get("/works", auth=("wronguser", "testpass"))
+    response = auth_client.get("/api/works", auth=("wronguser", "testpass"))
     assert response.status_code == 401
