@@ -21,14 +21,36 @@
 
 ### Claude Code から agy を呼び出す方法
 
-実装は Claude Code から次のコマンドで agy に委譲する:
+#### 方式の選択
+
+| 方式 | 条件 | 利点 |
+|------|------|------|
+| **MCP（推奨）** | `mcp__agy__agy_ask` ツールが利用可能 | stdout バグ回避、会話継続が自然、タイムアウト問題が少ない |
+| **Bash（フォールバック）** | MCP未セットアップの環境 | セットアップ不要、どの環境でも動く |
+
+セッション開始時に `mcp__agy__agy_status` が呼べるか確認し、利用可能なら MCP 方式を使う。
+利用できなければ Bash 方式にフォールバックする。
+
+#### MCP 方式（推奨）
+
+MCPブリッジ経由でagyをサブエージェントとして呼び出す。
+
+```
+mcp__agy__agy_ask(prompt="<実装プロンプト>", workspace="<プロジェクトルート>")
+```
+
+- 新規タスク: `mcp__agy__agy_ask`
+- 追加指示・継続: `mcp__agy__agy_continue`
+- 診断（クォータ消費なし）: `mcp__agy__agy_status`
+
+#### Bash 方式（フォールバック）
+
+MCP が使えない環境では従来の Bash 経由で呼び出す:
 
 ```bash
 GIT_TERMINAL_PROMPT=0 CI=true \
   agy --dangerously-skip-permissions --print-timeout 3m --print "<実装プロンプト>" 2>&1
 ```
-
-**タイムアウト値の目安:**
 
 | タスク規模 | ファイル数 | タイムアウト |
 |-----------|-----------|------------|
@@ -38,12 +60,14 @@ GIT_TERMINAL_PROMPT=0 CI=true \
 
 `CI=true` の副作用でツールの動作が変わった場合は、当該環境変数を除外してプロンプト内ルールのみでハング予防する。
 
+#### 共通ルール（MCP・Bash 両方式共通）
+
 **タスク単位の分割呼び出し:**
 一括委譲ではなく、OpenSpec tasks.md の各タスクを個別の agy ワンショットで実行する。
 十分に小さいタスク（1ファイルの小変更）は Claude Code の判断でまとめてよい。
 各タスク完了後に `git status` / `git diff` で結果を確認してから次のタスクに進む。
 
-プロンプトには以下を含める:
+**プロンプトに含める内容:**
 - 実装対象ファイルと変更内容（具体的に）
 - 既存コードのパターン（コピーすべき書き方）
 - スコープ外の制約（「この2ファイルだけ触れ」など）
@@ -82,19 +106,22 @@ agy 実行 (1回目)
        ↓ 再度出力を解析（同じループ）
 ```
 
+- MCP 方式: `agy_continue` で追加コンテキストを渡す
+- Bash 方式: 新しい `agy --print` 呼び出しに回答を含める
+
 **ループの上限は 3 回**。3 回で解決しない場合は Claude Code が直接実装に切り替える。
 
-### agy タイムアウト時のリカバリ
+### agy 失敗時のリカバリ
 
-agy がタイムアウトまたはハングした場合、以下のフローで対応する:
+agy がタイムアウト・ハング・エラーで失敗した場合:
 
 ```
-タイムアウト発生
+失敗発生
   ↓
 git status / git diff で途中成果を確認
-  ├─ 成果あり → --continue で残り作業を指示
-  │   agy --dangerously-skip-permissions --print-timeout 3m \
-  │     --continue --print "前回タイムアウトした。対話的入力を避けて続行しろ"
+  ├─ 成果あり → 継続指示を送る
+  │   MCP: agy_continue で残り作業を指示
+  │   Bash: --continue で再開
   └─ 成果なし → 新規セッションで別アプローチを試行
       ↓
 再試行も失敗（2回連続）
@@ -102,8 +129,10 @@ git status / git diff で途中成果を確認
 Claude Code が直接実装に切り替える
 ```
 
-**注意:** `--print-timeout` が効かないケースがある。Bash ツールの `timeout` パラメータも併用し、
-agy プロセスが応答しない場合は `kill` して対処する。
+Bash 方式の場合、`--print-timeout` が効かないケースがある。
+Bash ツールの `timeout` パラメータも併用し、agy プロセスが応答しない場合は `kill` して対処する。
+
+### agy 委譲時の判断基準
 
 **Claude Code がユーザーに確認すべきケース:**
 - ビジネスロジックの仕様判断（「この場合どう振る舞うべきか」）
@@ -135,11 +164,11 @@ agy プロセスが応答しない場合は `kill` して対処する。
 
 3. 実装 (agy タスク単位 × N)
    tasks.md の各タスクを個別の agy ワンショットで実行
-   GIT_TERMINAL_PROMPT=0 CI=true \
-     agy --dangerously-skip-permissions --print-timeout 3m --print "..." 2>&1
+   MCP: mcp__agy__agy_ask(prompt="...", workspace="<プロジェクトルート>")
+   Bash: GIT_TERMINAL_PROMPT=0 CI=true agy --dangerously-skip-permissions --print-timeout 3m --print "..." 2>&1
    → 各タスク完了後に git status / git diff で確認
    → [QUESTION] があれば Claude Code が回答 or ユーザーに確認し再実行
-   → タイムアウト時は --continue で再開 or Claude Code が引き継ぐ
+   → 失敗時は agy_continue / --continue で再開 or Claude Code が引き継ぐ
    → agy が実装コードをコミットする（"feat: <変更内容>"）
 
 3.5. agy 別セッションレビュー (agy 新規セッション)
