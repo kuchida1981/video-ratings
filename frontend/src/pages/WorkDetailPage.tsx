@@ -247,7 +247,12 @@ export default function WorkDetailPage() {
   const createAndAddPerformerMutation = useMutation({
     mutationFn: async (data: { name: string; furigana?: string }) => {
       const p = await api.performers.create(data);
-      await api.works.addPerformer(workId, { performer_id: p.id });
+      try {
+        await api.works.addPerformer(workId, { performer_id: p.id });
+      } catch (error) {
+        console.error("Failed to add performer to work:", error);
+        alert("出演者の作成には成功しましたが、作品への追加に失敗しました。一覧から手動で追加してください。");
+      }
       return p;
     },
     onSuccess: () => {
@@ -743,7 +748,17 @@ export default function WorkDetailPage() {
         <DialogHeader>
           <DialogTitle>出演者を作成して追加</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!newPerformerName.trim() || createAndAddPerformerMutation.isPending) return;
+            createAndAddPerformerMutation.mutate({
+              name: newPerformerName.trim(),
+              furigana: newPerformerFurigana.trim() || undefined,
+            });
+          }}
+          className="space-y-3"
+        >
           <div>
             <Label>名前 *</Label>
             <Input
@@ -761,18 +776,13 @@ export default function WorkDetailPage() {
             />
           </div>
           <Button
-            onClick={() =>
-              createAndAddPerformerMutation.mutate({
-                name: newPerformerName.trim(),
-                furigana: newPerformerFurigana.trim() || undefined,
-              })
-            }
+            type="submit"
             disabled={!newPerformerName.trim() || createAndAddPerformerMutation.isPending}
             className="w-full"
           >
             {createAndAddPerformerMutation.isPending ? "作成中..." : "作成して追加"}
           </Button>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
     </>
