@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 import { Film, Users, Tag, Settings, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import WorksPage from "@/pages/WorksPage";
@@ -112,7 +112,7 @@ export default function App() {
           <main ref={mainRef} tabIndex={-1} className="flex-1 overflow-auto p-6 outline-none">
             <RouteChangeHandler mainRef={mainRef} />
             <Routes>
-              <Route path="/" element={<WorksPage />} />
+              <Route path="/" element={<Navigate to="/works" replace />} />
               <Route path="/works" element={<WorksPage />} />
               <Route path="/works/:id" element={<WorkDetailPage />} />
               <Route path="/performers" element={<PerformersPage />} />
