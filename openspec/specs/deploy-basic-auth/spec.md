@@ -45,8 +45,8 @@ install.sh と update.sh のどちらを実行しても、`.env` の Basic認証
 - **THEN** 更新後は認証なしでアクセスできる
 
 ### Requirement: ヘルスチェックエンドポイントは認証対象外とする
-`BASIC_AUTH_ENABLED=true` のとき、バックエンドの `/health` エンドポイントは認証なしでアクセスできなければならない（SHALL）。これにより systemd や Docker の healthcheck が認証情報なしで動作する。
+`BASIC_AUTH_ENABLED=true` のとき、バックエンドの `/api/health` エンドポイントは認証なしでアクセスできなければならない（SHALL）。これにより systemd や Docker の healthcheck が認証情報なしで動作する。
 
 #### Scenario: 認証が有効な状態でヘルスチェックを実行する
-- **WHEN** `BASIC_AUTH_ENABLED=true` の状態で、Authorization ヘッダーなしに `/health` へリクエストを送る
+- **WHEN** `BASIC_AUTH_ENABLED=true` の状態で、Authorization ヘッダーなしに `/api/health` へリクエストを送る
 - **THEN** HTTP 200 が返る
