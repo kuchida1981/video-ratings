@@ -34,7 +34,7 @@ async def basic_auth_middleware(request: Request, call_next):
     if not settings.basic_auth_enabled:
         return await call_next(request)
 
-    if request.url.path.rstrip("/") == "/health":
+    if request.url.path.rstrip("/") == "/api/health":
         return await call_next(request)
 
     auth_header = request.headers.get("Authorization")
@@ -67,16 +67,16 @@ async def basic_auth_middleware(request: Request, call_next):
 
 app.mount("/static/covers", StaticFiles(directory=str(COVERS_DIR)), name="covers")
 
-app.include_router(search.router)
-app.include_router(works.router)
-app.include_router(performers.router)
-app.include_router(tags.router)
-app.include_router(custom_fields.router)
-app.include_router(imports.router)
-app.include_router(data.router)
+app.include_router(search.router, prefix="/api")
+app.include_router(works.router, prefix="/api")
+app.include_router(performers.router, prefix="/api")
+app.include_router(tags.router, prefix="/api")
+app.include_router(custom_fields.router, prefix="/api")
+app.include_router(imports.router, prefix="/api")
+app.include_router(data.router, prefix="/api")
 
 
-@app.get("/health")
+@app.get("/api/health")
 def health():
     return {"status": "ok"}
 
