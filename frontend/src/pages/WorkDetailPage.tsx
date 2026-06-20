@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 
 
 export default function WorkDetailPage() {
@@ -28,6 +30,9 @@ export default function WorkDetailPage() {
   const [initializedId, setInitializedId] = useState<number | null>(null);
   const [newFileDisplayName, setNewFileDisplayName] = useState("");
   const [addPerformerId, setAddPerformerId] = useState("");
+  const [createPerformerOpen, setCreatePerformerOpen] = useState(false);
+  const [newPerformerName, setNewPerformerName] = useState("");
+  const [newPerformerFurigana, setNewPerformerFurigana] = useState("");
   const [playingFileId, setPlayingFileId] = useState<number | null>(null);
   const [theaterFile, setTheaterFile] = useState<WorkFile | null>(null);
   const [theaterStartTime, setTheaterStartTime] = useState(0);
@@ -236,6 +241,21 @@ export default function WorkDetailPage() {
     onSuccess: () => {
       setAddPerformerId("");
       invalidateWork();
+    },
+  });
+
+  const createAndAddPerformerMutation = useMutation({
+    mutationFn: async (data: { name: string; furigana?: string }) => {
+      const p = await api.performers.create(data);
+      await api.works.addPerformer(workId, { performer_id: p.id });
+      return p;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["performers"] });
+      invalidateWork();
+      setCreatePerformerOpen(false);
+      setNewPerformerName("");
+      setNewPerformerFurigana("");
     },
   });
 
@@ -463,21 +483,28 @@ export default function WorkDetailPage() {
             )}
           </div>
         ))}
-        {availablePerformers.length > 0 && (
           <div className="flex gap-2">
             <select
               className="border rounded px-2 py-1 text-sm"
               value={addPerformerId}
-              onChange={(e) => setAddPerformerId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "__create_new__") {
+                  setCreatePerformerOpen(true);
+                  setAddPerformerId("");
+                } else {
+                  setAddPerformerId(val);
+                }
+              }}
             >
               <option value="">出演者を追加…</option>
+              <option value="__create_new__">＋ 新規出演者を作成…</option>
               {availablePerformers.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}{p.furigana ? ` (${p.furigana})` : ""}</option>
               ))}
             </select>
             <Button size="sm" onClick={() => addPerformerMutation.mutate(Number(addPerformerId))} disabled={!addPerformerId}>追加</Button>
           </div>
-        )}
       </section>
 
       {/* Tags */}
@@ -711,6 +738,43 @@ export default function WorkDetailPage() {
         </button>
       </div>
     )}
+    <Dialog open={createPerformerOpen} onOpenChange={setCreatePerformerOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>出演者を作成して追加</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>名前 *</Label>
+            <Input
+              value={newPerformerName}
+              onChange={(e) => setNewPerformerName(e.target.value)}
+              placeholder="名前"
+            />
+          </div>
+          <div>
+            <Label>ふりがな</Label>
+            <Input
+              value={newPerformerFurigana}
+              onChange={(e) => setNewPerformerFurigana(e.target.value)}
+              placeholder="ふりがな"
+            />
+          </div>
+          <Button
+            onClick={() =>
+              createAndAddPerformerMutation.mutate({
+                name: newPerformerName.trim(),
+                furigana: newPerformerFurigana.trim() || undefined,
+              })
+            }
+            disabled={!newPerformerName.trim() || createAndAddPerformerMutation.isPending}
+            className="w-full"
+          >
+            {createAndAddPerformerMutation.isPending ? "作成中..." : "作成して追加"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
