@@ -200,7 +200,7 @@ export default function PerformerDetailPage() {
           <div className="relative aspect-video rounded-lg overflow-hidden border">
             <img src={performer.cover_image_url} alt={performer.name} className="w-full h-full object-cover" />
             <button
-              onClick={() => deleteCoverMutation.mutate()}
+              onClick={() => { if (confirm("カバー画像を削除しますか？")) deleteCoverMutation.mutate(); }}
               className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
             >
               <X size={14} />
