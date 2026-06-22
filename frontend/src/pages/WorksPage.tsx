@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle, LayoutGrid, List, Pencil } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { CustomFieldDefinition, ImportRow, WorkColumnKey } from "@/types";
@@ -72,6 +72,7 @@ export default function WorksPage() {
   const [onlyNoFiles, setOnlyNoFiles] = useState<boolean>(stored.onlyNoFiles ?? false);
   const [viewMode, setViewMode] = useState<"tile" | "table">(loadWorksViewMode);
   const [visibleWorkColumns, setVisibleWorkColumns] = useState<WorkColumnKey[]>(loadWorksTableColumns);
+  const [editMode, setEditMode] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -108,6 +109,9 @@ export default function WorksPage() {
     } catch (e) {
       console.error("Failed to save viewMode to localStorage", e);
     }
+    if (viewMode !== "table") {
+      setEditMode(false);
+    }
   }, [viewMode]);
 
   useEffect(() => {
@@ -135,6 +139,31 @@ export default function WorksPage() {
   });
 
   const sortableCustomFields = customFieldDefs.filter((d) => d.is_sortable);
+
+  const isEditModeDisabled = customFieldDefs.filter(
+    (d) => visibleWorkColumns.includes(`custom:${d.name}` as WorkColumnKey)
+  ).length === 0;
+
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!editMode) {
+      queryClient.invalidateQueries({ queryKey: ["works"] });
+    }
+  }, [editMode, queryClient]);
+
+  useEffect(() => {
+    if (isEditModeDisabled && editMode) {
+      setEditMode(false);
+    }
+  }, [isEditModeDisabled, editMode]);
+
+  const handleUpdateCustomField = async (workId: number, fieldName: string, value: unknown) => {
+    await api.works.updateCustomFields(workId, { [fieldName]: value });
+  };
 
   const createWorkMutation = useMutation({
     mutationFn: (data: { title: string }) =>
@@ -298,6 +327,17 @@ export default function WorksPage() {
               <List size={16} />
             </Button>
           </div>
+          {viewMode === "table" && (
+            <Button
+              variant={editMode ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setEditMode((v) => !v)}
+              title="編集モード"
+              disabled={isEditModeDisabled}
+            >
+              <Pencil size={16} />
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setBulkImportOpen(true)}>
             <Upload size={16} />一括登録
           </Button>
@@ -621,6 +661,8 @@ export default function WorksPage() {
           works={filteredWorks}
           visibleColumns={visibleWorkColumns}
           customFieldDefs={customFieldDefs}
+          editMode={editMode}
+          onUpdateCustomField={handleUpdateCustomField}
         />
       ) : (
         <div className="grid gap-3" style={gridStyle}>
