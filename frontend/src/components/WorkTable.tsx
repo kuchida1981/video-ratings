@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Files } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,8 @@ interface WorkTableProps {
   works: WorkListItem[];
   visibleColumns: WorkColumnKey[];
   customFieldDefs: CustomFieldDefinition[];
+  editMode?: boolean;
+  onUpdateCustomField?: (workId: number, fieldName: string, value: unknown) => Promise<void>;
 }
 
 function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["field_type"]): string {
@@ -16,7 +19,134 @@ function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["fie
   return String(value);
 }
 
-export function WorkTable({ works, visibleColumns, customFieldDefs }: WorkTableProps) {
+interface EditableCellProps {
+  workId: number;
+  fieldName: string;
+  fieldType: CustomFieldDefinition["field_type"];
+  initialValue: unknown;
+  onUpdate?: (workId: number, fieldName: string, value: unknown) => Promise<void>;
+}
+
+function getInitialStateValue(val: unknown, type: CustomFieldDefinition["field_type"]) {
+  if (type === "boolean") {
+    return !!val;
+  }
+  if (val === null || val === undefined) {
+    return "";
+  }
+  if (type === "date" && typeof val === "string") {
+    return val.slice(0, 10);
+  }
+  return String(val);
+}
+
+function EditableCell({
+  workId,
+  fieldName,
+  fieldType,
+  initialValue,
+  onUpdate,
+}: EditableCellProps) {
+  const [value, setValue] = useState<string | boolean>(() =>
+    getInitialStateValue(initialValue, fieldType)
+  );
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    setValue(getInitialStateValue(initialValue, fieldType));
+    setIsError(false);
+  }, [initialValue, fieldType]);
+
+  const handleBlur = () => {
+    if (fieldType === "boolean") return;
+
+    const strValue = value as string;
+
+    // 送信する値の決定
+    let submitValue: unknown = strValue;
+    if (strValue === "") {
+      submitValue = null;
+    } else if (fieldType === "number") {
+      submitValue = Number(strValue);
+    }
+
+    // 初期値の正規化と比較
+    let normInitialValue: unknown = initialValue;
+    if (initialValue === null || initialValue === undefined || initialValue === "") {
+      normInitialValue = null;
+    } else if (fieldType === "number") {
+      normInitialValue = Number(initialValue);
+    } else if (fieldType === "date" && typeof initialValue === "string") {
+      normInitialValue = initialValue.slice(0, 10);
+    }
+
+    if (submitValue !== normInitialValue) {
+      if (onUpdate) {
+        onUpdate(workId, fieldName, submitValue)
+          .then(() => {
+            setIsError(false);
+          })
+          .catch(() => {
+            setIsError(true);
+            setValue(getInitialStateValue(initialValue, fieldType));
+          });
+      }
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsError(false);
+    if (fieldType === "boolean") {
+      const nextVal = e.target.checked;
+      setValue(nextVal);
+      if (onUpdate) {
+        onUpdate(workId, fieldName, nextVal)
+          .then(() => {
+            setIsError(false);
+          })
+          .catch(() => {
+            setIsError(true);
+            setValue(!!initialValue);
+          });
+      }
+    } else {
+      setValue(e.target.value);
+    }
+  };
+
+  const inputClass = isError
+    ? "w-full bg-transparent border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring ring-2 ring-destructive"
+    : "w-full bg-transparent border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
+
+  if (fieldType === "boolean") {
+    return (
+      <input
+        type="checkbox"
+        checked={value as boolean}
+        onChange={handleChange}
+        className={isError ? "h-4 w-4 ring-2 ring-destructive" : "h-4 w-4"}
+      />
+    );
+  }
+
+  return (
+    <input
+      type={fieldType === "number" ? "number" : fieldType === "date" ? "date" : "text"}
+      value={value as string}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={inputClass}
+    />
+  );
+}
+
+export function WorkTable({
+  works,
+  visibleColumns,
+  customFieldDefs,
+  editMode = false,
+  onUpdateCustomField,
+}: WorkTableProps) {
   const customColDefs = customFieldDefs.filter((d) =>
     visibleColumns.includes(`custom:${d.name}` as WorkColumnKey)
   );
@@ -80,11 +210,28 @@ export function WorkTable({ works, visibleColumns, customFieldDefs }: WorkTableP
                   {visibleColumns.includes("created_at") && (
                     <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{w.created_at.slice(0, 10)}</td>
                   )}
-                  {customColDefs.map((d) => (
-                    <td key={d.id} className="px-3 py-2 text-muted-foreground whitespace-nowrap">
-                      {formatCustomValue((w.custom_fields ?? {})[d.name], d.field_type)}
-                    </td>
-                  ))}
+                  {customColDefs.map((d) => {
+                    const fieldValue = (w.custom_fields ?? {})[d.name];
+                    return (
+                      <td
+                        key={d.id}
+                        className="px-3 py-2 text-muted-foreground whitespace-nowrap"
+                        onClick={editMode ? (e) => e.stopPropagation() : undefined}
+                      >
+                        {editMode ? (
+                          <EditableCell
+                            workId={w.id}
+                            fieldName={d.name}
+                            fieldType={d.field_type}
+                            initialValue={fieldValue}
+                            onUpdate={onUpdateCustomField}
+                          />
+                        ) : (
+                          formatCustomValue(fieldValue, d.field_type)
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}
