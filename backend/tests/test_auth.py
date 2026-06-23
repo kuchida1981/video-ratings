@@ -7,7 +7,7 @@ from app.database import get_db
 from app.main import app
 from app.models.models import User
 
-pytestmark = pytest.mark.unit
+pytestmark = pytest.mark.integration
 
 
 @pytest.fixture

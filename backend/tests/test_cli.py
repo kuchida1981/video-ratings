@@ -5,7 +5,7 @@ from click.testing import CliRunner
 from app.cli import cli
 from app.models.models import User
 
-pytestmark = pytest.mark.unit
+pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
