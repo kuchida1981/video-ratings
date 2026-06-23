@@ -139,6 +139,9 @@ export default function PerformersPage() {
     } catch (e) {
       console.error("Failed to save viewMode to localStorage", e);
     }
+    if (viewMode !== "table") {
+      setEditMode(false);
+    }
   }, [viewMode]);
 
   const hasFilters = !!(onlyUnrated || onlyNoCover || sortBy !== DEFAULT_PERFORMERS_SORT_BY || sortDesc !== DEFAULT_PERFORMERS_SORT_DESC);
