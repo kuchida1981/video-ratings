@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     frontend_dir: str = ""
     secret_key: str
     session_timeout_seconds: int = 7200
-    cookie_secure: bool = True
+    cookie_secure: bool = False
     debug: bool = False
 
     model_config = {"env_file": ".env", "extra": "ignore"}
