@@ -153,18 +153,23 @@ Bash ツールの `timeout` パラメータも併用し、agy プロセスが応
 ### 機能追加・バグ修正の標準フロー
 
 ```
-1. 設計 (Claude Code)
+1. 設計 & proposal コミット (Claude Code)
    /opsx:explore  → 問題を探索し設計を固める
    /opsx:propose  → change proposal を生成（proposal.md / design.md / specs / tasks.md）
-   → ユーザーが承認（OK等）したら、Claude Code が自律的にステップ 2 を実行する
-   → ただし main 以外のブランチにいる場合はユーザーに確認してから行動する
 
-2. トピックブランチ作成 & proposal コミット (Claude Code)
-   git checkout -b feature/<change-name>
-   git add openspec/changes/<change-name>/
-   git commit -m "docs(openspec): propose <change-name>"
+   ★ /opsx:propose 完了後、Claude Code は自動的に以下を実行する（スキルの出力より優先）:
+     a. main ブランチにいる場合:
+        git checkout -b feature/<change-name>
+        git add openspec/changes/<change-name>/
+        git commit -m "docs(openspec): propose <change-name>"
+     b. main 以外のブランチにいる場合:
+        ユーザーに「新しいブランチを作るか、現在のブランチで続けるか」を確認する
 
-3. 実装 (agy タスク単位 × N)
+   ★ コミット後、ユーザーに proposal の確認を促す:
+     「proposal をコミットしました。内容を確認して、問題なければ `/opsx:apply` で実装を開始できます。」
+     → 実装開始を勝手に促さない。まずユーザーのレビューを待つ。
+
+2. 実装 (agy タスク単位 × N)
    /opsx:apply 実行時、Claude Code はデフォルトで agy に実装を委譲する
    難易度が高い、または agy が行き詰まった場合のみ Claude Code が直接実装する
    tasks.md の各タスクを個別の agy ワンショットで実行
@@ -175,28 +180,28 @@ Bash ツールの `timeout` パラメータも併用し、agy プロセスが応
    → 失敗時は agy_continue / --continue で再開 or Claude Code が引き継ぐ
    → agy が実装コードをコミットする（"feat: <変更内容>"）
 
-3.5. agy 別セッションレビュー (agy 新規セッション)
+2.5. agy 別セッションレビュー (agy 新規セッション)
    実装とは別の新規 agy セッションで diff をレビューさせる
    → 変更要約（変更ファイル一覧、問題点、設計判断、テスト充足度）を出力させる
    → Claude Code は要約をベースに最終レビューの判断材料にする
    → 変更が 1 ファイル・20 行以下の場合はこのステップを省略してよい
 
-4. コードレビュー (Claude Code)
+3. コードレビュー (Claude Code)
    /code-review（agy レビュー結果も参考にしつつ最終判断）
    → 指摘があれば、修正内容を具体的にまとめる
 
-5. レビュー指摘の修正 (agy)
+4. レビュー指摘の修正 (agy)
    Claude Code がレビュー結果から修正プロンプトを作成し agy に委譲する
    → 修正対象ファイル・行・具体的な変更内容を指示する
    → agy が修正コードをコミットする（"fix: <修正内容>"）
    → 指摘がなければこのステップはスキップ
 
-6. PR 作成 & OpenSpec アーカイブ (Claude Code)
+5. PR 作成 & OpenSpec アーカイブ (Claude Code)
    /opsx:archive  → change をアーカイブ（delta spec sync を含む）
    gh pr create
    → アーカイブと spec sync のコミットを PR に含める
 
-7. CI 確認 (Claude Code)
+6. CI 確認 (Claude Code)
    gh pr checks --watch
    → 失敗したら是正してプッシュし、再度 watch する
 ```
