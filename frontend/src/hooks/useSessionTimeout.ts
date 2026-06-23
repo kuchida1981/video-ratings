@@ -30,7 +30,7 @@ export function useSessionTimeout(onTimeout: () => void) {
           lastActivity.current = Date.now();
         }
       } catch {
-        onTimeout();
+        // ネットワークエラーはセッション切れとみなさない
       }
     }, CHECK_INTERVAL_MS);
 

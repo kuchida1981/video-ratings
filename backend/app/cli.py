@@ -31,6 +31,8 @@ def user():
 @click.option("--role", type=click.Choice(["viewer", "editor"]), required=True)
 def create(username: str, role: str):
     """Create a new user."""
+    if not username.strip():
+        raise click.ClickException("Username cannot be empty or whitespace only")
     password = click.prompt("Password", hide_input=True, confirmation_prompt=True)
     db: Session = SessionLocal()
     try:
@@ -83,12 +85,12 @@ def set_role(username: str, role: str):
 @click.argument("username")
 def reset_password(username: str):
     """Reset a user's password."""
-    password = click.prompt("New password", hide_input=True, confirmation_prompt=True)
     db: Session = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
         if not u:
             raise click.ClickException(f"User '{username}' not found")
+        password = click.prompt("New password", hide_input=True, confirmation_prompt=True)
         u.password_hash = _hash_password(password)
         db.commit()
         click.echo(f"Password reset for '{username}'")
@@ -105,6 +107,10 @@ def delete(username: str):
         u = db.query(User).filter(User.username == username).first()
         if not u:
             raise click.ClickException(f"User '{username}' not found")
+        if u.role == "editor":
+            editor_count = db.query(User).filter(User.role == "editor").count()
+            if editor_count <= 1:
+                raise click.ClickException("Cannot delete the last editor user")
         db.delete(u)
         db.commit()
         click.echo(f"Deleted user '{username}'")
