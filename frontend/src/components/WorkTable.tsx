@@ -82,7 +82,13 @@ function EditableCell({
     if (strValue === "") {
       submitValue = null;
     } else if (fieldType === "number") {
-      submitValue = Number(strValue);
+      const num = Number(strValue);
+      if (Number.isNaN(num)) {
+        setIsError(true);
+        setValue(lastSavedRef.current);
+        return;
+      }
+      submitValue = num;
     }
     if (strValue !== lastSavedRef.current) {
       save(submitValue, strValue);
