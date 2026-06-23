@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 import { Film, Users, Tag, Settings, PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import SessionTimeoutOverlay from "@/components/SessionTimeoutOverlay";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import LoginPage from "@/pages/LoginPage";
 import WorksPage from "@/pages/WorksPage";
 import WorkDetailPage from "@/pages/WorkDetailPage";
@@ -83,7 +85,20 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function AppLayout() {
   const mainRef = useRef<HTMLElement>(null);
-  const { user, logout } = useAuth();
+  const { user, logout, isTimedOut, setTimedOut } = useAuth();
+
+  const handleTimeout = useCallback(() => {
+    setTimedOut();
+  }, [setTimedOut]);
+
+  useSessionTimeout(handleTimeout);
+
+  useEffect(() => {
+    const handler = () => setTimedOut();
+    window.addEventListener("auth:unauthorized", handler);
+    return () => window.removeEventListener("auth:unauthorized", handler);
+  }, [setTimedOut]);
+
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem("sidebar-collapsed") === "true";
@@ -160,6 +175,7 @@ function AppLayout() {
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
+      {isTimedOut && <SessionTimeoutOverlay />}
     </div>
   );
 }
