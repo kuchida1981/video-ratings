@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  useDocumentTitle("ログイン");
   const from = (location.state as { from?: string })?.from || "/works";
 
   const handleSubmit = async (e: FormEvent) => {

@@ -41,10 +41,12 @@ function SortableRow({
   def,
   onRemove,
   onToggleSortable,
+  isEditor,
 }: {
   def: CustomFieldDefinition;
   onRemove: () => void;
   onToggleSortable: (checked: boolean) => void;
+  isEditor: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: def.id });
   const style = {
@@ -57,25 +59,29 @@ function SortableRow({
 
   return (
     <tr ref={setNodeRef} style={style} className="border-t bg-background">
-      <td className="px-2 py-2 w-6">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-        >
-          <GripVertical size={16} />
-        </div>
-      </td>
+      {isEditor && (
+        <td className="px-2 py-2 w-6">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          >
+            <GripVertical size={16} />
+          </div>
+        </td>
+      )}
       <td className="px-4 py-2">{def.name}</td>
       <td className="px-4 py-2 text-muted-foreground">{typeLabel(def.field_type)}</td>
       <td className="px-4 py-2 text-center">
-        <Switch checked={def.is_sortable} onCheckedChange={onToggleSortable} />
+        <Switch checked={def.is_sortable} onCheckedChange={onToggleSortable} disabled={!isEditor} />
       </td>
-      <td className="px-4 py-2 text-right">
-        <button className="text-muted-foreground hover:text-destructive" onClick={onRemove}>
-          <Trash2 size={14} />
-        </button>
-      </td>
+      {isEditor && (
+        <td className="px-4 py-2 text-right">
+          <button className="text-muted-foreground hover:text-destructive" onClick={onRemove}>
+            <Trash2 size={14} />
+          </button>
+        </td>
+      )}
     </tr>
   );
 }
@@ -144,9 +150,11 @@ export default function SettingsPage() {
     api.customFields.reorder(moved.map((d) => d.id)).catch(() => invalidate());
   };
 
+  const colCount = isEditor ? 5 : 3;
+
   const renderTable = (defs: CustomFieldDefinition[], emptyMsg: string, entityTypeScope: "work" | "performer") => (
     <DndContext
-      sensors={sensors}
+      sensors={isEditor ? sensors : []}
       collisionDetection={closestCenter}
       onDragEnd={(e) => handleDragEnd(e, entityTypeScope)}
     >
@@ -154,11 +162,11 @@ export default function SettingsPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <th className="px-2 py-2 w-6"></th>
+              {isEditor && <th className="px-2 py-2 w-6"></th>}
               <th className="text-left px-4 py-2 font-medium">項目名</th>
               <th className="text-left px-4 py-2 font-medium">型</th>
               <th className="px-4 py-2 font-medium text-center text-xs">並べ替えOK</th>
-              <th className="px-4 py-2"></th>
+              {isEditor && <th className="px-4 py-2"></th>}
             </tr>
           </thead>
           <tbody>
@@ -167,6 +175,7 @@ export default function SettingsPage() {
                 <SortableRow
                   key={d.id}
                   def={d}
+                  isEditor={isEditor}
                   onToggleSortable={(checked) => updateMutation.mutate({ id: d.id, data: { is_sortable: checked } })}
                   onRemove={() => {
                     const target = d.entity_type === "performer" ? "全出演者" : "全作品";
@@ -179,7 +188,7 @@ export default function SettingsPage() {
             </SortableContext>
             {defs.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{emptyMsg}</td>
+                <td colSpan={colCount} className="px-4 py-8 text-center text-muted-foreground">{emptyMsg}</td>
               </tr>
             )}
           </tbody>
@@ -293,20 +302,20 @@ export default function SettingsPage() {
       </section>
 
       {/* データ管理セクション */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold border-b pb-2">データ管理</h2>
-        <p className="text-sm text-muted-foreground">
-          全登録データのエクスポート・インポートを行います。インポートは既存データを完全に置き換えます。
-        </p>
-        <p className="text-xs text-muted-foreground">
-          エクスポートは画像を含む全データをZIPに圧縮するため、データ量によって数秒かかる場合があります。
-        </p>
+      {isEditor && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold border-b pb-2">データ管理</h2>
+          <p className="text-sm text-muted-foreground">
+            全登録データのエクスポート・インポートを行います。インポートは既存データを完全に置き換えます。
+          </p>
+          <p className="text-xs text-muted-foreground">
+            エクスポートは画像を含む全データをZIPに圧縮するため、データ量によって数秒かかる場合があります。
+          </p>
 
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handleExport} disabled={exportLoading || importLoading}>
-            <Download size={16} />{exportLoading ? "エクスポート中…" : "エクスポート"}
-          </Button>
-          {isEditor && (
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={handleExport} disabled={exportLoading || importLoading}>
+              <Download size={16} />{exportLoading ? "エクスポート中…" : "エクスポート"}
+            </Button>
             <label className="cursor-pointer">
               <input
                 ref={fileInputRef}
@@ -319,15 +328,15 @@ export default function SettingsPage() {
                 <span><Upload size={16} />インポート</span>
               </Button>
             </label>
-          )}
-        </div>
+          </div>
 
-        {importStatus && (
-          <p className={`text-sm ${importStatus.startsWith("エラー") ? "text-destructive" : "text-green-600"}`}>
-            {importStatus}
-          </p>
-        )}
-      </section>
+          {importStatus && (
+            <p className={`text-sm ${importStatus.startsWith("エラー") ? "text-destructive" : "text-green-600"}`}>
+              {importStatus}
+            </p>
+          )}
+        </section>
+      )}
 
       {/* アプリケーション情報セクション */}
       <section className="space-y-4">
