@@ -7,6 +7,7 @@ import type { CustomFieldDefinition, ImportRow, WorkColumnKey } from "@/types";
 import { useImportFlow } from "@/hooks/useImportFlow";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ function defaultSortDescForFieldType(fieldType: CustomFieldDefinition["field_typ
 export default function WorksPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isEditor } = useAuth();
   useDocumentTitle("作品一覧");
   const searchInputRef = useRef<HTMLInputElement>(null);
   useScrollRestoration("video-ratings:works-scroll-y");
@@ -332,7 +334,7 @@ export default function WorksPage() {
               <List size={16} />
             </Button>
           </div>
-          {viewMode === "table" && (
+          {isEditor && viewMode === "table" && (
             <Button
               variant={editMode ? "secondary" : "ghost"}
               size="sm"
@@ -343,25 +345,29 @@ export default function WorksPage() {
               <Pencil size={16} />
             </Button>
           )}
-          <Button variant="outline" onClick={() => setBulkImportOpen(true)}>
-            <Upload size={16} />一括登録
-          </Button>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus size={16} />新規登録</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>作品を登録</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div><Label>作品名 *</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="作品名" /></div>
-                <Button
-                  onClick={() => createWorkMutation.mutate({ title: newTitle.trim() })}
-                  disabled={!newTitle.trim()}
-                  className="w-full"
-                >登録する</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          {isEditor && (
+            <Button variant="outline" onClick={() => setBulkImportOpen(true)}>
+              <Upload size={16} />一括登録
+            </Button>
+          )}
+          {isEditor && (
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus size={16} />新規登録</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>作品を登録</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>作品名 *</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="作品名" /></div>
+                  <Button
+                    onClick={() => createWorkMutation.mutate({ title: newTitle.trim() })}
+                    disabled={!newTitle.trim()}
+                    className="w-full"
+                  >登録する</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 

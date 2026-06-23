@@ -13,6 +13,7 @@ import { PerformerTile } from "@/components/PerformerTile";
 import { PerformerTable } from "@/components/PerformerTable";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
+import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
@@ -56,6 +57,7 @@ function loadPerformersViewMode(): "tile" | "table" {
 export default function PerformersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isEditor } = useAuth();
   useDocumentTitle("出演者一覧");
   useScrollRestoration("video-ratings:performers-scroll-y");
   const [open, setOpen] = useState(false);
@@ -232,7 +234,7 @@ export default function PerformersPage() {
               <List size={16} />
             </Button>
           </div>
-          {viewMode === "table" && (
+          {isEditor && viewMode === "table" && (
             <Button
               variant={editMode ? "secondary" : "ghost"}
               size="sm"
@@ -243,19 +245,21 @@ export default function PerformersPage() {
               <Pencil size={16} />
             </Button>
           )}
-          <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus size={16} />新規登録</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>出演者を登録</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div><Label>名前 *</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="名前" /></div>
-              <div><Label>ふりがな</Label><Input value={furigana} onChange={(e) => setFurigana(e.target.value)} placeholder="ふりがな" /></div>
-              <Button onClick={() => createMutation.mutate({ name, furigana: furigana || undefined })} disabled={!name.trim()} className="w-full">登録する</Button>
-            </div>
-          </DialogContent>
-          </Dialog>
+          {isEditor && (
+            <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus size={16} />新規登録</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>出演者を登録</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div><Label>名前 *</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="名前" /></div>
+                <div><Label>ふりがな</Label><Input value={furigana} onChange={(e) => setFurigana(e.target.value)} placeholder="ふりがな" /></div>
+                <Button onClick={() => createMutation.mutate({ name, furigana: furigana || undefined })} disabled={!name.trim()} className="w-full">登録する</Button>
+              </div>
+            </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 

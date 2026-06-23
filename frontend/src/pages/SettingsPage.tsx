@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useAuth } from "@/contexts/AuthContext";
 
 type FieldType = "text" | "number" | "date" | "boolean";
 
@@ -82,6 +83,7 @@ function SortableRow({
 export default function SettingsPage() {
   const { maxCols, setMaxCols } = useTileMaxColumns();
   const queryClient = useQueryClient();
+  const { isEditor } = useAuth();
   useDocumentTitle("設定");
   const [name, setName] = useState("");
   const [fieldType, setFieldType] = useState<FieldType>("text");
@@ -256,7 +258,7 @@ export default function SettingsPage() {
           {renderTable(performerDefs, "出演者用カスタム項目がありません", "performer")}
         </div>
 
-        <div className="space-y-3 border rounded-lg p-4">
+        {isEditor && <div className="space-y-3 border rounded-lg p-4">
           <h3 className="font-semibold text-sm">項目を追加</h3>
           <div className="flex gap-2">
             <div className="flex-1">
@@ -287,7 +289,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <Button onClick={() => { if (!name.trim()) return; createMutation.mutate({ name, field_type: fieldType, entity_type: entityType }); }} disabled={!name.trim()}><Plus size={16} />追加</Button>
-        </div>
+        </div>}
       </section>
 
       {/* データ管理セクション */}
@@ -304,18 +306,20 @@ export default function SettingsPage() {
           <Button variant="outline" onClick={handleExport} disabled={exportLoading || importLoading}>
             <Download size={16} />{exportLoading ? "エクスポート中…" : "エクスポート"}
           </Button>
-          <label className="cursor-pointer">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".zip"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportFileSelect(f); }}
-            />
-            <Button variant="outline" asChild>
-              <span><Upload size={16} />インポート</span>
-            </Button>
-          </label>
+          {isEditor && (
+            <label className="cursor-pointer">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".zip"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportFileSelect(f); }}
+              />
+              <Button variant="outline" asChild>
+                <span><Upload size={16} />インポート</span>
+              </Button>
+            </label>
+          )}
         </div>
 
         {importStatus && (
