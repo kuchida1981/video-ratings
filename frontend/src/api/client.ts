@@ -16,8 +16,13 @@ const BASE = "/api";
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...init?.headers },
+    credentials: "include",
     ...init,
   });
+  if (res.status === 401) {
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+    throw new Error("Unauthorized");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail ?? res.statusText);
@@ -29,7 +34,11 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 async function upload<T>(path: string, file: File): Promise<T> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${BASE}${path}`, { method: "POST", body: form });
+  const res = await fetch(`${BASE}${path}`, { method: "POST", body: form, credentials: "include" });
+  if (res.status === 401) {
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+    throw new Error("Unauthorized");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail ?? res.statusText);
@@ -135,7 +144,7 @@ export const api = {
     preview: (file: File) => {
       const form = new FormData();
       form.append("file", file);
-      return fetch(`${BASE}/import/preview`, { method: "POST", body: form })
+      return fetch(`${BASE}/import/preview`, { method: "POST", body: form, credentials: "include" })
         .then((r) => r.json() as Promise<ImportPreviewResponse>);
     },
     execute: (rows: ExecuteRow[]) =>
@@ -144,7 +153,7 @@ export const api = {
 
   data: {
     exportAndDownload: async () => {
-      const res = await fetch(`${BASE}/export`);
+      const res = await fetch(`${BASE}/export`, { credentials: "include" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
         throw new Error(err.detail ?? res.statusText);
