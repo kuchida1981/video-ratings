@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, X, ArrowUpDown, Upload, CheckCircle2, XCircle, AlertTriangle, LayoutGrid, List, Pencil } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -145,13 +145,16 @@ export default function WorksPage() {
   ).length === 0;
 
   const isFirstRender = useRef(true);
+  const pendingSaveRef = useRef<Promise<void>>(Promise.resolve());
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
     if (!editMode) {
-      queryClient.invalidateQueries({ queryKey: ["works"] });
+      pendingSaveRef.current.finally(() => {
+        queryClient.invalidateQueries({ queryKey: ["works"] });
+      });
     }
   }, [editMode, queryClient]);
 
@@ -161,9 +164,11 @@ export default function WorksPage() {
     }
   }, [isEditModeDisabled, editMode]);
 
-  const handleUpdateCustomField = async (workId: number, fieldName: string, value: unknown) => {
-    await api.works.updateCustomFields(workId, { [fieldName]: value });
-  };
+  const handleUpdateCustomField = useCallback(async (workId: number, fieldName: string, value: unknown) => {
+    const save = api.works.updateCustomFields(workId, { [fieldName]: value }).then(() => {});
+    pendingSaveRef.current = save;
+    await save;
+  }, []);
 
   const createWorkMutation = useMutation({
     mutationFn: (data: { title: string }) =>

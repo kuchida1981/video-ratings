@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Files } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -51,46 +51,41 @@ function EditableCell({
     getInitialStateValue(initialValue, fieldType)
   );
   const [isError, setIsError] = useState(false);
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const lastSavedRef = useRef<string | boolean>(getInitialStateValue(initialValue, fieldType));
 
   useEffect(() => {
-    setValue(getInitialStateValue(initialValue, fieldType));
+    const v = getInitialStateValue(initialValue, fieldType);
+    setValue(v);
+    lastSavedRef.current = v;
     setIsError(false);
   }, [initialValue, fieldType]);
 
+  const save = (submitValue: unknown, displayValue: string | boolean) => {
+    if (!onUpdate) return;
+    onUpdate(workId, fieldName, submitValue)
+      .then(() => {
+        setIsError(false);
+        lastSavedRef.current = displayValue;
+      })
+      .catch(() => {
+        setIsError(true);
+        setValue(lastSavedRef.current);
+      });
+  };
+
   const handleBlur = () => {
     if (fieldType === "boolean") return;
-
-    const strValue = value as string;
-
-    // 送信する値の決定
+    const strValue = valueRef.current as string;
     let submitValue: unknown = strValue;
     if (strValue === "") {
       submitValue = null;
     } else if (fieldType === "number") {
       submitValue = Number(strValue);
     }
-
-    // 初期値の正規化と比較
-    let normInitialValue: unknown = initialValue;
-    if (initialValue === null || initialValue === undefined || initialValue === "") {
-      normInitialValue = null;
-    } else if (fieldType === "number") {
-      normInitialValue = Number(initialValue);
-    } else if (fieldType === "date" && typeof initialValue === "string") {
-      normInitialValue = initialValue.slice(0, 10);
-    }
-
-    if (submitValue !== normInitialValue) {
-      if (onUpdate) {
-        onUpdate(workId, fieldName, submitValue)
-          .then(() => {
-            setIsError(false);
-          })
-          .catch(() => {
-            setIsError(true);
-            setValue(getInitialStateValue(initialValue, fieldType));
-          });
-      }
+    if (strValue !== lastSavedRef.current) {
+      save(submitValue, strValue);
     }
   };
 
@@ -99,24 +94,14 @@ function EditableCell({
     if (fieldType === "boolean") {
       const nextVal = e.target.checked;
       setValue(nextVal);
-      if (onUpdate) {
-        onUpdate(workId, fieldName, nextVal)
-          .then(() => {
-            setIsError(false);
-          })
-          .catch(() => {
-            setIsError(true);
-            setValue(!!initialValue);
-          });
-      }
+      save(nextVal, nextVal);
     } else {
       setValue(e.target.value);
     }
   };
 
-  const inputClass = isError
-    ? "w-full bg-transparent border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring ring-2 ring-destructive"
-    : "w-full bg-transparent border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
+  const baseInputClass = "w-full bg-transparent border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
+  const inputClass = isError ? `${baseInputClass} ring-2 ring-destructive` : baseInputClass;
 
   if (fieldType === "boolean") {
     return (
