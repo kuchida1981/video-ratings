@@ -8,7 +8,7 @@ from app.config import settings
 
 SESSION_COOKIE_NAME = "session"
 SESSION_MAX_AGE = settings.session_timeout_seconds
-SESSION_SECURE = not settings.debug
+SESSION_SECURE = settings.cookie_secure
 DUMMY_HASH = "$2b$12$000000000000000000000u2jqDFMFamKruUbZnEooMGprUwvetfC6"
 
 
