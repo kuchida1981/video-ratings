@@ -14,6 +14,7 @@ import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PERFORMER_WORKS_SORT_KEY = "video-ratings:performer-detail-works-sort";
 
@@ -34,6 +35,7 @@ export default function PerformerDetailPage() {
   const navigate = useNavigate();
   const performerId = Number(id);
   const queryClient = useQueryClient();
+  const { isEditor } = useAuth();
 
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [editing, setEditing] = useState(false);
@@ -199,16 +201,18 @@ export default function PerformerDetailPage() {
         {performer.cover_image_url ? (
           <div className="relative aspect-video rounded-lg overflow-hidden border">
             <img src={performer.cover_image_url} alt={performer.name} className="w-full h-full object-cover" />
-            <button
-              onClick={() => { if (confirm("カバー画像を削除しますか？")) deleteCoverMutation.mutate(); }}
-              className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
-            >
-              <X size={14} />
-            </button>
+            {isEditor && (
+              <button
+                onClick={() => { if (confirm("カバー画像を削除しますか？")) deleteCoverMutation.mutate(); }}
+                className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
-        ) : (
+        ) : isEditor ? (
           <CoverUploadZone onUpload={uploadCoverMutation.mutate} />
-        )}
+        ) : null}
       </section>
 
       <div className="flex items-start justify-between">
@@ -331,8 +335,8 @@ export default function PerformerDetailPage() {
         </div>
         <div className="flex gap-2 items-center">
           <div className="text-2xl font-bold text-primary">{performer.total_score}点</div>
-          {!editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
-          <Button variant="destructive" size="sm" onClick={() => { if (confirm("この出演者を削除しますか？")) deleteMutation.mutate(); }}><Trash2 size={14} /></Button>
+          {isEditor && !editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
+          {isEditor && <Button variant="destructive" size="sm" onClick={() => { if (confirm("この出演者を削除しますか？")) deleteMutation.mutate(); }}><Trash2 size={14} /></Button>}
         </div>
       </div>
 
@@ -350,8 +354,8 @@ export default function PerformerDetailPage() {
                 <div key={tag.id} className="group relative">
                   <Badge
                     variant={performer.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleTagMutation.mutate(tag.id)}
+                    className={isEditor ? "cursor-pointer" : ""}
+                    onClick={isEditor ? () => toggleTagMutation.mutate(tag.id) : undefined}
                   >
                     {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
                   </Badge>
@@ -381,6 +385,7 @@ export default function PerformerDetailPage() {
                       type="checkbox"
                       className="h-4 w-4"
                       checked={Boolean(customFieldValues[cf.name])}
+                      disabled={!isEditor}
                       onChange={(e) => {
                         setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.checked }));
                         updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.checked });
@@ -391,8 +396,10 @@ export default function PerformerDetailPage() {
                   <Input
                     type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
                     value={String(customFieldValues[cf.name] ?? "")}
+                    readOnly={!isEditor}
                     onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
                     onBlur={(e) => {
+                      if (!isEditor) return;
                       const raw = e.target.value;
                       const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
                       updateCustomFieldMutation.mutate({ name: cf.name, value: value as string | number | null });
@@ -409,8 +416,9 @@ export default function PerformerDetailPage() {
       <section className="space-y-2">
         <h2 className="font-semibold">メモ</h2>
         <Textarea
-          placeholder="メモを入力..."
+          placeholder={isEditor ? "メモを入力..." : ""}
           value={memo}
+          readOnly={!isEditor}
           onChange={(e) => setMemo(e.target.value)}
           onBlur={handleMemoBlur}
           className="min-h-[120px]"

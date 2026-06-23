@@ -11,13 +11,23 @@
 | コードレビュー・PR作成 | **Claude Code** | `/code-review` スキルを使う |
 | レビュー指摘の修正 | **Antigravity CLI** (`agy`) | 実装担当が修正。Claude Code は修正内容を指示するのみ |
 
-### 難易度の目安
+### 難易度の目安（タスク単位で判定）
 
-- **低**: 既存パターンのコピー・追記、2ファイル以内、マイグレーション不要
-- **中**: 複数ファイルにまたがる変更、新しいロジックの追加、スキーマ変更を伴わない
-- **高**: アーキテクチャ変更、DBマイグレーション、複雑な状態管理、セキュリティ要件
+判定は change 全体ではなく tasks.md の各タスク単位で行う。
+agy をデフォルトとし、以下の条件に該当する場合のみ Claude Code が実装する。
 
-難易度が高い実装や、agy が行き詰まった場合は Claude Code に切り替える。
+**agy に任せる（デフォルト）:**
+- 既存コードにパターンがある実装（認証・DB・セキュリティ含む）
+- モデル追加・マイグレーション作成（スキーマが設計で確定済み）
+- 既存パターンの横展開（複数ページへの同じ変更等）
+- 依存追加・設定変更・クリーンアップ
+- テスト追加（既存テストパターンを参考にできる場合）
+
+**Claude Code が実装する:**
+- コードベースに前例がない新規アーキテクチャパターンの導入
+- 複数コンポーネント間の複雑な状態フローの設計と実装
+- プロンプトで十分な文脈を伝えきれない場合
+- agy が 2 回連続で失敗した場合
 
 ### Claude Code から agy を呼び出す方法
 
@@ -76,6 +86,11 @@ GIT_TERMINAL_PROMPT=0 CI=true \
 - **不明点・判断に迷う点がある場合は実装せず、`[QUESTION] ...` の形式で質問を出力すること**
 - **ハング予防ルール（以下の「agy プロンプトの必須ルール」セクション参照）**
 
+**タスク種別ごとの追加コンテキスト:**
+- Alembic マイグレーション作成時: `ls backend/alembic/versions/` の結果と最新 revision ID を含める
+- テスト作成時: CI 制約を明示（`pytest.mark.unit` = DB 不要・CI で実行、`pytest.mark.integration` = DB 必要・CI では実行しない。`SECRET_KEY` 環境変数が必要）
+- MCP 方式で中規模以上のタスク（テスト作成 + 実行確認等）: `timeout_s=240` 以上を設定
+
 実装完了後は Claude Code で `git diff HEAD` または `git log` を確認してからレビューに進む。
 
 ### agy プロンプトの必須ルール
@@ -88,6 +103,7 @@ agy へのすべてのプロンプトに、以下のルールを必ず含める:
 - 必ず非対話フラグ（--yes, -y, --no-input 等）を付けること
 - git push, npm publish など外部サービスへの送信は行わないこと
 - 対話的入力が必要な状況に遭遇したら、実行せず [QUESTION] で報告すること
+- git add は指定ファイルのみ。`git add -A` や `git add .` は禁止
 ```
 
 ### agy との対話ループ
@@ -153,20 +169,25 @@ Bash ツールの `timeout` パラメータも併用し、agy プロセスが応
 ### 機能追加・バグ修正の標準フロー
 
 ```
-1. 設計 (Claude Code)
+1. 設計 & proposal コミット (Claude Code)
    /opsx:explore  → 問題を探索し設計を固める
    /opsx:propose  → change proposal を生成（proposal.md / design.md / specs / tasks.md）
-   → ユーザーが承認（OK等）したら、Claude Code が自律的にステップ 2 を実行する
-   → ただし main 以外のブランチにいる場合はユーザーに確認してから行動する
 
-2. トピックブランチ作成 & proposal コミット (Claude Code)
-   git checkout -b feature/<change-name>
-   git add openspec/changes/<change-name>/
-   git commit -m "docs(openspec): propose <change-name>"
+   ★ /opsx:propose 完了後、Claude Code は自動的に以下を実行する（スキルの出力より優先）:
+     a. main ブランチにいる場合:
+        git checkout -b feature/<change-name>
+        git add openspec/changes/<change-name>/
+        git commit -m "docs(openspec): propose <change-name>"
+     b. main 以外のブランチにいる場合:
+        ユーザーに「新しいブランチを作るか、現在のブランチで続けるか」を確認する
 
-3. 実装 (agy タスク単位 × N)
-   /opsx:apply 実行時、Claude Code はデフォルトで agy に実装を委譲する
-   難易度が高い、または agy が行き詰まった場合のみ Claude Code が直接実装する
+   ★ コミット後、ユーザーに proposal の確認を促す:
+     「proposal をコミットしました。内容を確認して、問題なければ `/opsx:apply` で実装を開始できます。」
+     → 実装開始を勝手に促さない。まずユーザーのレビューを待つ。
+
+2. 実装 (agy タスク単位 × N)
+   /opsx:apply 実行時、各タスクの難易度をタスク単位で判定する（「難易度の目安」参照）
+   agy がデフォルト。Claude Code は前例のない新規パターンや、agy 2回連続失敗時のみ実装する
    tasks.md の各タスクを個別の agy ワンショットで実行
    MCP: mcp__agy__agy_ask(prompt="...", workspace="<プロジェクトルート>")
    Bash: GIT_TERMINAL_PROMPT=0 CI=true agy --dangerously-skip-permissions --print-timeout 3m --print "..." 2>&1
@@ -175,28 +196,28 @@ Bash ツールの `timeout` パラメータも併用し、agy プロセスが応
    → 失敗時は agy_continue / --continue で再開 or Claude Code が引き継ぐ
    → agy が実装コードをコミットする（"feat: <変更内容>"）
 
-3.5. agy 別セッションレビュー (agy 新規セッション)
+2.5. agy 別セッションレビュー (agy 新規セッション)
    実装とは別の新規 agy セッションで diff をレビューさせる
    → 変更要約（変更ファイル一覧、問題点、設計判断、テスト充足度）を出力させる
    → Claude Code は要約をベースに最終レビューの判断材料にする
    → 変更が 1 ファイル・20 行以下の場合はこのステップを省略してよい
 
-4. コードレビュー (Claude Code)
+3. コードレビュー (Claude Code)
    /code-review（agy レビュー結果も参考にしつつ最終判断）
    → 指摘があれば、修正内容を具体的にまとめる
 
-5. レビュー指摘の修正 (agy)
+4. レビュー指摘の修正 (agy)
    Claude Code がレビュー結果から修正プロンプトを作成し agy に委譲する
    → 修正対象ファイル・行・具体的な変更内容を指示する
    → agy が修正コードをコミットする（"fix: <修正内容>"）
    → 指摘がなければこのステップはスキップ
 
-6. PR 作成 & OpenSpec アーカイブ (Claude Code)
+5. PR 作成 & OpenSpec アーカイブ (Claude Code)
    /opsx:archive  → change をアーカイブ（delta spec sync を含む）
    gh pr create
    → アーカイブと spec sync のコミットを PR に含める
 
-7. CI 確認 (Claude Code)
+6. CI 確認 (Claude Code)
    gh pr checks --watch
    → 失敗したら是正してプッシュし、再度 watch する
 ```

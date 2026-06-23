@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useAuth } from "@/contexts/AuthContext";
 
 function SortableItem({ id, children, className, handle = false, gripTop = false }: { id: number; children: React.ReactNode; className?: string; handle?: boolean; gripTop?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -55,6 +56,7 @@ function SortableItem({ id, children, className, handle = false, gripTop = false
 
 export default function TagsPage() {
   const queryClient = useQueryClient();
+  const { isEditor } = useAuth();
   useDocumentTitle("タグ管理");
   const [catOpen, setCatOpen] = useState(false);
   const [catName, setCatName] = useState("");
@@ -171,7 +173,7 @@ export default function TagsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">タグ管理</h1>
-        <Dialog open={catOpen} onOpenChange={setCatOpen}>
+        {isEditor && <Dialog open={catOpen} onOpenChange={setCatOpen}>
           <DialogTrigger asChild>
             <Button><Plus size={16} />カテゴリ追加</Button>
           </DialogTrigger>
@@ -201,7 +203,7 @@ export default function TagsPage() {
               >作成</Button>
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       {["work", "performer"].map((et) => {
@@ -246,18 +248,20 @@ export default function TagsPage() {
                         <div className="flex items-center gap-2 px-4 py-2 bg-muted/30">
                           <span className="font-medium flex-1">{cat.name}</span>
                           <Badge variant="outline" className="text-xs">{cat.is_multi_select ? "複数可" : "単一選択"}</Badge>
-                          <button
-                            className="text-muted-foreground hover:text-primary"
-                            onClick={() => openEditCat(cat)}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => { if (confirm("このカテゴリとタグを全て削除しますか？")) deleteCategoryMutation.mutate(cat.id); }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {isEditor && <>
+                            <button
+                              className="text-muted-foreground hover:text-primary"
+                              onClick={() => openEditCat(cat)}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => { if (confirm("このカテゴリとタグを全て削除しますか？")) deleteCategoryMutation.mutate(cat.id); }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>}
                         </div>
                       )}
                       <div className="p-3 space-y-3 bg-background">
@@ -281,16 +285,18 @@ export default function TagsPage() {
                                           {tag.score != null && <Badge variant="secondary" className="text-[10px] h-4 px-1">+{tag.score}</Badge>}
                                           {tag.description && <span className="text-xs text-muted-foreground truncate">{tag.description}</span>}
                                         </div>
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                          <button
-                                            className="text-muted-foreground hover:text-primary p-1"
-                                            onClick={() => openEdit(tag)}
-                                          ><Pencil size={14} /></button>
-                                          <button
-                                            className="text-muted-foreground hover:text-destructive p-1"
-                                            onClick={() => { if (confirm("このタグを削除しますか？")) deleteTagMutation.mutate(tag.id); }}
-                                          ><Trash2 size={14} /></button>
-                                        </div>
+                                        {isEditor && (
+                                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                              className="text-muted-foreground hover:text-primary p-1"
+                                              onClick={() => openEdit(tag)}
+                                            ><Pencil size={14} /></button>
+                                            <button
+                                              className="text-muted-foreground hover:text-destructive p-1"
+                                              onClick={() => { if (confirm("このタグを削除しますか？")) deleteTagMutation.mutate(tag.id); }}
+                                            ><Trash2 size={14} /></button>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                   </SortableItem>
@@ -299,7 +305,7 @@ export default function TagsPage() {
                             </SortableContext>
                           </DndContext>
 
-                          {tagOpen === cat.id ? (
+                          {isEditor && (tagOpen === cat.id ? (
                             <div className="flex gap-2 items-end border-t pt-3 mt-1">
                               <div className="flex-[2]"><Label className="text-xs">タグ名</Label><Input value={tagName} onChange={(e) => setTagName(e.target.value)} /></div>
                               <div className="flex-[3]"><Label className="text-xs">説明</Label><Input value={tagDescription} onChange={(e) => setTagDescription(e.target.value)} placeholder="（任意）" /></div>
@@ -311,7 +317,7 @@ export default function TagsPage() {
                             <Button size="sm" variant="ghost" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={() => { setTagOpen(cat.id); setTagName(""); setTagScore(""); setTagDescription(""); setEditingTagId(null); }}>
                               <Plus size={14} className="mr-2" />タグを追加
                             </Button>
-                          )}
+                          ))}
                         </div>
                     </SortableItem>
                   ))}
