@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
 import { Files } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { WorkListItem, WorkColumnKey, CustomFieldDefinition } from "@/types";
+import { EditableCell, formatCustomValue } from "@/components/EditableCell";
 
 interface WorkTableProps {
   works: WorkListItem[];
@@ -12,124 +12,6 @@ interface WorkTableProps {
   onUpdateCustomField?: (workId: number, fieldName: string, value: unknown) => Promise<void>;
 }
 
-function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["field_type"]): string {
-  if (value === null || value === undefined) return "—";
-  if (fieldType === "boolean") return value ? "✓" : "—";
-  if (fieldType === "date" && typeof value === "string") return value.slice(0, 10);
-  return String(value);
-}
-
-interface EditableCellProps {
-  workId: number;
-  fieldName: string;
-  fieldType: CustomFieldDefinition["field_type"];
-  initialValue: unknown;
-  onUpdate?: (workId: number, fieldName: string, value: unknown) => Promise<void>;
-}
-
-function getInitialStateValue(val: unknown, type: CustomFieldDefinition["field_type"]) {
-  if (type === "boolean") {
-    return !!val;
-  }
-  if (val === null || val === undefined) {
-    return "";
-  }
-  if (type === "date" && typeof val === "string") {
-    return val.slice(0, 10);
-  }
-  return String(val);
-}
-
-function EditableCell({
-  workId,
-  fieldName,
-  fieldType,
-  initialValue,
-  onUpdate,
-}: EditableCellProps) {
-  const [value, setValue] = useState<string | boolean>(() =>
-    getInitialStateValue(initialValue, fieldType)
-  );
-  const [isError, setIsError] = useState(false);
-  const valueRef = useRef(value);
-  valueRef.current = value;
-  const lastSavedRef = useRef<string | boolean>(getInitialStateValue(initialValue, fieldType));
-
-  useEffect(() => {
-    const v = getInitialStateValue(initialValue, fieldType);
-    setValue(v);
-    lastSavedRef.current = v;
-    setIsError(false);
-  }, [initialValue, fieldType]);
-
-  const save = (submitValue: unknown, displayValue: string | boolean) => {
-    if (!onUpdate) return;
-    onUpdate(workId, fieldName, submitValue)
-      .then(() => {
-        setIsError(false);
-        lastSavedRef.current = displayValue;
-      })
-      .catch(() => {
-        setIsError(true);
-        setValue(lastSavedRef.current);
-      });
-  };
-
-  const handleBlur = () => {
-    if (fieldType === "boolean") return;
-    const strValue = valueRef.current as string;
-    let submitValue: unknown = strValue;
-    if (strValue === "") {
-      submitValue = null;
-    } else if (fieldType === "number") {
-      const num = Number(strValue);
-      if (Number.isNaN(num)) {
-        setIsError(true);
-        setValue(lastSavedRef.current);
-        return;
-      }
-      submitValue = num;
-    }
-    if (strValue !== lastSavedRef.current) {
-      save(submitValue, strValue);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsError(false);
-    if (fieldType === "boolean") {
-      const nextVal = e.target.checked;
-      setValue(nextVal);
-      save(nextVal, nextVal);
-    } else {
-      setValue(e.target.value);
-    }
-  };
-
-  const baseInputClass = "w-full bg-transparent border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
-  const inputClass = isError ? `${baseInputClass} ring-2 ring-destructive` : baseInputClass;
-
-  if (fieldType === "boolean") {
-    return (
-      <input
-        type="checkbox"
-        checked={value as boolean}
-        onChange={handleChange}
-        className={isError ? "h-4 w-4 ring-2 ring-destructive" : "h-4 w-4"}
-      />
-    );
-  }
-
-  return (
-    <input
-      type={fieldType === "number" ? "number" : fieldType === "date" ? "date" : "text"}
-      value={value as string}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      className={inputClass}
-    />
-  );
-}
 
 export function WorkTable({
   works,
@@ -211,7 +93,7 @@ export function WorkTable({
                       >
                         {editMode ? (
                           <EditableCell
-                            workId={w.id}
+                            entityId={w.id}
                             fieldName={d.name}
                             fieldType={d.field_type}
                             initialValue={fieldValue}
