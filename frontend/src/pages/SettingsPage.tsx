@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useAuth } from "@/contexts/AuthContext";
 
 type FieldType = "text" | "number" | "date" | "boolean";
 
@@ -40,12 +41,14 @@ function SortableRow({
   def,
   onRemove,
   onToggleSortable,
+  isEditor = false,
 }: {
   def: CustomFieldDefinition;
   onRemove: () => void;
   onToggleSortable: (checked: boolean) => void;
+  isEditor?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: def.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: def.id, disabled: !isEditor });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -57,23 +60,27 @@ function SortableRow({
   return (
     <tr ref={setNodeRef} style={style} className="border-t bg-background">
       <td className="px-2 py-2 w-6">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-        >
-          <GripVertical size={16} />
-        </div>
+        {isEditor && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          >
+            <GripVertical size={16} />
+          </div>
+        )}
       </td>
       <td className="px-4 py-2">{def.name}</td>
       <td className="px-4 py-2 text-muted-foreground">{typeLabel(def.field_type)}</td>
       <td className="px-4 py-2 text-center">
-        <Switch checked={def.is_sortable} onCheckedChange={onToggleSortable} />
+        <Switch checked={def.is_sortable} onCheckedChange={onToggleSortable} disabled={!isEditor} />
       </td>
       <td className="px-4 py-2 text-right">
-        <button className="text-muted-foreground hover:text-destructive" onClick={onRemove}>
-          <Trash2 size={14} />
-        </button>
+        {isEditor && (
+          <button className="text-muted-foreground hover:text-destructive" onClick={onRemove}>
+            <Trash2 size={14} />
+          </button>
+        )}
       </td>
     </tr>
   );
@@ -82,6 +89,8 @@ function SortableRow({
 export default function SettingsPage() {
   const { maxCols, setMaxCols } = useTileMaxColumns();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isEditor = user?.role === "editor";
   useDocumentTitle("設定");
   const [name, setName] = useState("");
   const [fieldType, setFieldType] = useState<FieldType>("text");
@@ -172,6 +181,7 @@ export default function SettingsPage() {
                       removeMutation.mutate(d.id);
                     }
                   }}
+                  isEditor={isEditor}
                 />
               ))}
             </SortableContext>
@@ -256,38 +266,40 @@ export default function SettingsPage() {
           {renderTable(performerDefs, "出演者用カスタム項目がありません", "performer")}
         </div>
 
-        <div className="space-y-3 border rounded-lg p-4">
-          <h3 className="font-semibold text-sm">項目を追加</h3>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label className="text-xs">項目名</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 発売日" />
+        {isEditor && (
+          <div className="space-y-3 border rounded-lg p-4">
+            <h3 className="font-semibold text-sm">項目を追加</h3>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label className="text-xs">項目名</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 発売日" />
+              </div>
+              <div className="w-36">
+                <Label className="text-xs">対象</Label>
+                <Select value={entityType} onValueChange={(v) => setEntityType(v as "work" | "performer")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="work">作品</SelectItem>
+                    <SelectItem value="performer">出演者</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-40">
+                <Label className="text-xs">型</Label>
+                <Select value={fieldType} onValueChange={(v) => setFieldType(v as FieldType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">テキスト</SelectItem>
+                    <SelectItem value="number">数値</SelectItem>
+                    <SelectItem value="date">日付</SelectItem>
+                    <SelectItem value="boolean">チェックボックス</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="w-36">
-              <Label className="text-xs">対象</Label>
-              <Select value={entityType} onValueChange={(v) => setEntityType(v as "work" | "performer")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="work">作品</SelectItem>
-                  <SelectItem value="performer">出演者</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-40">
-              <Label className="text-xs">型</Label>
-              <Select value={fieldType} onValueChange={(v) => setFieldType(v as FieldType)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">テキスト</SelectItem>
-                  <SelectItem value="number">数値</SelectItem>
-                  <SelectItem value="date">日付</SelectItem>
-                  <SelectItem value="boolean">チェックボックス</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Button onClick={() => { if (!name.trim()) return; createMutation.mutate({ name, field_type: fieldType, entity_type: entityType }); }} disabled={!name.trim()}><Plus size={16} />追加</Button>
           </div>
-          <Button onClick={() => { if (!name.trim()) return; createMutation.mutate({ name, field_type: fieldType, entity_type: entityType }); }} disabled={!name.trim()}><Plus size={16} />追加</Button>
-        </div>
+        )}
       </section>
 
       {/* データ管理セクション */}
@@ -304,18 +316,20 @@ export default function SettingsPage() {
           <Button variant="outline" onClick={handleExport} disabled={exportLoading || importLoading}>
             <Download size={16} />{exportLoading ? "エクスポート中…" : "エクスポート"}
           </Button>
-          <label className="cursor-pointer">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".zip"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportFileSelect(f); }}
-            />
-            <Button variant="outline" asChild>
-              <span><Upload size={16} />インポート</span>
-            </Button>
-          </label>
+          {isEditor && (
+            <label className="cursor-pointer">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".zip"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportFileSelect(f); }}
+              />
+              <Button variant="outline" asChild>
+                <span><Upload size={16} />インポート</span>
+              </Button>
+            </label>
+          )}
         </div>
 
         {importStatus && (

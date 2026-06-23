@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 
@@ -20,6 +21,8 @@ export default function WorkDetailPage() {
   const navigate = useNavigate();
   const workId = Number(id);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isEditor = user?.role === "editor";
 
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [performerCFValues, setPerformerCFValues] = useState<Record<number, Record<string, string | boolean>>>({});
@@ -336,22 +339,24 @@ export default function WorkDetailPage() {
         {work.cover_image_url ? (
           <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
             <img src={work.cover_image_url} alt={work.title} className="w-full h-full object-cover" />
-            <button
-              onClick={() => { if (confirm("カバー画像を削除しますか？")) deleteCoverMutation.mutate(); }}
-              className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
-            >
-              <X size={14} />
-            </button>
+            {isEditor && (
+              <button
+                onClick={() => { if (confirm("カバー画像を削除しますか？")) deleteCoverMutation.mutate(); }}
+                className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         ) : (
-          <CoverUploadZone onUpload={uploadCoverMutation.mutate} />
+          isEditor && <CoverUploadZone onUpload={uploadCoverMutation.mutate} />
         )}
       </section>
 
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          {editing ? (
+          {editing && isEditor ? (
             <div className="space-y-2">
               <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-xl font-bold h-auto text-xl" />
               <div className="flex gap-2">
@@ -380,8 +385,12 @@ export default function WorkDetailPage() {
         </div>
         <div className="flex gap-2 items-center">
           <div className="text-2xl font-bold text-primary">{work.total_score}点</div>
-          {!editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
-          <Button variant="destructive" size="sm" onClick={() => { if (confirm("この作品を削除しますか？")) deleteWorkMutation.mutate(); }}><Trash2 size={14} /></Button>
+          {isEditor && (
+            <>
+              {!editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
+              <Button variant="destructive" size="sm" onClick={() => { if (confirm("この作品を削除しますか？")) deleteWorkMutation.mutate(); }}><Trash2 size={14} /></Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -401,86 +410,103 @@ export default function WorkDetailPage() {
                 </span>
                 <span className="text-sm text-primary font-mono">{p.total_score}点</span>
               </div>
-              <div className="flex items-center gap-1">
-                {!p.is_main && (
+              {isEditor && (
+                <div className="flex items-center gap-1">
+                  {!p.is_main && (
+                    <button
+                      className="text-muted-foreground hover:text-yellow-500"
+                      onClick={() => setMainPerformerMutation.mutate(p.id)}
+                      title="主演に設定"
+                    >
+                      <UserCheck size={14} />
+                    </button>
+                  )}
                   <button
-                    className="text-muted-foreground hover:text-yellow-500"
-                    onClick={() => setMainPerformerMutation.mutate(p.id)}
-                    title="主演に設定"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => removePerformerMutation.mutate(p.id)}
                   >
-                    <UserCheck size={14} />
+                    <X size={14} />
                   </button>
-                )}
-                <button
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => removePerformerMutation.mutate(p.id)}
-                >
-                  <X size={14} />
-                </button>
-              </div>
+                </div>
+              )}
             </div>
-            {performerCategories.map((cat) => (
-              <div key={cat.id}>
-                <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
-                  <span>{cat.name}</span>
-                  {cat.description && <span className="opacity-60">({cat.description})</span>}
+            {performerCategories.map((cat) => {
+              const activeTags = cat.tags.filter((tag) => p.tags.some((t) => t.id === tag.id));
+              const tagsToRender = isEditor ? cat.tags : activeTags;
+              if (!isEditor && activeTags.length === 0) return null;
+              return (
+                <div key={cat.id}>
+                  <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+                    <span>{cat.name}</span>
+                    {cat.description && <span className="opacity-60">({cat.description})</span>}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {tagsToRender.map((tag) => (
+                      <div key={tag.id} className="group relative">
+                        <Badge
+                          variant={p.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
+                          className={isEditor ? "cursor-pointer" : ""}
+                          onClick={() => isEditor && togglePerformerTagMutation.mutate({ performer: p, tagId: tag.id, cat })}
+                        >
+                          {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
+                        </Badge>
+                        {tag.description && (
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground border shadow-md text-[10px] rounded px-2 py-1 mb-1 whitespace-nowrap z-50">
+                            {tag.description}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {cat.tags.map((tag) => (
-                    <div key={tag.id} className="group relative">
-                      <Badge
-                        variant={p.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => togglePerformerTagMutation.mutate({ performer: p, tagId: tag.id, cat })}
-                      >
-                        {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
-                      </Badge>
-                      {tag.description && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground border shadow-md text-[10px] rounded px-2 py-1 mb-1 whitespace-nowrap z-50">
-                          {tag.description}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {performerCFDefs.length > 0 && (
               <div className="grid grid-cols-2 gap-2 pt-1">
                 {performerCFDefs.map((cf) => (
                   <div key={cf.id}>
                     <Label className="text-xs">{cf.name}</Label>
-                    {cf.field_type === "boolean" ? (
-                      <div className="flex items-center h-9">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={Boolean(performerCFValues[p.id]?.[cf.name])}
-                          onChange={(e) => {
+                    {isEditor ? (
+                      cf.field_type === "boolean" ? (
+                        <div className="flex items-center h-9">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4"
+                            checked={Boolean(performerCFValues[p.id]?.[cf.name])}
+                            onChange={(e) => {
+                              setPerformerCFValues((prev) => ({
+                                ...prev,
+                                [p.id]: { ...prev[p.id], [cf.name]: e.target.checked },
+                              }));
+                              updatePerformerCFMutation.mutate({ performerId: p.id, name: cf.name, value: e.target.checked });
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <Input
+                          type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
+                          value={String(performerCFValues[p.id]?.[cf.name] ?? "")}
+                          onChange={(e) =>
                             setPerformerCFValues((prev) => ({
                               ...prev,
-                              [p.id]: { ...prev[p.id], [cf.name]: e.target.checked },
-                            }));
-                            updatePerformerCFMutation.mutate({ performerId: p.id, name: cf.name, value: e.target.checked });
+                              [p.id]: { ...prev[p.id], [cf.name]: e.target.value },
+                            }))
+                          }
+                          onBlur={(e) => {
+                            const raw = e.target.value;
+                            const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
+                            updatePerformerCFMutation.mutate({ performerId: p.id, name: cf.name, value: value as string | number | null });
                           }}
                         />
-                      </div>
+                      )
                     ) : (
-                      <Input
-                        type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
-                        value={String(performerCFValues[p.id]?.[cf.name] ?? "")}
-                        onChange={(e) =>
-                          setPerformerCFValues((prev) => ({
-                            ...prev,
-                            [p.id]: { ...prev[p.id], [cf.name]: e.target.value },
-                          }))
-                        }
-                        onBlur={(e) => {
-                          const raw = e.target.value;
-                          const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
-                          updatePerformerCFMutation.mutate({ performerId: p.id, name: cf.name, value: value as string | number | null });
-                        }}
-                      />
+                      <div className="flex items-center h-9 text-sm">
+                        {cf.field_type === "boolean" ? (
+                          performerCFValues[p.id]?.[cf.name] ? "はい" : "いいえ"
+                        ) : (
+                          String(performerCFValues[p.id]?.[cf.name] ?? "—") || "—"
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -488,6 +514,7 @@ export default function WorkDetailPage() {
             )}
           </div>
         ))}
+        {isEditor && (
           <div className="flex gap-2">
             <select
               className="border rounded px-2 py-1 text-sm"
@@ -510,37 +537,43 @@ export default function WorkDetailPage() {
             </select>
             <Button size="sm" onClick={() => addPerformerMutation.mutate(Number(addPerformerId))} disabled={!addPerformerId}>追加</Button>
           </div>
+        )}
       </section>
 
       {/* Tags */}
       <section className="space-y-2">
         <h2 className="font-semibold">タグ評価</h2>
-        {categories.map((cat) => (
-          <div key={cat.id}>
-            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
-              <span>{cat.name}</span>
-              {cat.description && <span className="opacity-60 font-normal">({cat.description})</span>}
+        {categories.map((cat) => {
+          const activeTags = cat.tags.filter((tag) => work.tags.some((t) => t.id === tag.id));
+          const tagsToRender = isEditor ? cat.tags : activeTags;
+          if (!isEditor && activeTags.length === 0) return null;
+          return (
+            <div key={cat.id}>
+              <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+                <span>{cat.name}</span>
+                {cat.description && <span className="opacity-60 font-normal">({cat.description})</span>}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {tagsToRender.map((tag) => (
+                  <div key={tag.id} className="group relative">
+                    <Badge
+                      variant={work.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
+                      className={isEditor ? "cursor-pointer" : ""}
+                      onClick={() => isEditor && toggleTagMutation.mutate(tag.id)}
+                    >
+                      {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
+                    </Badge>
+                    {tag.description && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground border shadow-md text-[10px] rounded px-2 py-1 mb-1 whitespace-nowrap z-50">
+                        {tag.description}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {cat.tags.map((tag) => (
-                <div key={tag.id} className="group relative">
-                  <Badge
-                    variant={work.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleTagMutation.mutate(tag.id)}
-                  >
-                    {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
-                  </Badge>
-                  {tag.description && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground border shadow-md text-[10px] rounded px-2 py-1 mb-1 whitespace-nowrap z-50">
-                      {tag.description}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       {/* Files */}
@@ -548,7 +581,7 @@ export default function WorkDetailPage() {
         <h2 className="font-semibold">ファイルパス</h2>
         {work.files.map((f) => (
           <div key={f.id}>
-            {editingFileId === f.id ? (
+            {editingFileId === f.id && isEditor ? (
               <div className="flex items-center gap-2 text-sm">
                 <Input
                   value={editFileForm.path}
@@ -589,13 +622,15 @@ export default function WorkDetailPage() {
               <div className="flex items-center gap-2 text-sm">
                 <code className="flex-1 bg-muted px-2 py-1 rounded text-xs">{f.path}</code>
                 {f.display_name && <span className="text-muted-foreground">{f.display_name}</span>}
-                <button
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => { setEditingFileId(f.id); setEditFileForm({ path: f.path, display_name: f.display_name ?? "" }); }}
-                  title="編集"
-                >
-                  <Pencil size={14} />
-                </button>
+                {isEditor && (
+                  <button
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => { setEditingFileId(f.id); setEditFileForm({ path: f.path, display_name: f.display_name ?? "" }); }}
+                    title="編集"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
                 {isSmbUrl(f.path) && (
                   <button
                     className={`${playingFileId === f.id ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
@@ -605,15 +640,17 @@ export default function WorkDetailPage() {
                     {playingFileId === f.id ? <X size={14} /> : <Play size={14} />}
                   </button>
                 )}
-                <button
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => {
-                    if (playingFileId === f.id) setPlayingFileId(null);
-                    removeFileMutation.mutate(f.id);
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
+                {isEditor && (
+                  <button
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => {
+                      if (playingFileId === f.id) setPlayingFileId(null);
+                      removeFileMutation.mutate(f.id);
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
             )}
             {playingFileId === f.id && (
@@ -650,21 +687,23 @@ export default function WorkDetailPage() {
             )}
           </div>
         ))}
-        <div className="flex gap-2">
-          <Input
-            placeholder="smb://server/share/path/file.mkv"
-            value={newFilePath}
-            onChange={(e) => setNewFilePath(e.target.value)}
-            className="flex-1"
-          />
-          <Input
-            placeholder="表示名"
-            value={newFileDisplayName}
-            onChange={(e) => setNewFileDisplayName(e.target.value)}
-            className="w-32"
-          />
-          <Button size="sm" onClick={() => addFileMutation.mutate({ path: newFilePath, display_name: newFileDisplayName || undefined })} disabled={!newFilePath.trim()}><Plus size={14} /></Button>
-        </div>
+        {isEditor && (
+          <div className="flex gap-2">
+            <Input
+              placeholder="smb://server/share/path/file.mkv"
+              value={newFilePath}
+              onChange={(e) => setNewFilePath(e.target.value)}
+              className="flex-1"
+            />
+            <Input
+              placeholder="表示名"
+              value={newFileDisplayName}
+              onChange={(e) => setNewFileDisplayName(e.target.value)}
+              className="w-32"
+            />
+            <Button size="sm" onClick={() => addFileMutation.mutate({ path: newFilePath, display_name: newFileDisplayName || undefined })} disabled={!newFilePath.trim()}><Plus size={14} /></Button>
+          </div>
+        )}
       </section>
 
       {/* Custom Fields */}
@@ -675,29 +714,39 @@ export default function WorkDetailPage() {
             {customFields.map((cf) => (
               <div key={cf.id}>
                 <Label className="text-xs">{cf.name}</Label>
-                {cf.field_type === "boolean" ? (
-                  <div className="flex items-center h-9">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={Boolean(customFieldValues[cf.name])}
-                      onChange={(e) => {
-                        setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.checked }));
-                        updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.checked });
+                {isEditor ? (
+                  cf.field_type === "boolean" ? (
+                    <div className="flex items-center h-9">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={Boolean(customFieldValues[cf.name])}
+                        onChange={(e) => {
+                          setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.checked }));
+                          updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.checked });
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <Input
+                      type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
+                      value={String(customFieldValues[cf.name] ?? "")}
+                      onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
+                      onBlur={(e) => {
+                        const raw = e.target.value;
+                        const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
+                        updateCustomFieldMutation.mutate({ name: cf.name, value: value as string | number | null });
                       }}
                     />
-                  </div>
+                  )
                 ) : (
-                  <Input
-                    type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
-                    value={String(customFieldValues[cf.name] ?? "")}
-                    onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
-                    onBlur={(e) => {
-                      const raw = e.target.value;
-                      const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
-                      updateCustomFieldMutation.mutate({ name: cf.name, value: value as string | number | null });
-                    }}
-                  />
+                  <div className="flex items-center h-9 text-sm">
+                    {cf.field_type === "boolean" ? (
+                      customFieldValues[cf.name] ? "はい" : "いいえ"
+                    ) : (
+                      String(customFieldValues[cf.name] ?? "—") || "—"
+                    )}
+                  </div>
                 )}
               </div>
             ))}
@@ -708,13 +757,19 @@ export default function WorkDetailPage() {
       {/* Memo */}
       <section className="space-y-2">
         <h2 className="font-semibold">メモ</h2>
-        <Textarea
-          placeholder="メモを入力..."
-          value={memo}
-          onChange={(e) => setMemo(e.target.value)}
-          onBlur={handleMemoBlur}
-          className="min-h-[120px]"
-        />
+        {isEditor ? (
+          <Textarea
+            placeholder="メモを入力..."
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            onBlur={handleMemoBlur}
+            className="min-h-[120px]"
+          />
+        ) : (
+          <div className="border rounded-md p-3 text-sm min-h-[120px] whitespace-pre-wrap bg-muted/10">
+            {work.memo || <span className="text-muted-foreground">メモはありません</span>}
+          </div>
+        )}
       </section>
     </div>
     {theaterFile && (

@@ -14,6 +14,7 @@ import { CoverUploadZone } from "@/components/CoverUploadZone";
 import { useTileMaxColumns } from "@/hooks/useTileMaxColumns";
 import { useTileGridStyle } from "@/hooks/useTileGridStyle";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PERFORMER_WORKS_SORT_KEY = "video-ratings:performer-detail-works-sort";
 
@@ -34,6 +35,8 @@ export default function PerformerDetailPage() {
   const navigate = useNavigate();
   const performerId = Number(id);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isEditor = user?.role === "editor";
 
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [editing, setEditing] = useState(false);
@@ -199,21 +202,23 @@ export default function PerformerDetailPage() {
         {performer.cover_image_url ? (
           <div className="relative aspect-video rounded-lg overflow-hidden border">
             <img src={performer.cover_image_url} alt={performer.name} className="w-full h-full object-cover" />
-            <button
-              onClick={() => { if (confirm("カバー画像を削除しますか？")) deleteCoverMutation.mutate(); }}
-              className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
-            >
-              <X size={14} />
-            </button>
+            {isEditor && (
+              <button
+                onClick={() => { if (confirm("カバー画像を削除しますか？")) deleteCoverMutation.mutate(); }}
+                className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         ) : (
-          <CoverUploadZone onUpload={uploadCoverMutation.mutate} />
+          isEditor && <CoverUploadZone onUpload={uploadCoverMutation.mutate} />
         )}
       </section>
 
       <div className="flex items-start justify-between">
         <div>
-          {editing ? (
+          {editing && isEditor ? (
             <div className="space-y-4">
               <div className="space-y-2">
                 <div><Label>名前</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
@@ -331,40 +336,49 @@ export default function PerformerDetailPage() {
         </div>
         <div className="flex gap-2 items-center">
           <div className="text-2xl font-bold text-primary">{performer.total_score}点</div>
-          {!editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
-          <Button variant="destructive" size="sm" onClick={() => { if (confirm("この出演者を削除しますか？")) deleteMutation.mutate(); }}><Trash2 size={14} /></Button>
+          {isEditor && (
+            <>
+              {!editing && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>編集</Button>}
+              <Button variant="destructive" size="sm" onClick={() => { if (confirm("この出演者を削除しますか？")) deleteMutation.mutate(); }}><Trash2 size={14} /></Button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Tags */}
       <section className="space-y-2">
         <h2 className="font-semibold">評価タグ</h2>
-        {categories.map((cat) => (
-          <div key={cat.id}>
-            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
-              <span>{cat.name}</span>
-              {cat.description && <span className="opacity-60 font-normal">({cat.description})</span>}
+        {categories.map((cat) => {
+          const activeTags = cat.tags.filter((tag) => performer.tags.some((t) => t.id === tag.id));
+          const tagsToRender = isEditor ? cat.tags : activeTags;
+          if (!isEditor && activeTags.length === 0) return null;
+          return (
+            <div key={cat.id}>
+              <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+                <span>{cat.name}</span>
+                {cat.description && <span className="opacity-60 font-normal">({cat.description})</span>}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {tagsToRender.map((tag) => (
+                  <div key={tag.id} className="group relative">
+                    <Badge
+                      variant={performer.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
+                      className={isEditor ? "cursor-pointer" : ""}
+                      onClick={() => isEditor && toggleTagMutation.mutate(tag.id)}
+                    >
+                      {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
+                    </Badge>
+                    {tag.description && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground border shadow-md text-[10px] rounded px-2 py-1 mb-1 whitespace-nowrap z-50">
+                        {tag.description}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {cat.tags.map((tag) => (
-                <div key={tag.id} className="group relative">
-                  <Badge
-                    variant={performer.tags.some((t) => t.id === tag.id) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleTagMutation.mutate(tag.id)}
-                  >
-                    {tag.name}{tag.score != null ? ` +${tag.score}` : ""}
-                  </Badge>
-                  {tag.description && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground border shadow-md text-[10px] rounded px-2 py-1 mb-1 whitespace-nowrap z-50">
-                      {tag.description}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       {/* Custom Fields */}
@@ -375,29 +389,39 @@ export default function PerformerDetailPage() {
             {customFieldDefs.map((cf) => (
               <div key={cf.id}>
                 <Label className="text-xs">{cf.name}</Label>
-                {cf.field_type === "boolean" ? (
-                  <div className="flex items-center h-9">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={Boolean(customFieldValues[cf.name])}
-                      onChange={(e) => {
-                        setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.checked }));
-                        updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.checked });
+                {isEditor ? (
+                  cf.field_type === "boolean" ? (
+                    <div className="flex items-center h-9">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={Boolean(customFieldValues[cf.name])}
+                        onChange={(e) => {
+                          setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.checked }));
+                          updateCustomFieldMutation.mutate({ name: cf.name, value: e.target.checked });
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <Input
+                      type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
+                      value={String(customFieldValues[cf.name] ?? "")}
+                      onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
+                      onBlur={(e) => {
+                        const raw = e.target.value;
+                        const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
+                        updateCustomFieldMutation.mutate({ name: cf.name, value: value as string | number | null });
                       }}
                     />
-                  </div>
+                  )
                 ) : (
-                  <Input
-                    type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
-                    value={String(customFieldValues[cf.name] ?? "")}
-                    onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [cf.name]: e.target.value }))}
-                    onBlur={(e) => {
-                      const raw = e.target.value;
-                      const value = raw === "" ? null : cf.field_type === "number" ? Number(raw) : raw;
-                      updateCustomFieldMutation.mutate({ name: cf.name, value: value as string | number | null });
-                    }}
-                  />
+                  <div className="flex items-center h-9 text-sm">
+                    {cf.field_type === "boolean" ? (
+                      customFieldValues[cf.name] ? "はい" : "いいえ"
+                    ) : (
+                      String(customFieldValues[cf.name] ?? "—") || "—"
+                    )}
+                  </div>
                 )}
               </div>
             ))}
@@ -408,13 +432,19 @@ export default function PerformerDetailPage() {
       {/* Memo */}
       <section className="space-y-2">
         <h2 className="font-semibold">メモ</h2>
-        <Textarea
-          placeholder="メモを入力..."
-          value={memo}
-          onChange={(e) => setMemo(e.target.value)}
-          onBlur={handleMemoBlur}
-          className="min-h-[120px]"
-        />
+        {isEditor ? (
+          <Textarea
+            placeholder="メモを入力..."
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            onBlur={handleMemoBlur}
+            className="min-h-[120px]"
+          />
+        ) : (
+          <div className="border rounded-md p-3 text-sm min-h-[120px] whitespace-pre-wrap bg-muted/10">
+            {performer.memo || <span className="text-muted-foreground">メモはありません</span>}
+          </div>
+        )}
       </section>
 
       </div>
