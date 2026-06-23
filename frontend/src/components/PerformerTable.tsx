@@ -1,21 +1,17 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { Performer, PerformerColumnKey, CustomFieldDefinition } from "@/types";
+import { EditableCell, formatCustomValue } from "@/components/EditableCell";
 
 interface PerformerTableProps {
   performers: Performer[];
   visibleColumns: PerformerColumnKey[];
   customFieldDefs: CustomFieldDefinition[];
+  editMode?: boolean;
+  onUpdateCustomField?: (performerId: number, fieldName: string, value: unknown) => Promise<void>;
 }
 
-function formatCustomValue(value: unknown, fieldType: CustomFieldDefinition["field_type"]): string {
-  if (value === null || value === undefined) return "—";
-  if (fieldType === "boolean") return value ? "✓" : "—";
-  if (fieldType === "date" && typeof value === "string") return value.slice(0, 10);
-  return String(value);
-}
-
-export function PerformerTable({ performers, visibleColumns, customFieldDefs }: PerformerTableProps) {
+export function PerformerTable({ performers, visibleColumns, customFieldDefs, editMode = false, onUpdateCustomField }: PerformerTableProps) {
   const customColDefs = customFieldDefs.filter((d) =>
     visibleColumns.includes(`custom:${d.name}` as PerformerColumnKey)
   );
@@ -69,11 +65,28 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs }: 
                     </div>
                   </td>
                 )}
-                {customColDefs.map((d) => (
-                  <td key={d.id} className="px-3 py-2 text-muted-foreground whitespace-nowrap">
-                    {formatCustomValue((p.custom_fields ?? {})[d.name], d.field_type)}
-                  </td>
-                ))}
+                {customColDefs.map((d) => {
+                  const fieldValue = (p.custom_fields ?? {})[d.name];
+                  return (
+                    <td
+                      key={d.id}
+                      className="px-3 py-2 text-muted-foreground whitespace-nowrap"
+                      onClick={editMode ? (e) => e.stopPropagation() : undefined}
+                    >
+                      {editMode ? (
+                        <EditableCell
+                          entityId={p.id}
+                          fieldName={d.name}
+                          fieldType={d.field_type}
+                          initialValue={fieldValue}
+                          onUpdate={onUpdateCustomField}
+                        />
+                      ) : (
+                        formatCustomValue(fieldValue, d.field_type)
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

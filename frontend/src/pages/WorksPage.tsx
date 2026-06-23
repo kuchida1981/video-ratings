@@ -166,7 +166,7 @@ export default function WorksPage() {
 
   const handleUpdateCustomField = useCallback(async (workId: number, fieldName: string, value: unknown) => {
     const save = api.works.updateCustomFields(workId, { [fieldName]: value }).then(() => {});
-    pendingSaveRef.current = pendingSaveRef.current.then(() => save).catch(() => save);
+    pendingSaveRef.current = pendingSaveRef.current.then(() => save).catch(() => {});
     await save;
   }, []);
 
