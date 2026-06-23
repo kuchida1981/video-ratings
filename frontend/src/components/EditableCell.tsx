@@ -66,12 +66,15 @@ export function EditableCell({
 
   const handleBlur = () => {
     if (fieldType === "boolean") return;
-    const strValue = valueRef.current as string;
-    let submitValue: unknown = strValue;
-    if (strValue === "") {
+    const trimmed = (valueRef.current as string).trim();
+    if (trimmed !== valueRef.current) {
+      setValue(trimmed);
+    }
+    let submitValue: unknown = trimmed;
+    if (trimmed === "") {
       submitValue = null;
     } else if (fieldType === "number") {
-      const num = Number(strValue);
+      const num = Number(trimmed);
       if (Number.isNaN(num)) {
         setIsError(true);
         setValue(lastSavedRef.current);
@@ -79,8 +82,8 @@ export function EditableCell({
       }
       submitValue = num;
     }
-    if (strValue !== lastSavedRef.current) {
-      save(submitValue, strValue);
+    if (trimmed !== lastSavedRef.current) {
+      save(submitValue, trimmed);
     }
   };
 

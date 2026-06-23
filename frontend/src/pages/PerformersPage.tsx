@@ -112,7 +112,7 @@ export default function PerformersPage() {
 
   const handleUpdateCustomField = useCallback(async (performerId: number, fieldName: string, value: unknown) => {
     const save = api.performers.updateCustomFields(performerId, { [fieldName]: value }).then(() => {});
-    pendingSaveRef.current = pendingSaveRef.current.then(() => save).catch(() => save);
+    pendingSaveRef.current = pendingSaveRef.current.then(() => save).catch(() => {});
     await save;
   }, []);
 
