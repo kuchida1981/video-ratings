@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import SESSION_COOKIE_NAME, SESSION_MAX_AGE, create_session_cookie
+from app.auth import DUMMY_HASH, SESSION_COOKIE_NAME, SESSION_MAX_AGE, SESSION_SECURE, create_session_cookie
 from app.database import get_db
 from app.models.models import User
 
@@ -23,7 +23,9 @@ class MeResponse(BaseModel):
 @router.post("/login")
 def login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == data.username).first()
-    if not user or not bcrypt.checkpw(data.password.encode("utf-8"), user.password_hash.encode("utf-8")):
+    password_hash = user.password_hash if user else DUMMY_HASH
+    is_correct = bcrypt.checkpw(data.password.encode("utf-8"), password_hash.encode("utf-8"))
+    if not user or not is_correct:
         return Response(
             content='{"detail":"ユーザー名またはパスワードが正しくありません"}',
             status_code=401,
@@ -37,6 +39,7 @@ def login(data: LoginRequest, response: Response, db: Session = Depends(get_db))
         max_age=SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=SESSION_SECURE,
         path="/",
     )
     return {"username": user.username, "role": user.role}

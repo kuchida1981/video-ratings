@@ -5,8 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.auth import SESSION_COOKIE_NAME, create_session_cookie, verify_session_cookie
+from app.auth import SESSION_COOKIE_NAME, SESSION_MAX_AGE, SESSION_SECURE, create_session_cookie, verify_session_cookie
 from app.config import settings
+from app.database import SessionLocal
+from app.models.models import User
 from app.routers import auth, custom_fields, data, imports, performers, search, tags, works
 
 COVERS_DIR = Path(settings.upload_dir) / "covers"
@@ -47,6 +49,15 @@ async def session_auth_middleware(request: Request, call_next):
     if not session:
         return Response(content='{"detail":"session expired"}', status_code=401, media_type="application/json")
 
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.id == session["user_id"]).first()
+        if not user:
+            return Response(content='{"detail":"user deleted"}', status_code=401, media_type="application/json")
+        session["role"] = user.role
+    finally:
+        db.close()
+
     if session["role"] == "viewer" and request.method in VIEWER_BLOCKED_METHODS and not path.startswith("/api/auth/"):
         return Response(content='{"detail":"forbidden"}', status_code=403, media_type="application/json")
 
@@ -55,14 +66,13 @@ async def session_auth_middleware(request: Request, call_next):
     response = await call_next(request)
 
     new_cookie = create_session_cookie(session["user_id"], session["username"], session["role"])
-    from app.auth import SESSION_MAX_AGE
-
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=new_cookie,
         max_age=SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=SESSION_SECURE,
         path="/",
     )
 
