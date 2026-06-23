@@ -69,6 +69,8 @@ jobs:
 
       - name: pytest (unit + coverage)
         run: pytest -m unit --cov --cov-report=term-missing
+        env:
+          SECRET_KEY: ci-test-secret-key
 
   typecheck-frontend:
     runs-on: ubuntu-latest
