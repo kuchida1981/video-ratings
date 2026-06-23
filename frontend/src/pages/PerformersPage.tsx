@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ArrowUpDown, X, LayoutGrid, List } from "lucide-react";
+import { Plus, ArrowUpDown, X, LayoutGrid, List, Pencil } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { CustomFieldDefinition, PerformerColumnKey } from "@/types";
@@ -68,6 +68,7 @@ export default function PerformersPage() {
   const [onlyUnrated, setOnlyUnrated] = useState<boolean>(stored.onlyUnrated ?? false);
   const [onlyNoCover, setOnlyNoCover] = useState<boolean>(stored.onlyNoCover ?? false);
   const [viewMode, setViewMode] = useState<"tile" | "table">(loadPerformersViewMode);
+  const [editMode, setEditMode] = useState(false);
   const [visiblePerformerColumns, setVisiblePerformerColumns] = useState<PerformerColumnKey[]>(loadPerformersTableColumns);
 
   const { maxCols } = useTileMaxColumns();
@@ -84,6 +85,36 @@ export default function PerformersPage() {
   });
 
   const sortableCustomFields = customFieldDefs.filter((d) => d.is_sortable);
+
+  const isEditModeDisabled = customFieldDefs.filter(
+    (d) => visiblePerformerColumns.includes(`custom:${d.name}` as PerformerColumnKey)
+  ).length === 0;
+
+  const isFirstRender = useRef(true);
+  const pendingSaveRef = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!editMode) {
+      pendingSaveRef.current.finally(() => {
+        queryClient.invalidateQueries({ queryKey: ["performers"] });
+      });
+    }
+  }, [editMode, queryClient]);
+
+  useEffect(() => {
+    if (isEditModeDisabled && editMode) {
+      setEditMode(false);
+    }
+  }, [isEditModeDisabled, editMode]);
+
+  const handleUpdateCustomField = useCallback(async (performerId: number, fieldName: string, value: unknown) => {
+    const save = api.performers.updateCustomFields(performerId, { [fieldName]: value }).then(() => {});
+    pendingSaveRef.current = pendingSaveRef.current.then(() => save).catch(() => save);
+    await save;
+  }, []);
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; furigana?: string }) => api.performers.create(data),
@@ -198,6 +229,17 @@ export default function PerformersPage() {
               <List size={16} />
             </Button>
           </div>
+          {viewMode === "table" && (
+            <Button
+              variant={editMode ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setEditMode((v) => !v)}
+              title="編集モード"
+              disabled={isEditModeDisabled}
+            >
+              <Pencil size={16} />
+            </Button>
+          )}
           <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><Plus size={16} />新規登録</Button>
@@ -361,6 +403,8 @@ export default function PerformersPage() {
           performers={filteredPerformers}
           visibleColumns={visiblePerformerColumns}
           customFieldDefs={customFieldDefs}
+          editMode={editMode}
+          onUpdateCustomField={handleUpdateCustomField}
         />
       ) : (
         <div className="grid gap-3" style={gridStyle}>
