@@ -156,6 +156,8 @@ Bash ツールの `timeout` パラメータも併用し、agy プロセスが応
 1. 設計 (Claude Code)
    /opsx:explore  → 問題を探索し設計を固める
    /opsx:propose  → change proposal を生成（proposal.md / design.md / specs / tasks.md）
+   → ユーザーが承認（OK等）したら、Claude Code が自律的にステップ 2 を実行する
+   → ただし main 以外のブランチにいる場合はユーザーに確認してから行動する
 
 2. トピックブランチ作成 & proposal コミット (Claude Code)
    git checkout -b feature/<change-name>
@@ -163,6 +165,8 @@ Bash ツールの `timeout` パラメータも併用し、agy プロセスが応
    git commit -m "docs(openspec): propose <change-name>"
 
 3. 実装 (agy タスク単位 × N)
+   /opsx:apply 実行時、Claude Code はデフォルトで agy に実装を委譲する
+   難易度が高い、または agy が行き詰まった場合のみ Claude Code が直接実装する
    tasks.md の各タスクを個別の agy ワンショットで実行
    MCP: mcp__agy__agy_ask(prompt="...", workspace="<プロジェクトルート>")
    Bash: GIT_TERMINAL_PROMPT=0 CI=true agy --dangerously-skip-permissions --print-timeout 3m --print "..." 2>&1
