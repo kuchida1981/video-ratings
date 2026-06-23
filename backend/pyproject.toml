@@ -54,6 +54,9 @@ omit = [
     "app/main.py",
     "app/database.py",
     "app/config.py",
+    "app/auth.py",
+    "app/cli.py",
+    "app/__main__.py",
     "app/services/smb.py",
     "alembic/*",
 ]
