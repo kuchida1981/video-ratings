@@ -24,7 +24,11 @@ class MeResponse(BaseModel):
 def login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == data.username).first()
     if not user or not bcrypt.checkpw(data.password.encode("utf-8"), user.password_hash.encode("utf-8")):
-        return Response(content='{"detail":"ユーザー名またはパスワードが正しくありません"}', status_code=401, media_type="application/json")
+        return Response(
+            content='{"detail":"ユーザー名またはパスワードが正しくありません"}',
+            status_code=401,
+            media_type="application/json",
+        )
 
     cookie_value = create_session_cookie(user.id, user.username, user.role)
     response.set_cookie(
