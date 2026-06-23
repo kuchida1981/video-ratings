@@ -1,4 +1,8 @@
-export default function SessionTimeoutOverlay({ onLogin }: { onLogin: () => void }) {
+import { useNavigate } from "react-router-dom";
+
+export default function SessionTimeoutOverlay() {
+  const navigate = useNavigate();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <div className="w-full max-w-sm space-y-4 rounded-lg border bg-card p-8 text-center shadow-lg">
@@ -7,7 +11,7 @@ export default function SessionTimeoutOverlay({ onLogin }: { onLogin: () => void
           一定時間操作がなかったため、セッションが切れました。
         </p>
         <button
-          onClick={onLogin}
+          onClick={() => navigate("/login")}
           className="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
         >
           ログインページへ

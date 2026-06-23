@@ -67,7 +67,7 @@ function NavItem({
 
 function AuthenticatedApp() {
   const mainRef = useRef<HTMLElement>(null);
-  const { user, logout, timedOut, setTimedOut } = useAuth();
+  const { user, logout, setTimedOut } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -79,7 +79,7 @@ function AuthenticatedApp() {
   });
 
   const handleTimeout = useCallback(() => {
-    setTimedOut(true);
+    setTimedOut();
   }, [setTimedOut]);
 
   useSessionTimeout(handleTimeout);
@@ -103,16 +103,7 @@ function AuthenticatedApp() {
     navigate("/login");
   };
 
-  if (timedOut) {
-    return (
-      <SessionTimeoutOverlay
-        onLogin={() => {
-          setTimedOut(false);
-          navigate("/login");
-        }}
-      />
-    );
-  }
+
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -185,9 +176,9 @@ function AuthenticatedApp() {
 }
 
 function AppRoutes() {
-  const { user, loading } = useAuth();
+  const { user, isLoading, isTimedOut } = useAuth();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -196,10 +187,13 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route path="/*" element={user ? <AuthenticatedApp /> : <Navigate to="/login" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+        <Route path="/*" element={user ? <AuthenticatedApp /> : <Navigate to="/login" replace />} />
+      </Routes>
+      {isTimedOut && <SessionTimeoutOverlay />}
+    </>
   );
 }
 

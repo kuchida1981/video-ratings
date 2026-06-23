@@ -7,11 +7,12 @@ interface AuthUser {
 
 interface AuthContextType {
   user: AuthUser | null;
-  loading: boolean;
-  timedOut: boolean;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  isTimedOut: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  setTimedOut: (v: boolean) => void;
+  setTimedOut: () => void;
   isEditor: boolean;
 }
 
@@ -19,8 +20,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [timedOut, setTimedOut] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTimedOut, setIsTimedOut] = useState(false);
 
   const checkSession = useCallback(async () => {
     try {
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setUser(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const data = await res.json();
     setUser(data);
-    setTimedOut(false);
+    setIsTimedOut(false);
   }, []);
 
   const logout = useCallback(async () => {
@@ -63,15 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const handleTimedOut = useCallback(() => {
+    setUser(null);
+    setIsTimedOut(true);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        loading,
-        timedOut,
+        isLoading,
+        isAuthenticated: !!user,
+        isTimedOut,
         login,
         logout,
-        setTimedOut,
+        setTimedOut: handleTimedOut,
         isEditor: user?.role === "editor",
       }}
     >
