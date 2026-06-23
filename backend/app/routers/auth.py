@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import SESSION_COOKIE_NAME, SESSION_MAX_AGE, create_session_cookie, verify_session_cookie
+from app.auth import SESSION_COOKIE_NAME, SESSION_MAX_AGE, create_session_cookie
 from app.database import get_db
 from app.models.models import User
 
