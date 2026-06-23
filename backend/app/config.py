@@ -7,9 +7,8 @@ class Settings(BaseSettings):
     smb_password: str = ""
     upload_dir: str = "uploads"
     frontend_dir: str = ""
-    basic_auth_enabled: bool = False
-    basic_auth_user: str = ""
-    basic_auth_password: str = ""
+    secret_key: str
+    session_timeout_seconds: int = 7200
     debug: bool = False
 
     model_config = {"env_file": ".env"}
