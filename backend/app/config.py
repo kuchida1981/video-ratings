@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     session_timeout_seconds: int = 7200
     debug: bool = False
 
-    model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()
