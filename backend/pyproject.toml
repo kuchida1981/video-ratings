@@ -59,6 +59,9 @@ omit = [
     "app/__main__.py",
     "app/services/smb.py",
     "alembic/*",
+    "tests/test_auth.py",
+    "tests/test_authorization.py",
+    "tests/test_cli.py",
 ]
 
 [tool.coverage.report]
