@@ -13,15 +13,9 @@ import type {
 
 const BASE = "/api";
 
-let onUnauthorized: (() => void) | null = null;
-
-export function setOnUnauthorized(cb: () => void) {
-  onUnauthorized = cb;
-}
-
 function handleUnauthorized(res: Response) {
-  if (res.status === 401 && onUnauthorized) {
-    onUnauthorized();
+  if (res.status === 401) {
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
   }
 }
 

@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNaviga
 import { Film, Users, Tag, Settings, PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { setOnUnauthorized } from "@/api/client";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import SessionTimeoutOverlay from "@/components/SessionTimeoutOverlay";
 import LoginPage from "@/pages/LoginPage";
@@ -85,8 +84,10 @@ function AuthenticatedApp() {
   useSessionTimeout(handleTimeout);
 
   useEffect(() => {
-    setOnUnauthorized(handleTimeout);
-  }, [handleTimeout]);
+    const handler = () => setTimedOut();
+    window.addEventListener("auth:unauthorized", handler);
+    return () => window.removeEventListener("auth:unauthorized", handler);
+  }, [setTimedOut]);
 
   const toggleSidebar = () => {
     const nextValue = !collapsed;
@@ -175,8 +176,9 @@ function AuthenticatedApp() {
   );
 }
 
-function AppRoutes() {
-  const { user, isLoading, isTimedOut } = useAuth();
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -186,11 +188,21 @@ function AppRoutes() {
     );
   }
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
+  const { isTimedOut } = useAuth();
+
   return (
     <>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-        <Route path="/*" element={user ? <AuthenticatedApp /> : <Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/*" element={<RequireAuth><AuthenticatedApp /></RequireAuth>} />
       </Routes>
       {isTimedOut && <SessionTimeoutOverlay />}
     </>
