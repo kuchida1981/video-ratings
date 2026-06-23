@@ -1,14 +1,14 @@
-import base64
-import secrets
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.auth import create_session_cookie, verify_session_cookie
 from app.config import settings
-from app.routers import custom_fields, data, imports, performers, search, tags, works
+from app.routers import auth, custom_fields, data, imports, performers, search, tags, works
 
 COVERS_DIR = Path(settings.upload_dir) / "covers"
 COVERS_DIR.mkdir(parents=True, exist_ok=True)
@@ -24,49 +24,49 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://frontend:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+EXEMPT_PATHS = {"/api/health", "/api/auth/login", "/api/auth/logout", "/api/auth/me"}
+
 
 @app.middleware("http")
-async def basic_auth_middleware(request: Request, call_next):
-    if not settings.basic_auth_enabled:
+async def session_auth_middleware(request: Request, call_next):
+    path = request.url.path.rstrip("/")
+
+    if path in EXEMPT_PATHS or not path.startswith("/api/"):
         return await call_next(request)
 
-    if request.url.path.rstrip("/") == "/api/health":
-        return await call_next(request)
+    cookie_value = request.cookies.get("session")
+    if not cookie_value:
+        return JSONResponse({"detail": "not authenticated"}, status_code=401)
 
-    auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        return Response(
-            content="Unauthorized", status_code=401, headers={"WWW-Authenticate": 'Basic realm="Restricted"'}
-        )
+    session_data = verify_session_cookie(cookie_value)
+    if not session_data:
+        return JSONResponse({"detail": "not authenticated"}, status_code=401)
 
-    try:
-        auth_type, credentials = auth_header.split(" ", 1)
-        if auth_type.lower() != "basic":
-            raise ValueError()
-        decoded = base64.b64decode(credentials).decode("utf-8")
-        username, password = decoded.split(":", 1)
-    except Exception:
-        return Response(
-            content="Invalid credentials", status_code=401, headers={"WWW-Authenticate": 'Basic realm="Restricted"'}
-        )
+    if session_data["role"] == "viewer" and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        return JSONResponse({"detail": "forbidden"}, status_code=403)
 
-    is_user_correct = secrets.compare_digest(username.encode("utf-8"), settings.basic_auth_user.encode("utf-8"))
-    is_password_correct = secrets.compare_digest(password.encode("utf-8"), settings.basic_auth_password.encode("utf-8"))
+    response = await call_next(request)
 
-    if not (is_user_correct and is_password_correct):
-        return Response(
-            content="Unauthorized", status_code=401, headers={"WWW-Authenticate": 'Basic realm="Restricted"'}
-        )
-
-    return await call_next(request)
+    new_cookie = create_session_cookie(session_data["user_id"], session_data["username"], session_data["role"])
+    response.set_cookie(
+        key="session",
+        value=new_cookie,
+        httponly=True,
+        samesite="lax",
+        max_age=7200,
+        path="/",
+    )
+    return response
 
 
 app.mount("/static/covers", StaticFiles(directory=str(COVERS_DIR)), name="covers")
 
+app.include_router(auth.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(works.router, prefix="/api")
 app.include_router(performers.router, prefix="/api")

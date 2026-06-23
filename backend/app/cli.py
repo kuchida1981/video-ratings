@@ -137,9 +137,5 @@ def delete(username):
         db.close()
 
 
-# パスワードの検証用 (要件に記載されている検証コード):
-# bcrypt.checkpw(password.encode("utf-8"), user.password_hash.encode("utf-8"))
-
-
 if __name__ == "__main__":
     cli()
