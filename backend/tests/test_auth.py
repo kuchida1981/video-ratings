@@ -24,7 +24,10 @@ def mock_db():
 
 
 @pytest.fixture
-def client(mock_db):
+def client(mock_db, monkeypatch):
+    monkeypatch.setattr("app.main.SessionLocal", lambda: mock_db)
+    monkeypatch.setattr("app.auth.SESSION_SECURE", False)
+    monkeypatch.setattr("app.routers.auth.SESSION_SECURE", False)
     app.dependency_overrides[get_db] = lambda: mock_db
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c

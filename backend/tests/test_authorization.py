@@ -35,11 +35,15 @@ def _login(client, mock_db, role: str):
     mock_db.query.return_value.filter.return_value.first.return_value = user
     client.post("/api/auth/login", json={"username": user.username, "password": "pass"})
     mock_db.reset_mock()
+    mock_db.query.return_value.filter.return_value.first.return_value = user
     return user
 
 
 @pytest.fixture
-def editor_client(mock_db):
+def editor_client(mock_db, monkeypatch):
+    monkeypatch.setattr("app.main.SessionLocal", lambda: mock_db)
+    monkeypatch.setattr("app.auth.SESSION_SECURE", False)
+    monkeypatch.setattr("app.routers.auth.SESSION_SECURE", False)
     app.dependency_overrides[get_db] = lambda: mock_db
     with TestClient(app, raise_server_exceptions=False) as c:
         _login(c, mock_db, "editor")
@@ -48,7 +52,10 @@ def editor_client(mock_db):
 
 
 @pytest.fixture
-def viewer_client(mock_db):
+def viewer_client(mock_db, monkeypatch):
+    monkeypatch.setattr("app.main.SessionLocal", lambda: mock_db)
+    monkeypatch.setattr("app.auth.SESSION_SECURE", False)
+    monkeypatch.setattr("app.routers.auth.SESSION_SECURE", False)
     app.dependency_overrides[get_db] = lambda: mock_db
     with TestClient(app, raise_server_exceptions=False) as c:
         _login(c, mock_db, "viewer")
