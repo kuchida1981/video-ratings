@@ -1,3 +1,4 @@
+import { Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { Performer, PerformerColumnKey, CustomFieldDefinition } from "@/types";
@@ -40,9 +41,22 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, ed
                 className="border-t transition-colors"
               >
                 <td className="font-medium whitespace-nowrap p-0">
-                  <Link to={`/performers/${p.id}`} className="block px-3 py-2 hover:underline text-primary hover:text-primary/80">
-                    {p.name}
-                  </Link>
+                  <div className="flex items-center">
+                    <Link to={`/performers/${p.id}`} className="flex-1 py-2 pl-3 pr-2 hover:underline text-primary hover:text-primary/80">
+                      {p.name}
+                    </Link>
+                    {editMode && (
+                      <a
+                        href={`https://www.google.com/search?q=${encodeURIComponent(`"${p.name}"`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-2 pl-2 pr-3 text-muted-foreground hover:text-primary flex-shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Search size={14} />
+                      </a>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{p.furigana ?? "—"}</td>
                 {visibleColumns.includes("work_count") && (
