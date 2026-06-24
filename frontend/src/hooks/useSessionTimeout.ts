@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 
 const SESSION_TIMEOUT_MS = Number(import.meta.env.VITE_SESSION_TIMEOUT_MS) || 2 * 60 * 60 * 1000;
-const CHECK_INTERVAL_MS = 60 * 1000; // 1 minute
+const CHECK_INTERVAL_MS = Number(import.meta.env.VITE_SESSION_CHECK_INTERVAL_MS) || 60 * 1000;
 
 export function useSessionTimeout(onTimeout: () => void) {
   const lastActivity = useRef(Date.now());
