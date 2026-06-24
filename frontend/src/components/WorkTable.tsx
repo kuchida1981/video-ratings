@@ -51,8 +51,8 @@ export function WorkTable({
                   className="border-t transition-colors"
                 >
                   <td className="font-medium max-w-xs p-0">
-                    <div className="flex items-center px-3 py-2">
-                      <Link to={`/works/${w.id}`} className="line-clamp-2 hover:underline text-primary hover:text-primary/80">
+                    <div className="flex items-center">
+                      <Link to={`/works/${w.id}`} className="flex-1 min-w-0 py-2 pl-3 pr-2 line-clamp-2 hover:underline text-primary hover:text-primary/80">
                         {w.title}
                       </Link>
                       {editMode && (
@@ -62,7 +62,7 @@ export function WorkTable({
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="ml-1 text-muted-foreground hover:text-primary flex-shrink-0"
+                          className="py-2 pl-2 pr-3 text-muted-foreground hover:text-primary flex-shrink-0"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Search size={14} />

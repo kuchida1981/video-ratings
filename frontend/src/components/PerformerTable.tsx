@@ -41,8 +41,8 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, ed
                 className="border-t transition-colors"
               >
                 <td className="font-medium whitespace-nowrap p-0">
-                  <div className="flex items-center px-3 py-2">
-                    <Link to={`/performers/${p.id}`} className="hover:underline text-primary hover:text-primary/80">
+                  <div className="flex items-center">
+                    <Link to={`/performers/${p.id}`} className="flex-1 py-2 pl-3 pr-2 hover:underline text-primary hover:text-primary/80">
                       {p.name}
                     </Link>
                     {editMode && (
@@ -50,7 +50,7 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, ed
                         href={`https://www.google.com/search?q=${encodeURIComponent(`"${p.name}"`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="ml-1 text-muted-foreground hover:text-primary flex-shrink-0"
+                        className="py-2 pl-2 pr-3 text-muted-foreground hover:text-primary flex-shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Search size={14} />
