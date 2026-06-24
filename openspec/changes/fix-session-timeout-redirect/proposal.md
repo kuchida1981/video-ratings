@@ -6,6 +6,7 @@
 
 - `SessionTimeoutOverlay` のボタンクリック時に `isTimedOut` ステートをリセットしてオーバーレイを閉じるように修正
 - `AuthContext` に `clearTimedOut` 関数を追加
+- フロントエンドのセッションタイムアウト時間を環境変数 `VITE_SESSION_TIMEOUT_MS` で設定可能にする（デフォルト: 7200000ms = 2時間）
 - `session-auth` spec にタイムアウトオーバーレイからの復帰シナリオを追記
 
 ## Capabilities
@@ -22,4 +23,5 @@
 
 - `frontend/src/contexts/AuthContext.tsx` — `clearTimedOut` 関数追加
 - `frontend/src/components/SessionTimeoutOverlay.tsx` — ボタンクリックハンドラ修正
+- `frontend/src/hooks/useSessionTimeout.ts` — タイムアウト時間を環境変数から読み取るように変更
 - `frontend/src/App.tsx` — 変更なし（`RequireAuth` が自動的に `/login` へリダイレクトするため）
