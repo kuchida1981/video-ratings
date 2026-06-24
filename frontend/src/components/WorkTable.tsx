@@ -1,4 +1,4 @@
-import { Files } from "lucide-react";
+import { Files, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { WorkListItem, WorkColumnKey, CustomFieldDefinition } from "@/types";
@@ -51,9 +51,24 @@ export function WorkTable({
                   className="border-t transition-colors"
                 >
                   <td className="font-medium max-w-xs p-0">
-                    <Link to={`/works/${w.id}`} className="block px-3 py-2 line-clamp-2 hover:underline text-primary hover:text-primary/80">
-                      {w.title}
-                    </Link>
+                    <div className="flex items-center px-3 py-2">
+                      <Link to={`/works/${w.id}`} className="line-clamp-2 hover:underline text-primary hover:text-primary/80">
+                        {w.title}
+                      </Link>
+                      {editMode && (
+                        <a
+                          href={`https://www.google.com/search?q=${encodeURIComponent(
+                            [...w.performers.map((p) => `"${p.name}"`), `"${w.title}"`].join(" ")
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 text-muted-foreground hover:text-primary flex-shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Search size={14} />
+                        </a>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-muted-foreground max-w-xs">
                     <span className="line-clamp-1">{performers}</span>
