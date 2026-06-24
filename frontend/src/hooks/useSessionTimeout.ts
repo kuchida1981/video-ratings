@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 
-const SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
+const SESSION_TIMEOUT_MS = Number(import.meta.env.VITE_SESSION_TIMEOUT_MS) || 2 * 60 * 60 * 1000;
 const CHECK_INTERVAL_MS = 60 * 1000; // 1 minute
 
 export function useSessionTimeout(onTimeout: () => void) {

@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setTimedOut: () => void;
+  clearTimedOut: () => void;
   isEditor: boolean;
 }
 
@@ -69,6 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsTimedOut(true);
   }, []);
 
+  const clearTimedOut = useCallback(() => {
+    setIsTimedOut(false);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -79,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         setTimedOut: handleTimedOut,
+        clearTimedOut,
         isEditor: user?.role === "editor",
       }}
     >
