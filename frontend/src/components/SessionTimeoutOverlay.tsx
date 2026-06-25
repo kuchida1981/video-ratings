@@ -1,7 +1,7 @@
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function SessionTimeoutOverlay() {
-  const navigate = useNavigate();
+  const { clearTimedOut } = useAuth();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -11,7 +11,7 @@ export default function SessionTimeoutOverlay() {
           一定時間操作がなかったため、セッションが切れました。
         </p>
         <button
-          onClick={() => navigate("/login")}
+          onClick={() => clearTimedOut()}
           className="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
         >
           ログインページへ
