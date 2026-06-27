@@ -32,10 +32,12 @@ function SortableRow({
   def,
   onRemove,
   onToggleSortable,
+  onToggleSearchKeyword,
 }: {
   def: CustomFieldDefinition;
   onRemove: () => void;
   onToggleSortable: (checked: boolean) => void;
+  onToggleSearchKeyword: (checked: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: def.id });
   const style = {
@@ -61,6 +63,13 @@ function SortableRow({
       <td className="px-4 py-2 text-muted-foreground">{typeLabel(def.field_type)}</td>
       <td className="px-4 py-2 text-center">
         <Switch checked={def.is_sortable} onCheckedChange={onToggleSortable} />
+      </td>
+      <td className="px-4 py-2 text-center">
+        <Switch
+          checked={def.is_search_keyword}
+          onCheckedChange={onToggleSearchKeyword}
+          disabled={def.field_type !== "text"}
+        />
       </td>
       <td className="px-4 py-2 text-right">
         <button className="text-muted-foreground hover:text-destructive" onClick={onRemove}>
@@ -102,7 +111,7 @@ export default function CustomFieldsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { is_sortable?: boolean } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { is_sortable?: boolean; is_search_keyword?: boolean } }) =>
       api.customFields.update(id, data),
     onSuccess: () => invalidate(),
   });
@@ -139,6 +148,7 @@ export default function CustomFieldsPage() {
               <th className="text-left px-4 py-2 font-medium">項目名</th>
               <th className="text-left px-4 py-2 font-medium">型</th>
               <th className="px-4 py-2 font-medium text-center text-xs">並べ替えOK</th>
+              <th className="px-4 py-2 font-medium text-center text-xs">検索キーワード</th>
               <th className="px-4 py-2"></th>
             </tr>
           </thead>
@@ -149,6 +159,7 @@ export default function CustomFieldsPage() {
                   key={d.id}
                   def={d}
                   onToggleSortable={(checked) => updateMutation.mutate({ id: d.id, data: { is_sortable: checked } })}
+                  onToggleSearchKeyword={(checked) => updateMutation.mutate({ id: d.id, data: { is_search_keyword: checked } })}
                   onRemove={() => {
                     const target = d.entity_type === "performer" ? "全出演者" : "全作品";
                     if (confirm(`「${d.name}」を削除すると${target}からこの項目の値も削除されます。続けますか？`)) {
@@ -160,7 +171,7 @@ export default function CustomFieldsPage() {
             </SortableContext>
             {defs.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{emptyMsg}</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">{emptyMsg}</td>
               </tr>
             )}
           </tbody>

@@ -47,7 +47,16 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, ed
                     </Link>
                     {editMode && (
                       <a
-                        href={`https://www.google.com/search?q=${encodeURIComponent(`"${p.name}"`)}`}
+                        href={`https://www.google.com/search?q=${encodeURIComponent(
+                          [
+                            `"${p.name}"`,
+                            ...customFieldDefs
+                              .filter((d) => d.is_search_keyword && d.field_type === "text")
+                              .map((d) => String(p.custom_fields?.[d.name] ?? "").trim())
+                              .filter((v) => v !== "")
+                              .map((v) => `"${v}"`),
+                          ].join(" ")
+                        )}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="py-2 pl-2 pr-3 text-muted-foreground hover:text-primary flex-shrink-0"

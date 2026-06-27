@@ -58,7 +58,15 @@ export function WorkTable({
                       {editMode && (
                         <a
                           href={`https://www.google.com/search?q=${encodeURIComponent(
-                            [...w.performers.map((p) => `"${p.name}"`), `"${w.title}"`].join(" ")
+                            [
+                              ...w.performers.map((p) => `"${p.name}"`),
+                              `"${w.title}"`,
+                              ...customFieldDefs
+                                .filter((d) => d.is_search_keyword && d.field_type === "text")
+                                .map((d) => String(w.custom_fields?.[d.name] ?? "").trim())
+                                .filter((v) => v !== "")
+                                .map((v) => `"${v}"`),
+                            ].join(" ")
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"

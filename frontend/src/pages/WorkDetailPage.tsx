@@ -369,7 +369,15 @@ export default function WorkDetailPage() {
                 <h1 className="text-2xl font-bold">{work.title}</h1>
                 <a
                   href={`https://www.google.com/search?q=${encodeURIComponent(
-                    [...work.performers.map((p) => `"${p.name}"`), `"${work.title}"`].join(" ")
+                    [
+                      ...work.performers.map((p) => `"${p.name}"`),
+                      `"${work.title}"`,
+                      ...customFields
+                        .filter((d) => d.is_search_keyword && d.field_type === "text")
+                        .map((d) => String(work.custom_fields?.[d.name] ?? "").trim())
+                        .filter((v) => v !== "")
+                        .map((v) => `"${v}"`),
+                    ].join(" ")
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"

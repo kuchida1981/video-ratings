@@ -133,7 +133,7 @@ export const api = {
       req<CustomFieldDefinition[]>(`/custom-field-definitions${entityType ? `?entity_type=${entityType}` : ""}`),
     create: (data: { name: string; field_type: string; entity_type?: string }) =>
       req<CustomFieldDefinition>("/custom-field-definitions", { method: "POST", body: JSON.stringify(data) }),
-    update: (id: number, data: { name?: string; is_sortable?: boolean }) =>
+    update: (id: number, data: { name?: string; is_sortable?: boolean; is_search_keyword?: boolean }) =>
       req<CustomFieldDefinition>(`/custom-field-definitions/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) => req<void>(`/custom-field-definitions/${id}`, { method: "DELETE" }),
     reorder: (ids: number[]) =>
