@@ -16,6 +16,7 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, ed
   const customColDefs = customFieldDefs.filter((d) =>
     visibleColumns.includes(`custom:${d.name}` as PerformerColumnKey)
   );
+  const searchKeywordDefs = customFieldDefs.filter((d) => d.is_search_keyword && d.field_type === "text");
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -50,8 +51,7 @@ export function PerformerTable({ performers, visibleColumns, customFieldDefs, ed
                         href={`https://www.google.com/search?q=${encodeURIComponent(
                           [
                             `"${p.name}"`,
-                            ...customFieldDefs
-                              .filter((d) => d.is_search_keyword && d.field_type === "text")
+                            ...searchKeywordDefs
                               .map((d) => String(p.custom_fields?.[d.name] ?? "").trim())
                               .filter((v) => v !== "")
                               .map((v) => `"${v}"`),

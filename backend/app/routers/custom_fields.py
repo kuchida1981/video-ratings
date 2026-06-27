@@ -63,6 +63,8 @@ def update_definition(definition_id: int, data: CustomFieldDefinitionUpdate, db:
     defn = db.query(CustomFieldDefinition).filter(CustomFieldDefinition.id == definition_id).first()
     if not defn:
         raise HTTPException(status_code=404, detail="Custom field definition not found")
+    if data.is_search_keyword and defn.field_type != "text":
+        raise HTTPException(status_code=422, detail="is_search_keyword can only be set on text fields")
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(defn, field, value)
     db.commit()
