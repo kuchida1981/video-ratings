@@ -45,6 +45,8 @@ def create_definition(data: CustomFieldDefinitionCreate, db: Session = Depends(g
     )
     if existing:
         raise HTTPException(status_code=409, detail="Custom field with this name already exists")
+    if data.is_search_keyword and data.field_type != "text":
+        raise HTTPException(status_code=422, detail="is_search_keyword can only be set on text fields")
     max_order = (
         db.query(func.max(CustomFieldDefinition.sort_order))
         .filter(CustomFieldDefinition.entity_type == data.entity_type)
