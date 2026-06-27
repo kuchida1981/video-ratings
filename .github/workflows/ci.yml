@@ -12,6 +12,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      openspec: ${{ steps.filter.outputs.openspec }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3

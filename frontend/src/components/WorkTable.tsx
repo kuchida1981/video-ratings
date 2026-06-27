@@ -23,6 +23,7 @@ export function WorkTable({
   const customColDefs = customFieldDefs.filter((d) =>
     visibleColumns.includes(`custom:${d.name}` as WorkColumnKey)
   );
+  const searchKeywordDefs = customFieldDefs.filter((d) => d.is_search_keyword && d.field_type === "text");
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -58,7 +59,14 @@ export function WorkTable({
                       {editMode && (
                         <a
                           href={`https://www.google.com/search?q=${encodeURIComponent(
-                            [...w.performers.map((p) => `"${p.name}"`), `"${w.title}"`].join(" ")
+                            [
+                              ...w.performers.map((p) => `"${p.name}"`),
+                              `"${w.title}"`,
+                              ...searchKeywordDefs
+                                .map((d) => String(w.custom_fields?.[d.name] ?? "").trim())
+                                .filter((v) => v !== "")
+                                .map((v) => `"${v}"`),
+                            ].join(" ")
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"

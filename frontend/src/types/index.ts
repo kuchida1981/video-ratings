@@ -117,6 +117,7 @@ export interface CustomFieldDefinition {
   entity_type: "work" | "performer";
   sort_order: number;
   is_sortable: boolean;
+  is_search_keyword: boolean;
   created_at: string;
 }
 

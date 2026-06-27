@@ -310,7 +310,16 @@ export default function PerformerDetailPage() {
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold">{performer.name}</h1>
                 <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent(`"${performer.name}"`)}`}
+                  href={`https://www.google.com/search?q=${encodeURIComponent(
+                    [
+                      `"${performer.name}"`,
+                      ...customFieldDefs
+                        .filter((d) => d.is_search_keyword && d.field_type === "text")
+                        .map((d) => String(performer.custom_fields?.[d.name] ?? "").trim())
+                        .filter((v) => v !== "")
+                        .map((v) => `"${v}"`),
+                    ].join(" ")
+                  )}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary"
