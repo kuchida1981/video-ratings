@@ -134,6 +134,7 @@ class CustomFieldDefinition(Base):
     entity_type = Column(String, nullable=False, server_default="work")  # 'work' or 'performer'
     sort_order = Column(Integer, nullable=False, default=0)
     is_sortable = Column(Boolean, nullable=False, default=False)
+    is_search_keyword = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
